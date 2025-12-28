@@ -1,0 +1,67 @@
+[package]
+name = "agent-skills-guard"
+version = "0.1.0"
+description = "A secure manager for Claude Code agent skills"
+authors = ["Bruce"]
+edition = "2021"
+
+[lib]
+name = "agent_skills_guard_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+# Tauri 核心
+tauri = { version = "2.8", features = ["devtools"] }
+tauri-plugin-dialog = "2.4"
+tauri-plugin-process = "2.0"
+tauri-plugin-store = "2.0"
+
+# 序列化
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# 数据库
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# HTTP 客户端
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# 异步运行时
+tokio = { version = "1.40", features = ["full"] }
+
+# 错误处理
+thiserror = "2.0"
+anyhow = "1.0"
+
+# 日志
+log = "0.4"
+env_logger = "0.11"
+
+# 文件系统操作
+walkdir = "2.5"
+tempfile = "3.13"
+
+# 加密和哈希
+sha2 = "0.10"
+hex = "0.4"
+
+# 时间处理
+chrono = { version = "0.4", features = ["serde"] }
+
+# 正则表达式
+regex = "1.11"
+lazy_static = "1.5"
+
+# UUID
+uuid = { version = "1.11", features = ["v4"] }
+
+# 目录
+dirs = "5.0"
+
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

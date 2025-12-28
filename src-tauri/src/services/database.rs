@@ -1,0 +1,213 @@
+use crate::models::{Repository, Skill, SkillInstallation};
+use anyhow::{Result, Context};
+use rusqlite::{Connection, params};
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+pub struct Database {
+    conn: Mutex<Connection>,
+}
+
+impl Database {
+    /// 创建或打开数据库
+    pub fn new(db_path: PathBuf) -> Result<Self> {
+        // 确保父目录存在
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let conn = Connection::open(db_path)
+            .context("Failed to open database")?;
+
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
+
+        db.initialize_schema()?;
+        Ok(db)
+    }
+
+    /// 初始化数据库架构
+    fn initialize_schema(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS repositories (
+                id TEXT PRIMARY KEY,
+                url TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                description TEXT,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                scan_subdirs INTEGER NOT NULL DEFAULT 1,
+                added_at TEXT NOT NULL,
+                last_scanned TEXT
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS skills (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                repository_url TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                version TEXT,
+                author TEXT,
+                installed INTEGER NOT NULL DEFAULT 0,
+                installed_at TEXT,
+                local_path TEXT,
+                checksum TEXT,
+                security_score INTEGER,
+                security_issues TEXT
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS installations (
+                skill_id TEXT PRIMARY KEY,
+                installed_at TEXT NOT NULL,
+                version TEXT NOT NULL,
+                local_path TEXT NOT NULL,
+                checksum TEXT NOT NULL,
+                FOREIGN KEY(skill_id) REFERENCES skills(id)
+            )",
+            [],
+        )?;
+
+        Ok(())
+    }
+
+    /// 添加仓库
+    pub fn add_repository(&self, repo: &Repository) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute(
+            "INSERT OR REPLACE INTO repositories
+            (id, url, name, description, enabled, scan_subdirs, added_at, last_scanned)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                repo.id,
+                repo.url,
+                repo.name,
+                repo.description,
+                repo.enabled as i32,
+                repo.scan_subdirs as i32,
+                repo.added_at.to_rfc3339(),
+                repo.last_scanned.as_ref().map(|d| d.to_rfc3339()),
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    /// 获取所有仓库
+    pub fn get_repositories(&self) -> Result<Vec<Repository>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, url, name, description, enabled, scan_subdirs, added_at, last_scanned
+             FROM repositories"
+        )?;
+
+        let repos = stmt.query_map([], |row| {
+            Ok(Repository {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                name: row.get(2)?,
+                description: row.get(3)?,
+                enabled: row.get::<_, i32>(4)? != 0,
+                scan_subdirs: row.get::<_, i32>(5)? != 0,
+                added_at: row.get::<_, String>(6)?.parse().unwrap(),
+                last_scanned: row.get::<_, Option<String>>(7)?
+                    .and_then(|s| s.parse().ok()),
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(repos)
+    }
+
+    /// 保存 skill
+    pub fn save_skill(&self, skill: &Skill) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        let security_issues_json = skill.security_issues.as_ref()
+            .map(|issues| serde_json::to_string(issues).unwrap());
+
+        conn.execute(
+            "INSERT OR REPLACE INTO skills
+            (id, name, description, repository_url, file_path, version, author,
+             installed, installed_at, local_path, checksum, security_score, security_issues)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            params![
+                skill.id,
+                skill.name,
+                skill.description,
+                skill.repository_url,
+                skill.file_path,
+                skill.version,
+                skill.author,
+                skill.installed as i32,
+                skill.installed_at.as_ref().map(|d| d.to_rfc3339()),
+                skill.local_path,
+                skill.checksum,
+                skill.security_score,
+                security_issues_json,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    /// 获取所有 skills
+    pub fn get_skills(&self) -> Result<Vec<Skill>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, description, repository_url, file_path, version, author,
+                    installed, installed_at, local_path, checksum, security_score, security_issues
+             FROM skills"
+        )?;
+
+        let skills = stmt.query_map([], |row| {
+            let security_issues: Option<String> = row.get(12)?;
+            let security_issues = security_issues
+                .and_then(|s| serde_json::from_str(&s).ok());
+
+            Ok(Skill {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                repository_url: row.get(3)?,
+                file_path: row.get(4)?,
+                version: row.get(5)?,
+                author: row.get(6)?,
+                installed: row.get::<_, i32>(7)? != 0,
+                installed_at: row.get::<_, Option<String>>(8)?
+                    .and_then(|s| s.parse().ok()),
+                local_path: row.get(9)?,
+                checksum: row.get(10)?,
+                security_score: row.get(11)?,
+                security_issues,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(skills)
+    }
+
+    /// 删除仓库
+    pub fn delete_repository(&self, repo_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM repositories WHERE id = ?1", params![repo_id])?;
+        Ok(())
+    }
+
+    /// 删除 skill
+    pub fn delete_skill(&self, skill_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM skills WHERE id = ?1", params![skill_id])?;
+        conn.execute("DELETE FROM installations WHERE skill_id = ?1", params![skill_id])?;
+        Ok(())
+    }
+}
