@@ -1,4 +1,4 @@
-use crate::models::{Repository, Skill, SkillInstallation};
+use crate::models::{Repository, Skill};
 use anyhow::{Result, Context};
 use rusqlite::{Connection, params};
 use std::path::PathBuf;

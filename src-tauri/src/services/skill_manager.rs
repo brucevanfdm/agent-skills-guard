@@ -35,19 +35,26 @@ impl SkillManager {
     pub async fn download_and_analyze(&self, skill: &mut Skill) -> Result<Vec<u8>> {
         // 构建下载 URL
         let (owner, repo) = crate::models::Repository::from_github_url(&skill.repository_url)?;
+
+        // 下载 SKILL.md 文件
         let download_url = format!(
-            "https://raw.githubusercontent.com/{}/{}/main/{}",
+            "https://raw.githubusercontent.com/{}/{}/main/{}/SKILL.md",
             owner, repo, skill.file_path
         );
 
-        log::info!("Downloading skill from: {}", download_url);
+        log::info!("Downloading SKILL.md from: {}", download_url);
 
         // 下载文件内容
         let content = self.github.download_file(&download_url).await?;
 
+        // 解析 frontmatter 更新 skill 元数据
+        let (name, description) = self.github.fetch_skill_metadata(&owner, &repo, &skill.file_path).await?;
+        skill.name = name;
+        skill.description = description;
+
         // 安全扫描
         let content_str = String::from_utf8_lossy(&content);
-        let report = self.scanner.scan_file(&content_str, &skill.file_path)?;
+        let report = self.scanner.scan_file(&content_str, "SKILL.md")?;
 
         // 更新 skill 信息
         skill.security_score = Some(report.score);
@@ -86,23 +93,27 @@ impl SkillManager {
         std::fs::create_dir_all(&self.skills_dir)
             .context("Failed to create skills directory")?;
 
-        // 写入文件
-        let file_name = PathBuf::from(&skill.file_path)
+        // 创建 skill 文件夹（使用 skill 的文件夹名）
+        let skill_folder_name = PathBuf::from(&skill.file_path)
             .file_name()
-            .context("Invalid file path")?
+            .context("Invalid skill path")?
             .to_str()
-            .context("Invalid filename")?
+            .context("Invalid skill folder name")?
             .to_string();
 
-        let target_path = self.skills_dir.join(&file_name);
+        let skill_dir = self.skills_dir.join(&skill_folder_name);
+        std::fs::create_dir_all(&skill_dir)
+            .context("Failed to create skill directory")?;
 
-        std::fs::write(&target_path, content)
-            .context("Failed to write skill file")?;
+        // 写入 SKILL.md 文件
+        let skill_file_path = skill_dir.join("SKILL.md");
+        std::fs::write(&skill_file_path, content)
+            .context("Failed to write SKILL.md file")?;
 
         // 更新数据库
         skill.installed = true;
         skill.installed_at = Some(Utc::now());
-        skill.local_path = Some(target_path.to_string_lossy().to_string());
+        skill.local_path = Some(skill_dir.to_string_lossy().to_string());
 
         self.db.save_skill(&skill)?;
 

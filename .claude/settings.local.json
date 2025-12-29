@@ -1,22 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm install:*)",
-      "Bash(npm --version:*)",
-      "Bash(npm install:*)",
-      "Bash(pnpm build:*)",
-      "Bash(cargo --version:*)",
-      "Bash(rustc:*)",
-      "Skill(superpowers:systematic-debugging)",
-      "Skill(superpowers:systematic-debugging:*)",
-      "Bash(rustup show:*)",
-      "Bash(where:*)",
-      "Bash(rustup toolchain:*)",
-      "Bash(test:*)",
-      "Bash(pnpm tauri:*)",
-      "Bash(powershell -Command:*)",
-      "Bash(powershell:*)",
-      "Bash(cargo check:*)"
+      "Bash(git add:*)",
+      "Bash(rm:*)"
     ]
   }
 }
