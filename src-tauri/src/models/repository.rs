@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use anyhow::{Result, anyhow};
 
 /// GitHub 仓库配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,12 +31,12 @@ impl Repository {
 
     /// 从 GitHub URL 提取仓库信息
     /// 支持格式: https://github.com/owner/repo
-    pub fn from_github_url(url: &str) -> Result<(String, String), String> {
+    pub fn from_github_url(url: &str) -> Result<(String, String)> {
         let url = url.trim_end_matches('/');
         let parts: Vec<&str> = url.split('/').collect();
 
         if parts.len() < 2 {
-            return Err("Invalid GitHub URL".to_string());
+            return Err(anyhow!("Invalid GitHub URL"));
         }
 
         let owner = parts[parts.len() - 2].to_string();

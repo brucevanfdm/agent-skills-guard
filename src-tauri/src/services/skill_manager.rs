@@ -3,17 +3,18 @@ use crate::security::SecurityScanner;
 use crate::services::{Database, GitHubService};
 use anyhow::{Result, Context};
 use std::path::PathBuf;
+use std::sync::Arc;
 use chrono::Utc;
 
 pub struct SkillManager {
-    db: Database,
+    db: Arc<Database>,
     github: GitHubService,
     scanner: SecurityScanner,
     skills_dir: PathBuf,
 }
 
 impl SkillManager {
-    pub fn new(db: Database) -> Self {
+    pub fn new(db: Arc<Database>) -> Self {
         let skills_dir = Self::get_skills_directory();
 
         Self {

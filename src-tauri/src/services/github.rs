@@ -1,6 +1,8 @@
 use crate::models::{GitHubContent, Repository, Skill};
 use anyhow::{Result, Context};
 use reqwest::Client;
+use std::future::Future;
+use std::pin::Pin;
 
 pub struct GitHubService {
     client: Client,
@@ -47,36 +49,38 @@ impl GitHubService {
     }
 
     /// 递归扫描目录
-    async fn scan_directory(
-        &self,
-        owner: &str,
-        repo: &str,
-        path: &str,
-        repo_url: &str,
-    ) -> Result<Vec<Skill>> {
-        let mut skills = Vec::new();
-        let contents = self.fetch_directory_contents(owner, repo, path).await?;
+    fn scan_directory<'a>(
+        &'a self,
+        owner: &'a str,
+        repo: &'a str,
+        path: &'a str,
+        repo_url: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<Skill>>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut skills = Vec::new();
+            let contents = self.fetch_directory_contents(owner, repo, path).await?;
 
-        for item in contents {
-            if item.content_type == "file" && self.is_skill_file(&item.name) {
-                let skill = Skill::new(
-                    item.name.clone(),
-                    repo_url.to_string(),
-                    item.path.clone(),
-                );
-                skills.push(skill);
-            } else if item.content_type == "dir" {
-                // 递归扫描（限制深度避免无限递归）
-                if path.split('/').count() < 5 {
-                    match self.scan_directory(owner, repo, &item.path, repo_url).await {
-                        Ok(mut sub_skills) => skills.append(&mut sub_skills),
-                        Err(e) => log::warn!("Failed to scan subdirectory {}: {}", item.path, e),
+            for item in contents {
+                if item.content_type == "file" && self.is_skill_file(&item.name) {
+                    let skill = Skill::new(
+                        item.name.clone(),
+                        repo_url.to_string(),
+                        item.path.clone(),
+                    );
+                    skills.push(skill);
+                } else if item.content_type == "dir" {
+                    // 递归扫描（限制深度避免无限递归）
+                    if path.split('/').count() < 5 {
+                        match self.scan_directory(owner, repo, &item.path, repo_url).await {
+                            Ok(mut sub_skills) => skills.append(&mut sub_skills),
+                            Err(e) => log::warn!("Failed to scan subdirectory {}: {}", item.path, e),
+                        }
                     }
                 }
             }
-        }
 
-        Ok(skills)
+            Ok(skills)
+        })
     }
 
     /// 获取目录内容

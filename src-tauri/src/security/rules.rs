@@ -34,7 +34,7 @@ lazy_static! {
 
     /// 文件读写操作
     pub static ref FILE_OPERATION_PATTERNS: Vec<(&'static str, &'static str)> = vec![
-        (r"open\s*\(.*['\"]w", "文件写入操作"),
+        (r#"open\s*\(.*['"]w"#, "文件写入操作"),
         (r"File\.write", "文件写入操作"),
         (r"fs\.writeFile", "文件写入操作"),
         (r"os\.remove", "文件删除操作"),
@@ -43,9 +43,9 @@ lazy_static! {
 
     /// 代码混淆特征
     pub static ref OBFUSCATION_PATTERNS: Vec<(&'static str, &'static str)> = vec![
-        (r"base64\.b64decode", "Base64 解码（可能用于混淆）"),
+        (r"base64\.b64decode", "Base64 解码(可能用于混淆)"),
         (r"\\x[0-9a-fA-F]{2}", "十六进制编码字符串"),
-        (r"chr\s*\(\s*\d+\s*\)", "字符编码（可能用于混淆）"),
+        (r"chr\s*\(\s*\d+\s*\)", "字符编码(可能用于混淆)"),
     ];
 }
 

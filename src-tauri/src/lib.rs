@@ -6,6 +6,7 @@ pub mod commands;
 use commands::AppState;
 use services::{Database, SkillManager};
 use std::sync::Arc;
+use tauri::Manager;
 use tokio::sync::Mutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -34,7 +35,7 @@ pub fn run() {
             let db = Arc::new(db);
 
             // 初始化 SkillManager
-            let skill_manager = SkillManager::new(Arc::clone(&db).as_ref().clone());
+            let skill_manager = SkillManager::new(Arc::clone(&db));
             let skill_manager = Arc::new(Mutex::new(skill_manager));
 
             // 初始化 GitHub 服务
