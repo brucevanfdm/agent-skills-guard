@@ -4,10 +4,13 @@ import { SkillsPage } from "./components/SkillsPage";
 import { RepositoriesPage } from "./components/RepositoriesPage";
 import { api } from "./lib/api";
 import { Terminal, Database, Zap } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
+  const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState<"skills" | "repositories">("skills");
   const [localScanMessage, setLocalScanMessage] = useState<string | null>(null);
   const [showScanAnimation, setShowScanAnimation] = useState(false);
@@ -17,7 +20,7 @@ function AppContent() {
   useEffect(() => {
     const initLocalSkills = async () => {
       setShowScanAnimation(true);
-      setLocalScanMessage("INITIALIZING_SKILL_SCANNER...");
+      setLocalScanMessage(t('scan.initializing'));
 
       await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -25,13 +28,13 @@ function AppContent() {
         const skills = await api.scanLocalSkills();
         queryClient.invalidateQueries({ queryKey: ["skills"] });
         if (skills.length > 0) {
-          setLocalScanMessage(`SCAN_COMPLETE: ${skills.length} SKILLS_DETECTED`);
+          setLocalScanMessage(t('scan.complete', { count: skills.length }));
         } else {
-          setLocalScanMessage("SCAN_COMPLETE: NO_LOCAL_SKILLS_FOUND");
+          setLocalScanMessage(t('scan.noSkills'));
         }
       } catch (error) {
         console.error("Failed to scan local skills:", error);
-        setLocalScanMessage("SCAN_ERROR: INITIALIZATION_FAILED");
+        setLocalScanMessage(t('scan.error'));
       } finally {
         setTimeout(() => {
           setShowScanAnimation(false);
@@ -40,10 +43,10 @@ function AppContent() {
       }
     };
     initLocalSkills();
-  }, [queryClient]);
+  }, [queryClient, t]);
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className="h-screen flex flex-col overflow-hidden bg-background relative">
       {/* Matrix background effect */}
       <div className="matrix-bg"></div>
 
@@ -63,10 +66,10 @@ function AppContent() {
       )}
 
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="flex-shrink-0 border-b border-border bg-card/50 backdrop-blur-sm z-40">
         <div className="container mx-auto px-6 py-6">
-          <div className="flex items-center gap-4">
-            {/* ASCII Logo */}
+          <div className="flex items-center justify-between">
+            {/* Left: ASCII Logo and Title */}
             <div className="flex items-center gap-4">
               <div className="text-terminal-cyan font-mono text-2xl leading-none select-none">
                 <pre className="text-xs leading-tight">
@@ -78,19 +81,22 @@ function AppContent() {
 
               <div>
                 <h1 className="text-2xl font-bold text-terminal-cyan text-glow tracking-wider">
-                  AGENT SKILLS GUARD
+                  {t('header.title')}
                 </h1>
                 <p className="text-xs text-muted-foreground font-mono mt-1 tracking-wide">
-                  <span className="text-terminal-green">&gt;</span> SECURE_SKILL_MANAGEMENT_PROTOCOL
+                  <span className="text-terminal-green">&gt;</span> {t('header.subtitle')}
                 </p>
               </div>
             </div>
+
+            {/* Right: Language Switcher */}
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
 
       {/* Navigation Tabs */}
-      <nav className="border-b border-border bg-card/30 backdrop-blur-sm sticky top-[88px] z-30">
+      <nav className="flex-shrink-0 border-b border-border bg-card/30 backdrop-blur-sm z-30">
         <div className="container mx-auto px-6">
           <div className="flex gap-1">
             <button
@@ -105,7 +111,7 @@ function AppContent() {
             >
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4" />
-                <span>SKILLS_REGISTRY</span>
+                <span>{t('nav.skills')}</span>
                 {currentTab === "skills" && (
                   <span className="text-terminal-green">●</span>
                 )}
@@ -124,7 +130,7 @@ function AppContent() {
             >
               <div className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
-                <span>REPO_CONFIG</span>
+                <span>{t('nav.repositories')}</span>
                 {currentTab === "repositories" && (
                   <span className="text-terminal-green">●</span>
                 )}
@@ -134,28 +140,30 @@ function AppContent() {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
-        <div
-          style={{
-            animation: 'fadeIn 0.4s ease-out'
-          }}
-        >
-          {currentTab === "skills" && <SkillsPage />}
-          {currentTab === "repositories" && <RepositoriesPage />}
+      {/* Main Content - Scrollable Area */}
+      <main className="flex-1 overflow-y-auto hide-scrollbar">
+        <div className="container mx-auto px-6 py-8">
+          <div
+            style={{
+              animation: 'fadeIn 0.4s ease-out'
+            }}
+          >
+            {currentTab === "skills" && <SkillsPage />}
+            {currentTab === "repositories" && <RepositoriesPage />}
+          </div>
         </div>
       </main>
 
-      {/* Footer Terminal Prompt */}
-      <footer className="border-t border-border bg-card/30 backdrop-blur-sm mt-auto">
+      {/* Footer - Fixed */}
+      <footer className="flex-shrink-0 border-t border-border bg-card/30 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-3">
           <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
             <span className="text-terminal-green">❯</span>
             <span>agent-skills-guard</span>
-            <span className="text-terminal-cyan">v0.1.0</span>
+            <span className="text-terminal-cyan">{t('footer.version')}0.1.0</span>
             <span className="mx-2">•</span>
-            <span className="text-terminal-purple">SYSTEM_STATUS:</span>
-            <span className="text-terminal-green">OPERATIONAL</span>
+            <span className="text-terminal-purple">{t('footer.status')}</span>
+            <span className="text-terminal-green">{t('footer.operational')}</span>
           </div>
         </div>
       </footer>
