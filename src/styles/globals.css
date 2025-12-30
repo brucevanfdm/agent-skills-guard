@@ -322,4 +322,14 @@
   .border-glow {
     box-shadow: 0 0 10px currentColor;
   }
+
+  /* Hide scrollbar but keep scroll functionality */
+  .hide-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }
