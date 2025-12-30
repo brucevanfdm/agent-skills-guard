@@ -6,6 +6,7 @@ import { api } from "./lib/api";
 import { Terminal, Database, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { WindowControls } from "./components/WindowControls";
 
 // 全局类型声明
 declare const __APP_VERSION__: string;
@@ -73,12 +74,12 @@ function AppContent() {
       )}
 
       {/* Header */}
-      <header className="flex-shrink-0 border-b border-border bg-card/50 backdrop-blur-sm z-40">
-        <div className="container mx-auto px-6 py-6">
+      <header className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur-sm shadow-lg z-40">
+        <div data-tauri-drag-region className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Left: ASCII Logo and Title */}
             <div className="flex items-center gap-4">
-              <div className="text-terminal-cyan font-mono text-2xl leading-none select-none">
+              <div className="text-terminal-cyan font-mono text-2xl leading-none select-none pointer-events-none">
                 <pre className="text-xs leading-tight">
 {`╔═══╗
 ║ ◎ ║
@@ -86,7 +87,7 @@ function AppContent() {
                 </pre>
               </div>
 
-              <div>
+              <div className="pointer-events-none">
                 <h1 className="text-2xl font-bold text-terminal-cyan text-glow tracking-wider">
                   {t('header.title')}
                 </h1>
@@ -96,8 +97,15 @@ function AppContent() {
               </div>
             </div>
 
-            {/* Right: Language Switcher */}
-            <LanguageSwitcher />
+            {/* Right: Language Switcher and Window Controls */}
+            <div className="flex items-center gap-4">
+              <div className="pointer-events-auto">
+                <LanguageSwitcher />
+              </div>
+              <div className="pointer-events-auto">
+                <WindowControls />
+              </div>
+            </div>
           </div>
         </div>
       </header>
