@@ -31,7 +31,17 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(if [ ! -d \"docs/plans\" ])",
+      "Bash(then mkdir -p docs/plans)",
+      "Bash(fi)",
+      "Bash(test:*)",
+      "Bash(pnpm list:*)",
+      "Bash(timeout /t 30 /nobreak)",
+      "Bash(ping:*)",
+      "Bash(tasklist:*)",
+      "Bash(if exist nul del /F nul)",
+      "Bash(timeout /t 15 /nobreak)"
     ]
   }
 }
