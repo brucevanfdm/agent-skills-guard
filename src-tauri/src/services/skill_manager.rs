@@ -219,12 +219,13 @@ impl SkillManager {
 
     /// 扫描本地 ~/.claude/skills/ 目录，导入未追踪的技能
     pub fn scan_local_skills(&self) -> Result<Vec<Skill>> {
-        let mut imported_skills = Vec::new();
+        let mut scanned_skills = Vec::new();  // 所有扫描到的技能
+        let mut imported_skills = Vec::new(); // 新导入的技能（用于日志）
 
         // 检查技能目录是否存在
         if !self.skills_dir.exists() {
             log::info!("Skills directory does not exist: {:?}", self.skills_dir);
-            return Ok(imported_skills);
+            return Ok(scanned_skills);
         }
 
         log::info!("Scanning local skills directory: {:?}", self.skills_dir);
@@ -255,11 +256,11 @@ impl SkillManager {
                         let checksum = self.scanner.calculate_checksum(content.as_bytes());
 
                         // 检查是否已存在（基于 checksum）
-                        let already_tracked = existing_skills.iter()
-                            .any(|s| s.checksum.as_ref() == Some(&checksum));
-
-                        if already_tracked {
+                        if let Some(existing_skill) = existing_skills.iter()
+                            .find(|s| s.checksum.as_ref() == Some(&checksum)) {
+                            // 已存在的技能，添加到扫描结果
                             log::debug!("Skill already tracked: {:?}", path);
+                            scanned_skills.push(existing_skill.clone());
                             continue;
                         }
 
@@ -279,7 +280,7 @@ impl SkillManager {
                             });
 
                         // 创建 skill 对象
-                        let mut skill = Skill {
+                        let skill = Skill {
                             id: format!("local::{}", checksum[..16].to_string()),
                             name,
                             description,
@@ -301,7 +302,8 @@ impl SkillManager {
 
                         // 保存到数据库
                         self.db.save_skill(&skill)?;
-                        imported_skills.push(skill);
+                        imported_skills.push(skill.clone());
+                        scanned_skills.push(skill);
 
                         log::info!("Imported local skill: {:?}", path);
                     }
@@ -312,8 +314,9 @@ impl SkillManager {
             }
         }
 
-        log::info!("Imported {} local skills", imported_skills.len());
-        Ok(imported_skills)
+        log::info!("Scanned {} local skills, imported {} new skills",
+                   scanned_skills.len(), imported_skills.len());
+        Ok(scanned_skills)
     }
 
     /// 解析 SKILL.md 的 frontmatter

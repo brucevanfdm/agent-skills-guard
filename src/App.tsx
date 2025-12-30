@@ -61,7 +61,7 @@ function AppContent() {
       {/* Scan notification banner */}
       {showScanAnimation && localScanMessage && (
         <div
-          className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-terminal-cyan/20 via-terminal-purple/20 to-terminal-cyan/20 border-b border-terminal-cyan/50 backdrop-blur-sm"
+          className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-terminal-cyan/20 via-terminal-purple/20 to-terminal-cyan/20 border-t border-terminal-cyan/50 backdrop-blur-sm"
           style={{ animation: 'fadeIn 0.3s ease-out' }}
         >
           <div className="container mx-auto px-6 py-3 flex items-center gap-3">
