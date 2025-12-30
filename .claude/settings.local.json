@@ -41,7 +41,10 @@
       "Bash(ping:*)",
       "Bash(tasklist:*)",
       "Bash(if exist nul del /F nul)",
-      "Bash(timeout /t 15 /nobreak)"
+      "Bash(timeout /t 15 /nobreak)",
+      "Bash(dir:*)",
+      "Bash(pnpm tauri:*)",
+      "Bash(ls:*)"
     ]
   }
 }
