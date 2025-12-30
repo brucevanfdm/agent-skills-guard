@@ -9,7 +9,12 @@
       "Skill(superpowers:executing-plans:*)",
       "Bash(cargo check:*)",
       "Bash(cargo test:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm dev)",
+      "Skill(frontend-design:frontend-design)",
+      "Skill(frontend-design:frontend-design:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }

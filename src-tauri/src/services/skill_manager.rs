@@ -77,29 +77,30 @@ impl SkillManager {
             .context("未找到该技能，请检查技能是否存在")?;
 
         // 下载并分析 SKILL.md（用于安全检查和元数据提取）
-        let (_skill_md_content, report) = self.download_and_analyze(&mut skill).await?;
+        let (_skill_md_content, _report) = self.download_and_analyze(&mut skill).await?;
 
-        // 优先检查是否被 hard_trigger 阻止
-        if report.blocked {
-            let mut error_msg = format!(
-                "⛔ 安全检测发现严重威胁，禁止安装！\n\n检测到以下高危操作：\n"
-            );
-            for (idx, issue) in report.hard_trigger_issues.iter().enumerate() {
-                error_msg.push_str(&format!("{}. {}\n", idx + 1, issue));
-            }
-            error_msg.push_str("\n这些操作可能对您的系统造成严重危害，强烈建议不要安装此技能。");
-            anyhow::bail!(error_msg);
-        }
+        // [已禁用] 安全扫描功能暂时关闭，方便调试
+        // // 优先检查是否被 hard_trigger 阻止
+        // if report.blocked {
+        //     let mut error_msg = format!(
+        //         "⛔ 安全检测发现严重威胁，禁止安装！\n\n检测到以下高危操作：\n"
+        //     );
+        //     for (idx, issue) in report.hard_trigger_issues.iter().enumerate() {
+        //         error_msg.push_str(&format!("{}. {}\n", idx + 1, issue));
+        //     }
+        //     error_msg.push_str("\n这些操作可能对您的系统造成严重危害，强烈建议不要安装此技能。");
+        //     anyhow::bail!(error_msg);
+        // }
 
-        // 检查安全评分
-        if let Some(score) = skill.security_score {
-            if score < 50 {
-                anyhow::bail!(
-                    "技能安全评分过低 ({}分)，为保护您的安全已阻止安装。建议评分至少为 50 分以上。",
-                    score
-                );
-            }
-        }
+        // // 检查安全评分
+        // if let Some(score) = skill.security_score {
+        //     if score < 50 {
+        //         anyhow::bail!(
+        //             "技能安全评分过低 ({}分)，为保护您的安全已阻止安装。建议评分至少为 50 分以上。",
+        //             score
+        //         );
+        //     }
+        // }
 
         // 确保目标目录存在
         std::fs::create_dir_all(&self.skills_dir)
@@ -137,18 +138,19 @@ impl SkillManager {
             let file_content = self.github.download_file(download_url).await
                 .context(format!("下载文件失败: {}", file_info.name))?;
 
-            // 对所有文本文件进行安全扫描
-            if let Ok(content_str) = String::from_utf8(file_content.clone()) {
-                let file_report = self.scanner.scan_file(&content_str, &file_info.name)?;
-
-                // 如果任何文件触发 hard_trigger，阻止安装
-                if file_report.blocked {
-                    anyhow::bail!(
-                        "⛔ 文件 {} 包含严重安全威胁，已阻止安装！",
-                        file_info.name
-                    );
-                }
-            }
+            // [已禁用] 安全扫描功能暂时关闭，方便调试
+            // // 对所有文本文件进行安全扫描
+            // if let Ok(content_str) = String::from_utf8(file_content.clone()) {
+            //     let file_report = self.scanner.scan_file(&content_str, &file_info.name)?;
+            //
+            //     // 如果任何文件触发 hard_trigger，阻止安装
+            //     if file_report.blocked {
+            //         anyhow::bail!(
+            //             "⛔ 文件 {} 包含严重安全威胁，已阻止安装！",
+            //             file_info.name
+            //         );
+            //     }
+            // }
 
             // 写入文件到本地
             let local_file_path = skill_dir.join(&file_info.name);

@@ -1,47 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
+    /* Terminal-inspired Dark Theme */
+    --background: 220 13% 8%;
+    --foreground: 160 84% 88%;
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --card: 220 15% 11%;
+    --card-foreground: 160 84% 88%;
+
+    --primary: 173 80% 60%;
+    --primary-foreground: 220 13% 8%;
+
+    --secondary: 280 70% 55%;
+    --secondary-foreground: 160 84% 88%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 160 20% 55%;
+
+    --accent: 173 80% 60%;
+    --accent-foreground: 220 13% 8%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 160 84% 88%;
+
+    --border: 173 30% 25%;
+    --input: 220 15% 18%;
+    --ring: 173 80% 60%;
+
+    --radius: 0.25rem;
+
+    /* Custom Terminal Colors */
+    --terminal-green: 142 71% 45%;
+    --terminal-cyan: 173 80% 60%;
+    --terminal-purple: 280 70% 55%;
+    --terminal-orange: 25 95% 53%;
+    --terminal-red: 0 72% 55%;
+    --terminal-yellow: 48 96% 53%;
+
+    /* Glow effects */
+    --glow-cyan: 0 0 20px rgba(94, 234, 212, 0.3);
+    --glow-purple: 0 0 20px rgba(192, 132, 252, 0.3);
   }
 }
 
@@ -49,7 +52,274 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15),
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.05;
+  }
+
+  /* Terminal cursor blink */
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .terminal-cursor::after {
+    content: '▊';
+    animation: blink 1s infinite;
+    color: hsl(var(--terminal-cyan));
+  }
+
+  /* Glitch effect */
+  @keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+  }
+
+  /* Fade in animation */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Slide in from left */
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Pulse glow */
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 5px rgba(94, 234, 212, 0.3),
+                  0 0 10px rgba(94, 234, 212, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 10px rgba(94, 234, 212, 0.5),
+                  0 0 20px rgba(94, 234, 212, 0.3),
+                  0 0 30px rgba(94, 234, 212, 0.2);
+    }
+  }
+
+  /* Typing effect */
+  @keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+}
+
+@layer components {
+  /* Terminal prompt */
+  .terminal-prompt {
+    @apply inline-flex items-center gap-2 text-terminal-cyan;
+  }
+
+  .terminal-prompt::before {
+    content: '>';
+    @apply text-terminal-green font-bold;
+  }
+
+  /* ASCII border */
+  .ascii-border {
+    position: relative;
+    border: 1px solid hsl(var(--border));
+  }
+
+  .ascii-border::before {
+    content: '┌─────────────────┐';
+    position: absolute;
+    top: -12px;
+    left: 10px;
+    background: hsl(var(--card));
+    padding: 0 8px;
+    font-size: 10px;
+    color: hsl(var(--terminal-cyan));
+    line-height: 1;
+  }
+
+  /* Neon button */
+  .neon-button {
+    @apply relative px-4 py-2 rounded font-medium transition-all duration-300;
+    @apply bg-transparent border border-terminal-cyan text-terminal-cyan;
+    @apply hover:bg-terminal-cyan hover:text-background;
+    @apply hover:shadow-[0_0_10px_rgba(94,234,212,0.5)];
+  }
+
+  /* Cyber card */
+  .cyber-card {
+    @apply relative bg-card border border-border rounded overflow-hidden;
+    @apply transition-all duration-300;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--muted)) 100%
+    );
+  }
+
+  .cyber-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--terminal-cyan)),
+      transparent
+    );
+    transition: left 0.5s;
+  }
+
+  .cyber-card:hover::before {
+    left: 100%;
+  }
+
+  .cyber-card:hover {
+    border-color: hsl(var(--terminal-cyan));
+    box-shadow: 0 0 20px rgba(94, 234, 212, 0.15);
+  }
+
+  /* Status indicator */
+  .status-indicator {
+    @apply inline-flex items-center gap-2 px-2 py-1 rounded text-xs font-medium;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .status-indicator::before {
+    content: '●';
+    @apply text-lg leading-none;
+  }
+
+  .status-installed {
+    @apply bg-terminal-green/10 text-terminal-green border border-terminal-green/30;
+  }
+
+  .status-installing {
+    @apply bg-terminal-cyan/10 text-terminal-cyan border border-terminal-cyan/30;
+    animation: pulseGlow 2s infinite;
+  }
+
+  .status-error {
+    @apply bg-terminal-red/10 text-terminal-red border border-terminal-red/30;
+  }
+
+  /* Terminal input */
+  .terminal-input {
+    @apply w-full px-3 py-2 bg-input border border-border rounded;
+    @apply text-foreground font-mono text-sm;
+    @apply focus:outline-none focus:border-terminal-cyan focus:ring-1 focus:ring-terminal-cyan;
+    @apply transition-all duration-200;
+  }
+
+  .terminal-input::placeholder {
+    @apply text-muted-foreground/50;
+  }
+
+  /* Glitch text */
+  .glitch-text {
+    position: relative;
+    display: inline-block;
+  }
+
+  .glitch-text:hover {
+    animation: glitch 0.3s infinite;
+  }
+
+  /* Matrix rain effect */
+  .matrix-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.03;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        hsl(var(--terminal-cyan)) 0px,
+        transparent 1px,
+        transparent 40px
+      );
+    animation: matrix-scroll 20s linear infinite;
+  }
+
+  @keyframes matrix-scroll {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100vh; }
+  }
+}
+
+@layer utilities {
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  .border-glow {
+    box-shadow: 0 0 10px currentColor;
   }
 }
