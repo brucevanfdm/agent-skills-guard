@@ -1,0 +1,16 @@
+# Skill-Security-Scanner 依赖项
+
+# 核心依赖
+pyyaml>=6.0
+click>=8.0.0
+
+# 开发依赖
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=23.0.0
+ruff>=0.1.0
+mypy>=1.0.0
+
+# 文档
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0

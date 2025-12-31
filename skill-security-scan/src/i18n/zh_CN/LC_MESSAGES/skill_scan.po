@@ -1,0 +1,216 @@
+# Chinese (Simplified) translations for skill-security-scan
+# Copyright (C) 2024
+# This file is distributed under the same license as the skill-security-scan package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: skill-security-scan 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-12-29 12:00+0800\n"
+"PO-Revision-Date: 2024-12-29 12:00+0800\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# CLI 消息
+msgid "Skill-Security-Scanner - Claude Skills Security Scanner"
+msgstr "Skill-Security-Scanner - Claude Skills 安全扫描工具"
+
+msgid "Scan Skill directory"
+msgstr "扫描 Skill 目录"
+
+msgid "PATH: Skill file or directory path"
+msgstr "PATH: Skill 文件或目录路径"
+
+msgid "Scanning: {path}"
+msgstr "正在扫描: {path}"
+
+msgid "Recursive scan subdirectories"
+msgstr "递归扫描子目录"
+
+msgid "Output report file"
+msgstr "输出报告文件"
+
+msgid "Report format"
+msgstr "报告格式"
+
+msgid "Custom rules file"
+msgstr "自定义规则文件"
+
+msgid "Minimum display level"
+msgstr "最低显示级别"
+
+msgid "Disable color output"
+msgstr "禁用彩色输出"
+
+msgid "Exit with non-zero code on specified level"
+msgstr "遇到指定级别错误时退出码非0"
+
+msgid "Error: {error}"
+msgstr "错误: {error}"
+
+msgid "Report saved to: {output}"
+msgstr "报告已保存到: {output}"
+
+# 严重级别
+msgid "CRITICAL"
+msgstr "严重"
+
+msgid "HIGH"
+msgstr "高"
+
+msgid "WARNING"
+msgstr "警告"
+
+msgid "INFO"
+msgstr "提示"
+
+msgid "SAFE"
+msgstr "安全"
+
+# 报告消息
+msgid "[*] Scanning Skill: "
+msgstr "[*] 扫描 Skill: "
+
+msgid "[*] Scanning Skills:"
+msgstr "[*] 扫描 Skills:"
+
+msgid "[*] Summary:"
+msgstr "[*] 摘要:"
+
+msgid "[*] Recommendation: {recommendation}"
+msgstr "[*] 建议: {recommendation}"
+
+msgid "Scanning Skill: {path}"
+msgstr "扫描 Skill: {path}"
+
+msgid "Risk Level: {level} ({score:.1f}/10)"
+msgstr "风险等级: {level} ({score:.1f}/10)"
+
+msgid "{icon} {severity} Issues ({count}):"
+msgstr "{icon} {severity} 问题 ({count} 个):"
+
+msgid "in {file}:{line}"
+msgstr "在 {file}:{line}"
+
+msgid "Pattern: {pattern}"
+msgstr "模式: {pattern}"
+
+msgid "Confidence: {confidence}"
+msgstr "置信度: {confidence}"
+
+msgid "HIGH"
+msgstr "高"
+
+msgid "MEDIUM"
+msgstr "中"
+
+msgid "LOW"
+msgstr "低"
+
+msgid "Summary:"
+msgstr "摘要:"
+
+msgid "Total Files Scanned: {count}"
+msgstr "扫描文件总数: {count}"
+
+msgid "Critical Issues: {count}"
+msgstr "严重问题: {count}"
+
+msgid "Warning Issues: {count}"
+msgstr "警告问题: {count}"
+
+msgid "Info Issues: {count}"
+msgstr "提示问题: {count}"
+
+msgid "Total Issues: {count}"
+msgstr "问题总数: {count}"
+
+msgid "Recommendation: {recommendation}"
+msgstr "建议: {recommendation}"
+
+# 建议
+msgid "DO NOT USE THIS SKILL - 检测到严重安全风险"
+msgstr "请勿使用 - 检测到严重安全风险"
+
+msgid "NOT RECOMMENDED - 检测到高风险问题"
+msgstr "不推荐使用 - 检测到高风险问题"
+
+msgid "REVIEW NEEDED - 请人工审查后使用"
+msgstr "需要审查 - 请人工审查后使用"
+
+msgid "USE WITH CAUTION - 存在轻微风险"
+msgstr "谨慎使用 - 存在轻微风险"
+
+msgid "SAFE - 未检测到明显安全问题"
+msgstr "安全 - 未检测到明显安全问题"
+
+# 白名单命令
+msgid "Manage whitelist"
+msgstr "管理白名单"
+
+msgid "ACTION: Action (add/remove/list)"
+msgstr "ACTION: 操作 (add/remove/list)"
+
+msgid "RULE_ID: Rule ID (required for add/remove)"
+msgstr "RULE_ID: 规则 ID (add/remove 时需要)"
+
+msgid "Current whitelist:"
+msgstr "当前白名单:"
+
+msgid "Whitelist is empty"
+msgstr "白名单为空"
+
+msgid "Error: rule_id is required for add action"
+msgstr "错误: add 操作需要 rule_id"
+
+msgid "Added {rule_id} to whitelist"
+msgstr "已将 {rule_id} 添加到白名单"
+
+msgid "Error: rule_id is required for remove action"
+msgstr "错误: remove 操作需要 rule_id"
+
+msgid "Removed {rule_id} from whitelist"
+msgstr "已将 {rule_id} 从白名单移除"
+
+# 报告命令
+msgid "View detailed report"
+msgstr "查看详细报告"
+
+msgid "REPORT_FILE: Report file path"
+msgstr "REPORT_FILE: 报告文件路径"
+
+# 通用消息
+msgid "  and {count} more"
+msgstr "  还有 {count} 个"
+
+msgid "Skill path not found: {path}"
+msgstr "Skill 路径未找到: {path}"
+
+msgid "Warning: Could not read file {file}: {error}"
+msgstr "警告: 无法读取文件 {file}: {error}"
+
+msgid "Error scanning {path}: {error}"
+msgstr "扫描错误 {path}: {error}"
+
+msgid "Warning: Failed to create rule {rule_id}: {error}"
+msgstr "警告: 创建规则失败 {rule_id}: {error}"
+
+msgid "Warning: Could not read SKILL.md: {error}"
+msgstr "警告: 无法读取 SKILL.md: {error}"
+
+msgid "Warning: Could not read file (encoding)"
+msgstr "警告: 无法读取文件 (编码问题)"
+
+msgid "Error loading configuration"
+msgstr "加载配置错误"
+
+msgid "Warning: Language '{lang}' not supported, using '{default}'"
+msgstr "警告: 不支持语言 '{lang}'，使用 '{default}'"
+
+msgid "Warning: Failed to load translation for '{lang}': {error}"
+msgstr "警告: 加载翻译失败 '{lang}': {error}"

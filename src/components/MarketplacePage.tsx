@@ -7,7 +7,7 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
 
 export function MarketplacePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: allSkills, isLoading } = useSkills();
   const installMutation = useInstallSkill();
   const uninstallMutation = useUninstallSkill();
@@ -40,15 +40,15 @@ export function MarketplacePage() {
       .map(([owner, count]) => ({
         owner,
         count,
-        displayName: owner === "local" ? "📁 本地" : `@${owner}`
+        displayName: owner === "local" ? t('skills.marketplace.localRepo') : `@${owner}`
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     return [
-      { owner: "all", count: allSkills.length, displayName: "全部" },
+      { owner: "all", count: allSkills.length, displayName: t('skills.marketplace.allRepos') },
       ...repos
     ];
-  }, [allSkills]);
+  }, [allSkills, i18n.language, t]);
 
   // 筛选逻辑
   const filteredSkills = useMemo(() => {
@@ -111,7 +111,7 @@ export function MarketplacePage() {
             <span>{t('nav.marketplace')}</span>
           </h2>
           <p className="text-xs text-muted-foreground font-mono mt-1">
-            <span className="text-terminal-green">&gt;</span> 找到 {filteredSkills.length} 个技能
+            <span className="text-terminal-green">&gt;</span> {t('skills.marketplace.found', { count: filteredSkills.length })}
           </p>
         </div>
 
@@ -122,7 +122,7 @@ export function MarketplacePage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="搜索技能..."
+              placeholder={t('skills.marketplace.search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-terminal-cyan transition-colors"
@@ -149,7 +149,7 @@ export function MarketplacePage() {
               checked={hideInstalled}
               onChange={(e) => setHideInstalled(e.target.checked)}
             />
-            <span>隐藏已安装</span>
+            <span>{t('skills.marketplace.hideInstalled')}</span>
           </label>
         </div>
       </div>
@@ -220,8 +220,8 @@ export function MarketplacePage() {
           <div className="text-terminal-cyan font-mono text-2xl mb-4">🔍</div>
           <p className="text-sm text-muted-foreground font-mono mb-2">
             {searchQuery
-              ? `没有找到包含"${searchQuery}"的技能`
-              : "当前筛选条件下没有技能"}
+              ? t('skills.marketplace.noResults', { query: searchQuery })
+              : t('skills.marketplace.noSkillsInFilter')}
           </p>
           <button
             onClick={() => {
@@ -231,7 +231,7 @@ export function MarketplacePage() {
             }}
             className="mt-4 px-4 py-2 rounded bg-terminal-cyan/10 border border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/20 transition-colors font-mono text-sm"
           >
-            清除筛选
+            {t('skills.marketplace.clearFilters')}
           </button>
         </div>
       )}
@@ -296,10 +296,10 @@ function SkillCard({
 
     try {
       await openPath(skill.local_path);
-      showLocalToast(`已打开文件夹`);
+      showLocalToast(t('skills.folder.opened'));
     } catch (error: any) {
       console.error('[ERROR] Failed to open folder:', error);
-      showLocalToast(`打开文件夹失败：${error?.message || String(error)}`);
+      showLocalToast(t('skills.folder.openFailed', { error: error?.message || String(error) }));
     }
   };
 

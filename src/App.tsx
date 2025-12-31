@@ -52,7 +52,8 @@ function AppContent() {
       }
     };
     initLocalSkills();
-  }, [queryClient, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background relative">

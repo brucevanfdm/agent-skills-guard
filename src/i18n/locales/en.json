@@ -65,6 +65,27 @@
     "installWarning": "Installing this skill may compromise system security. Verify source authenticity before proceeding.",
     "abort": "ABORT",
     "proceedAnyway": "PROCEED_ANYWAY",
+    "marketplace": {
+      "found": "FOUND_{{count}}_SKILLS",
+      "search": "SEARCH_SKILLS...",
+      "hideInstalled": "HIDE_INSTALLED",
+      "clearFilters": "CLEAR_FILTERS",
+      "noResults": "No skills found containing \"{{query}}\"",
+      "noSkillsInFilter": "No skills match current filters",
+      "localRepo": "📁 LOCAL",
+      "allRepos": "ALL"
+    },
+    "installedPage": {
+      "count": "INSTALLED_{{count}}_SKILLS",
+      "search": "SEARCH_INSTALLED_SKILLS...",
+      "clearSearch": "CLEAR_SEARCH",
+      "noResults": "No skills found containing \"{{query}}\"",
+      "empty": "NO_INSTALLED_SKILLS_YET"
+    },
+    "folder": {
+      "opened": "FOLDER_OPENED",
+      "openFailed": "OPEN_FOLDER_FAILED: {{error}}"
+    },
     "toast": {
       "installed": "[SUCCESS] SKILL_INSTALLED",
       "installFailed": "[ERROR] INSTALL_FAILED",
@@ -91,6 +112,30 @@
     "scanning": "SCANNING",
     "noReposFound": "No_Repositories_Found",
     "clickAddRepo": "Click \"ADD_REPO\" to configure your first repository",
+    "cache": {
+      "stats": "CACHE_STATISTICS",
+      "totalRepos": "TOTAL_REPOSITORIES",
+      "cached": "CACHED",
+      "size": "CACHE_SIZE",
+      "statusCached": "CACHED",
+      "statusUncached": "UNCACHED",
+      "refresh": "REFRESH_CACHE",
+      "refreshing": "REFRESHING",
+      "refreshTooltip": "Refresh cache (re-download)",
+      "clear": "CLEAR_CACHE",
+      "clearTooltip": "Clear local cache",
+      "confirmClear": "Are you sure you want to clear the cache for this repository? Next scan will re-download.",
+      "confirmRefresh": "Are you sure you want to refresh the cache? Will re-download latest repository content.",
+      "cleared": "CACHE_CLEARED",
+      "refreshed": "CACHE_REFRESHED, found {{count}} skills",
+      "clearFailed": "CLEAR_FAILED: {{error}}",
+      "refreshFailed": "REFRESH_FAILED: {{error}}"
+    },
+    "date": {
+      "today": "TODAY",
+      "yesterday": "YESTERDAY",
+      "daysAgo": "{{days}}_DAYS_AGO"
+    },
     "toast": {
       "added": "REPOSITORY_ADDED // SCANNING_SKILLS...",
       "error": "ERROR:",

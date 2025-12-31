@@ -76,7 +76,7 @@ export function InstalledSkillsPage() {
               <span>{t('nav.installed')}</span>
             </h2>
             <p className="text-xs text-muted-foreground font-mono mt-1">
-              <span className="text-terminal-green">&gt;</span> 已安装 {filteredSkills.length} 个技能
+              <span className="text-terminal-green">&gt;</span> {t('skills.installedPage.count', { count: filteredSkills.length })}
             </p>
           </div>
         </div>
@@ -86,7 +86,7 @@ export function InstalledSkillsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="搜索已安装的技能..."
+            placeholder={t('skills.installedPage.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-terminal-cyan transition-colors"
@@ -147,14 +147,14 @@ export function InstalledSkillsPage() {
             {searchQuery ? "🔍" : "📦"}
           </div>
           <p className="text-sm text-muted-foreground font-mono">
-            {searchQuery ? `没有找到包含"${searchQuery}"的技能` : "还没有安装任何技能"}
+            {searchQuery ? t('skills.installedPage.noResults', { query: searchQuery }) : t('skills.installedPage.empty')}
           </p>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
               className="mt-4 px-4 py-2 rounded bg-terminal-cyan/10 border border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/20 transition-colors font-mono text-sm"
             >
-              清除搜索
+              {t('skills.installedPage.clearSearch')}
             </button>
           )}
         </div>
@@ -215,10 +215,10 @@ function SkillCard({
 
     try {
       await openPath(skill.local_path);
-      showLocalToast(`已打开文件夹`);
+      showLocalToast(t('skills.folder.opened'));
     } catch (error: any) {
       console.error('[ERROR] Failed to open folder:', error);
-      showLocalToast(`打开文件夹失败：${error?.message || String(error)}`);
+      showLocalToast(t('skills.folder.openFailed', { error: error?.message || String(error) }));
     }
   };
 

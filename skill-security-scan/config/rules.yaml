@@ -1,0 +1,157 @@
+# Skill-Security-Scanner 默认规则配置
+
+network_rules:
+  - id: NET001
+    name: "外部网络请求"
+    severity: CRITICAL
+    patterns:
+      - "curl\\s+.*http"
+      - "wget\\s+"
+      - "requests\\.(post|get|put|delete)\\("
+      - "urllib\\.(request|parse)"
+      - "httpx\\."
+      - "fetch\\("
+    description: "检测到向外发送数据的网络请求"
+    allowed_domains:
+      - "api.anthropic.com"
+      - "github.com"
+      - "pypi.org"
+      - "npmjs.com"
+
+  - id: NET002
+    name: "数据外传"
+    severity: CRITICAL
+    patterns:
+      - "curl.*-d.*@"
+      - "wget.*--post-data"
+      - "nc\\s+.*-l"
+      - "netcat.*-l"
+    description: "检测到可能的数据外传行为"
+
+file_rules:
+  - id: FILE001
+    name: "敏感文件访问"
+    severity: CRITICAL
+    patterns:
+      - "~?/\\.ssh/"
+      - "~?/\\.env"
+      - "~?/\\.aws/"
+      - "~?/\\.azure/"
+      - "~?/\\.credentials"
+      - "\\.pem"
+      - "\\.key"
+      - "id_rsa"
+      - "id_ed25519"
+      - "credentials\\.json"
+      - "secrets\\.(yaml|yml|json|env)"
+      - "password"
+      - "token"
+      - "api[_-]?key"
+    description: "尝试访问敏感文件"
+
+  - id: FILE002
+    name: "危险文件操作"
+    severity: CRITICAL
+    patterns:
+      - "rm\\s+-rf\\s+/"
+      - "chmod\\s+777"
+      - "chmod\\s+a\\+rwx"
+      - "dd\\s+.*of=/"
+      - ">\\s+/(etc|usr|bin|sbin)/"
+    description: "执行危险的文件操作"
+
+command_rules:
+  - id: CMD001
+    name: "危险命令执行"
+    severity: CRITICAL
+    patterns:
+      - "\\bsudo\\b"
+      - "\\bsu\\s"
+      - "rm\\s+-rf\\s+/"
+      - "chmod\\s+777"
+      - "\\bdd\\s+.*of=/"
+      - ":()>.*\\("
+    description: "执行可能破坏系统的命令"
+
+  - id: CMD002
+    name: "系统命令调用"
+    severity: WARNING
+    patterns:
+      - "\\bos\\.system\\s*\\("
+      - "subprocess\\.(call|run|Popen).*shell\\s*=\\s*True"
+      - "\\bexec\\s*\\("
+      - "popen\\s*\\("
+    description: "调用系统命令执行功能"
+
+injection_rules:
+  - id: INJ001
+    name: "代码注入"
+    severity: CRITICAL
+    patterns:
+      - "inject.*into.*file"
+      - "prepend.*__import__"
+      - "inject.*code"
+      - "insert.*into.*file"
+    description: "检测到代码注入模式"
+
+  - id: INJ002
+    name: "动态代码执行"
+    severity: WARNING
+    patterns:
+      - "\\beval\\s*\\("
+      - "\\bexec\\s*\\("
+      - "__import__\\s*\\("
+      - "\\bcompile\\s*\\("
+    description: "动态执行代码片段"
+
+  - id: INJ003
+    name: "后门植入"
+    severity: CRITICAL
+    patterns:
+      - "bash\\s+-i\\s+>&\\s*/dev/tcp/"
+      - "nc\\s+-.*-e\\s+/"
+      - "netcat.*-e"
+      - "if.*PROD.*then.*(system|exec|eval|shell)"
+    description: "检测到后门植入模式"
+
+dependency_rules:
+  - id: DEP001
+    name: "全局包安装"
+    severity: WARNING
+    patterns:
+      - "pip\\s+install.*--global"
+      - "npm\\s+install.*-g"
+      - "npm\\s+i.*-g"
+      - "yarn\\s+global"
+      - "gem\\s+install"
+    description: "全局安装可能影响其他项目"
+
+  - id: DEP002
+    name: "强制版本覆盖"
+    severity: WARNING
+    patterns:
+      - "install.*==.*force"
+      - "--upgrade"
+      - "--force-reinstall"
+      - "--ignore-installed"
+    description: "可能破坏依赖环境"
+
+obfuscation_rules:
+  - id: OBF001
+    name: "代码混淆"
+    severity: WARNING
+    patterns:
+      - "base64\\.decode"
+      - "base64\\.b64decode"
+      - "chr\\s*\\(.+\\)\\s*\\+\\s*chr"
+      - "exec\\s*\\(.*decode"
+    description: "检测到可能的代码混淆"
+
+  - id: OBF002
+    name: "隐藏命令"
+    severity: WARNING
+    patterns:
+      - "__import__.*\\[.*\\]"
+      - "getattr\\s*\\(.*\\s*,\\s*['\"].*['\"]\\s*\\)\\s*\\("
+      - "vars\\(\\)\\[.*\\]"
+    description: "使用间接方式调用函数"

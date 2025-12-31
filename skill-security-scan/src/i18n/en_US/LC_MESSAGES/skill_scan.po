@@ -1,0 +1,216 @@
+# English translations for skill-security-scan
+# Copyright (C) 2024
+# This file is distributed under the same license as the skill-security-scan package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: skill-security-scan 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-12-29 12:00+0800\n"
+"PO-Revision-Date: 2024-12-29 12:00+0800\n"
+"Last-Translator: \n"
+"Language-Team: English\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# CLI 消息
+msgid "Skill-Security-Scanner - Claude Skills Security Scanner"
+msgstr "Skill-Security-Scanner - Claude Skills Security Scanner"
+
+msgid "Scan Skill directory"
+msgstr "Scan Skill directory"
+
+msgid "PATH: Skill file or directory path"
+msgstr "PATH: Skill file or directory path"
+
+msgid "Scanning: {path}"
+msgstr "Scanning: {path}"
+
+msgid "Recursive scan subdirectories"
+msgstr "Recursive scan subdirectories"
+
+msgid "Output report file"
+msgstr "Output report file"
+
+msgid "Report format"
+msgstr "Report format"
+
+msgid "Custom rules file"
+msgstr "Custom rules file"
+
+msgid "Minimum display level"
+msgstr "Minimum display level"
+
+msgid "Disable color output"
+msgstr "Disable color output"
+
+msgid "Exit with non-zero code on specified level"
+msgstr "Exit with non-zero code on specified level"
+
+msgid "Error: {error}"
+msgstr "Error: {error}"
+
+msgid "Report saved to: {output}"
+msgstr "Report saved to: {output}"
+
+# 严重级别
+msgid "CRITICAL"
+msgstr "CRITICAL"
+
+msgid "HIGH"
+msgstr "HIGH"
+
+msgid "WARNING"
+msgstr "WARNING"
+
+msgid "INFO"
+msgstr "INFO"
+
+msgid "SAFE"
+msgstr "SAFE"
+
+# 报告消息
+msgid "[*] Scanning Skill: "
+msgstr "[*] Scanning Skill: "
+
+msgid "[*] Scanning Skills:"
+msgstr "[*] Scanning Skills:"
+
+msgid "[*] Summary:"
+msgstr "[*] Summary:"
+
+msgid "[*] Recommendation: {recommendation}"
+msgstr "[*] Recommendation: {recommendation}"
+
+msgid "Scanning Skill: {path}"
+msgstr "Scanning Skill: {path}"
+
+msgid "Risk Level: {level} ({score:.1f}/10)"
+msgstr "Risk Level: {level} ({score:.1f}/10)"
+
+msgid "{icon} {severity} Issues ({count}):"
+msgstr "{icon} {severity} Issues ({count}):"
+
+msgid "in {file}:{line}"
+msgstr "in {file}:{line}"
+
+msgid "Pattern: {pattern}"
+msgstr "Pattern: {pattern}"
+
+msgid "Confidence: {confidence}"
+msgstr "Confidence: {confidence}"
+
+msgid "HIGH"
+msgstr "HIGH"
+
+msgid "MEDIUM"
+msgstr "MEDIUM"
+
+msgid "LOW"
+msgstr "LOW"
+
+msgid "Summary:"
+msgstr "Summary:"
+
+msgid "Total Files Scanned: {count}"
+msgstr "Total Files Scanned: {count}"
+
+msgid "Critical Issues: {count}"
+msgstr "Critical Issues: {count}"
+
+msgid "Warning Issues: {count}"
+msgstr "Warning Issues: {count}"
+
+msgid "Info Issues: {count}"
+msgstr "Info Issues: {count}"
+
+msgid "Total Issues: {count}"
+msgstr "Total Issues: {count}"
+
+msgid "Recommendation: {recommendation}"
+msgstr "Recommendation: {recommendation}"
+
+# 建议
+msgid "DO NOT USE THIS SKILL - 检测到严重安全风险"
+msgstr "DO NOT USE THIS SKILL - Critical security risks detected"
+
+msgid "NOT RECOMMENDED - 检测到高风险问题"
+msgstr "NOT RECOMMENDED - High-risk issues detected"
+
+msgid "REVIEW NEEDED - 请人工审查后使用"
+msgstr "REVIEW NEEDED - Manual review required before use"
+
+msgid "USE WITH CAUTION - 存在轻微风险"
+msgstr "USE WITH CAUTION - Minor risks detected"
+
+msgid "SAFE - 未检测到明显安全问题"
+msgstr "SAFE - No obvious security issues detected"
+
+# 白名单命令
+msgid "Manage whitelist"
+msgstr "Manage whitelist"
+
+msgid "ACTION: Action (add/remove/list)"
+msgstr "ACTION: Action (add/remove/list)"
+
+msgid "RULE_ID: Rule ID (required for add/remove)"
+msgstr "RULE_ID: Rule ID (required for add/remove)"
+
+msgid "Current whitelist:"
+msgstr "Current whitelist:"
+
+msgid "Whitelist is empty"
+msgstr "Whitelist is empty"
+
+msgid "Error: rule_id is required for add action"
+msgstr "Error: rule_id is required for add action"
+
+msgid "Added {rule_id} to whitelist"
+msgstr "Added {rule_id} to whitelist"
+
+msgid "Error: rule_id is required for remove action"
+msgstr "Error: rule_id is required for remove action"
+
+msgid "Removed {rule_id} from whitelist"
+msgstr "Removed {rule_id} from whitelist"
+
+# 报告命令
+msgid "View detailed report"
+msgstr "View detailed report"
+
+msgid "REPORT_FILE: Report file path"
+msgstr "REPORT_FILE: Report file path"
+
+# 通用消息
+msgid "  and {count} more"
+msgstr "  and {count} more"
+
+msgid "Skill path not found: {path}"
+msgstr "Skill path not found: {path}"
+
+msgid "Warning: Could not read file {file}: {error}"
+msgstr "Warning: Could not read file {file}: {error}"
+
+msgid "Error scanning {path}: {error}"
+msgstr "Error scanning {path}: {error}"
+
+msgid "Warning: Failed to create rule {rule_id}: {error}"
+msgstr "Warning: Failed to create rule {rule_id}: {error}"
+
+msgid "Warning: Could not read SKILL.md: {error}"
+msgstr "Warning: Could not read SKILL.md: {error}"
+
+msgid "Warning: Could not read file (encoding)"
+msgstr "Warning: Could not read file (encoding)"
+
+msgid "Error loading configuration"
+msgstr "Error loading configuration"
+
+msgid "Warning: Language '{lang}' not supported, using '{default}'"
+msgstr "Warning: Language '{lang}' not supported, using '{default}'"
+
+msgid "Warning: Failed to load translation for '{lang}': {error}"
+msgstr "Warning: Failed to load translation for '{lang}': {error}"

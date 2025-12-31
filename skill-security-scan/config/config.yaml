@@ -1,0 +1,78 @@
+# Skill-Security-Scanner 主配置文件
+
+scanner:
+  # 扫描器设置
+  max_file_size: 52428800  # 50MB - 单个文件最大大小
+
+  # 排除的目录和文件模式
+  exclude_patterns:
+    - ".git/"
+    - "__pycache__/"
+    - "node_modules/"
+    - ".venv/"
+    - "venv/"
+    - "dist/"
+    - "build/"
+    - ".pytest_cache/"
+    - "*.log"
+    - "*.tmp"
+
+  # 需要扫描的文件扩展名
+  scan_extensions:
+    - ".md"
+    - ".txt"
+    - ".py"
+    - ".js"
+    - ".ts"
+    - ".sh"
+    - ".bash"
+    - ".yml"
+    - ".yaml"
+    - ".json"
+    - ".toml"
+    - ".cfg"
+    - ".conf"
+
+reporting:
+  # 报告设置
+  default_format: console  # console | json
+
+  # 控制台输出设置
+  console:
+    use_color: true
+    max_findings_display: 50  # 最多显示的问题数
+
+  # JSON 报告设置
+  json:
+    indent: 2
+
+  # 最低显示级别
+  min_severity: INFO  # CRITICAL | WARNING | INFO
+
+rules:
+  # 规则设置
+  rules_file: config/rules.yaml
+
+  # 白名单文件
+  whitelist_file: config/whitelist.yaml
+
+  # 自动更新规则
+  auto_update: false
+  update_interval: 86400  # 24小时（秒）
+
+  # 自定义规则目录
+  custom_rules_dir: null
+
+output:
+  # 输出设置
+  save_reports: true
+  reports_dir: reports
+
+  # 报告文件名格式
+  report_name_format: "scan_{timestamp}_{skill_name}.{format}"
+
+  # 失败退出码
+  fail_on:
+    CRITICAL: true
+    WARNING: false
+    INFO: false

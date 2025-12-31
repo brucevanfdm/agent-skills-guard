@@ -18,17 +18,17 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, t: (key: string, options?: any) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-  if (days === 0) return '今天';
-  if (days === 1) return '昨天';
-  if (days < 7) return `${days}天前`;
+  if (days === 0) return t('repositories.date.today');
+  if (days === 1) return t('repositories.date.yesterday');
+  if (days < 7) return t('repositories.date.daysAgo', { days });
 
-  return date.toLocaleDateString('zh-CN');
+  return date.toLocaleDateString();
 }
 
 export function RepositoriesPage() {
@@ -58,10 +58,10 @@ export function RepositoriesPage() {
     mutationFn: api.clearRepositoryCache,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] });
-      showToast('缓存已清理');
+      showToast(t('repositories.cache.cleared'));
     },
     onError: (error: any) => {
-      showToast(`清理失败: ${error.message || error}`);
+      showToast(t('repositories.cache.clearFailed', { error: error.message || error }));
     },
   });
 
@@ -71,10 +71,10 @@ export function RepositoriesPage() {
     onSuccess: (skills) => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] });
       queryClient.invalidateQueries({ queryKey: ['skills'] });
-      showToast(`缓存已刷新，发现 ${skills.length} 个skills`);
+      showToast(t('repositories.cache.refreshed', { count: skills.length }));
     },
     onError: (error: any) => {
-      showToast(`刷新失败: ${error.message || error}`);
+      showToast(t('repositories.cache.refreshFailed', { error: error.message || error }));
     },
   });
 
@@ -103,13 +103,13 @@ export function RepositoriesPage() {
   };
 
   const handleClearCache = (repoId: string) => {
-    if (confirm('确定要清理此仓库的缓存吗？下次扫描将重新下载。')) {
+    if (confirm(t('repositories.cache.confirmClear'))) {
       clearCacheMutation.mutate(repoId);
     }
   };
 
   const handleRefreshCache = (repoId: string) => {
-    if (confirm('确定要刷新缓存吗？将重新下载最新版本的仓库内容。')) {
+    if (confirm(t('repositories.cache.confirmRefresh'))) {
       refreshCacheMutation.mutate(repoId);
     }
   };
@@ -154,7 +154,7 @@ export function RepositoriesPage() {
           <div className="flex items-center gap-2 mb-4">
             <Database className="w-5 h-5 text-terminal-purple" />
             <h3 className="font-bold text-terminal-purple tracking-wider uppercase">
-              缓存统计
+              {t('repositories.cache.stats')}
             </h3>
           </div>
 
@@ -162,7 +162,7 @@ export function RepositoriesPage() {
             <div className="cyber-card p-4 bg-background/40 border-terminal-cyan/30 hover:border-terminal-cyan hover:shadow-[0_0_15px_rgba(94,234,212,0.2)] transition-all duration-300">
               <div className="text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider flex items-center gap-1">
                 <span className="text-terminal-cyan">▸</span>
-                总仓库数
+                {t('repositories.cache.totalRepos')}
               </div>
               <div className="text-3xl font-bold text-terminal-cyan tabular-nums">
                 {cacheStats.totalRepositories}
@@ -172,7 +172,7 @@ export function RepositoriesPage() {
             <div className="cyber-card p-4 bg-background/40 border-terminal-green/30 hover:border-terminal-green hover:shadow-[0_0_15px_rgba(74,222,128,0.2)] transition-all duration-300">
               <div className="text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider flex items-center gap-1">
                 <span className="text-terminal-cyan">▸</span>
-                已缓存
+                {t('repositories.cache.cached')}
               </div>
               <div className="text-3xl font-bold text-terminal-green tabular-nums">
                 {cacheStats.cachedRepositories}
@@ -182,7 +182,7 @@ export function RepositoriesPage() {
             <div className="cyber-card p-4 bg-background/40 border-terminal-purple/30 hover:border-terminal-purple hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all duration-300">
               <div className="text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider flex items-center gap-1">
                 <span className="text-terminal-cyan">▸</span>
-                缓存大小
+                {t('repositories.cache.size')}
               </div>
               <div className="text-3xl font-bold text-terminal-purple tabular-nums">
                 {formatBytes(cacheStats.totalSizeBytes)}
@@ -346,11 +346,11 @@ export function RepositoriesPage() {
                     <div className="text-muted-foreground">
                       {repo.cache_path ? (
                         <span className="status-indicator text-terminal-green border-terminal-green/40 bg-terminal-green/15 hover:bg-terminal-green/25 transition-colors duration-200">
-                          已缓存 {repo.cached_at && `· ${formatDate(repo.cached_at)}`}
+                          {t('repositories.cache.statusCached')} {repo.cached_at && `· ${formatDate(repo.cached_at, t)}`}
                         </span>
                       ) : (
                         <span className="status-indicator text-muted-foreground border-border bg-background/50">
-                          未缓存
+                          {t('repositories.cache.statusUncached')}
                         </span>
                       )}
                     </div>
@@ -395,18 +395,18 @@ export function RepositoriesPage() {
                       <button
                         onClick={() => handleRefreshCache(repo.id)}
                         disabled={refreshCacheMutation.isPending || clearCacheMutation.isPending}
-                        title="刷新缓存（重新下载）"
+                        title={t('repositories.cache.refreshTooltip')}
                         className="px-3 py-2 rounded font-mono text-xs border border-terminal-purple text-terminal-purple hover:bg-terminal-purple hover:text-background hover:shadow-[0_0_10px_rgba(168,85,247,0.4)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
                       >
                         {refreshCacheMutation.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            刷新中
+                            {t('repositories.cache.refreshing')}
                           </>
                         ) : (
                           <>
                             <RefreshCw className="w-4 h-4" />
-                            刷新缓存
+                            {t('repositories.cache.refresh')}
                           </>
                         )}
                       </button>
@@ -414,7 +414,7 @@ export function RepositoriesPage() {
                       <button
                         onClick={() => handleClearCache(repo.id)}
                         disabled={refreshCacheMutation.isPending || clearCacheMutation.isPending}
-                        title="清理本地缓存"
+                        title={t('repositories.cache.clearTooltip')}
                         className="px-3 py-2 rounded font-mono text-xs border-2 border-terminal-red text-terminal-red hover:bg-terminal-red hover:text-background hover:shadow-[0_0_10px_rgba(239,68,68,0.4)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
                       >
                         {clearCacheMutation.isPending ? (
@@ -422,7 +422,7 @@ export function RepositoriesPage() {
                         ) : (
                           <>
                             <Trash className="w-4 h-4" />
-                            清理缓存
+                            {t('repositories.cache.clear')}
                           </>
                         )}
                       </button>
