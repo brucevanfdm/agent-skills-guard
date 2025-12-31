@@ -37,3 +37,5 @@ export enum SecurityLevel {
   High = "High",
   Critical = "Critical",
 }
+
+export type { CacheStats } from './cache';

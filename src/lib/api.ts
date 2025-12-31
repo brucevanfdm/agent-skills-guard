@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Repository, Skill } from "../types";
-import type { CacheStats } from "../types/cache";
+import type { Repository, Skill, CacheStats } from "../types";
 
 export const api = {
   // Repository APIs
