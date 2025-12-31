@@ -160,6 +160,28 @@ pub fn run() {
             // 存储托盘实例到 app state
             app.manage(tray);
 
+            // 监听窗口关闭请求，改为隐藏到托盘
+            if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+                let app_handle = app.handle().clone();
+                main_window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        log::info!("窗口关闭请求，隐藏到托盘而不是退出");
+                        // 阻止默认关闭行为
+                        api.prevent_close();
+                        // 隐藏窗口而不是关闭
+                        if let Some(window) = app_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+                            if let Err(e) = window.hide() {
+                                log::error!("隐藏窗口失败: {}", e);
+                            }
+                        } else {
+                            log::error!("无法获取主窗口");
+                        }
+                    }
+                });
+            } else {
+                log::warn!("无法获取主窗口，窗口关闭监听器未设置");
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
