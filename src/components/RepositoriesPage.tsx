@@ -109,7 +109,9 @@ export function RepositoriesPage() {
   };
 
   const handleRefreshCache = (repoId: string) => {
-    refreshCacheMutation.mutate(repoId);
+    if (confirm('确定要刷新缓存吗？将重新下载最新版本的仓库内容。')) {
+      refreshCacheMutation.mutate(repoId);
+    }
   };
 
   return (
