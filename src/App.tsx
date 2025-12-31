@@ -8,6 +8,7 @@ import { Package, ShoppingCart, Database as DatabaseIcon, Zap } from "lucide-rea
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { WindowControls } from "./components/WindowControls";
+import { Toaster } from "sonner";
 
 // 全局类型声明
 declare const __APP_VERSION__: string;
@@ -212,6 +213,7 @@ function App() {
   return (
     <QueryClientProvider client={reactQueryClient}>
       <AppContent />
+      <Toaster />
     </QueryClientProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 
 // TypeScript 接口定义
 interface SecurityIssue {
@@ -48,10 +49,12 @@ export function SecurityDashboard() {
   const handleScan = async () => {
     setIsScanning(true);
     try {
-      await invoke("scan_all_installed_skills");
+      const results = await invoke<SkillScanResult[]>("scan_all_installed_skills");
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
+      toast.success(t("security.dashboard.scanSuccess", { count: results.length }));
     } catch (error) {
-      console.error("扫描失败:", error);
+      console.error("Scan failed:", error);
+      toast.error(t("security.dashboard.scanError"));
     } finally {
       setIsScanning(false);
     }

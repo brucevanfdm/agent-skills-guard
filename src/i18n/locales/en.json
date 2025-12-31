@@ -154,7 +154,9 @@
       "scanning": "Scanning...",
       "loading": "Loading...",
       "noResults": "No scan results yet. Click 'Scan All Skills' to start.",
-      "resultsCount": "Skills Scanned"
+      "resultsCount": "Skills Scanned",
+      "scanSuccess": "Successfully scanned {{count}} Skills",
+      "scanError": "Scan failed, please try again"
     }
   }
 }

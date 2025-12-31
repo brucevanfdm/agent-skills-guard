@@ -154,7 +154,9 @@
       "scanning": "扫描中...",
       "loading": "加载中...",
       "noResults": "暂无扫描结果，点击「扫描所有 Skills」开始",
-      "resultsCount": "已扫描 Skills"
+      "resultsCount": "已扫描 Skills",
+      "scanSuccess": "成功扫描 {{count}} 个 Skills",
+      "scanError": "扫描失败，请重试"
     }
   }
 }
