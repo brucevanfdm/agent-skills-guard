@@ -1,3 +1,5 @@
+pub mod security;
+
 use crate::models::{Repository, Skill};
 use crate::services::{Database, GitHubService, SkillManager};
 use std::sync::Arc;
