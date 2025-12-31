@@ -5,11 +5,35 @@ import {
   useDeleteRepository,
   useScanRepository,
 } from "../hooks/useRepositories";
-import { Search, Plus, Trash2, GitBranch, Loader2, Database, X, Terminal } from "lucide-react";
+import { Search, Plus, Trash2, GitBranch, Loader2, Database, X, Terminal, RefreshCw, Trash } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "../lib/api";
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (days === 0) return '今天';
+  if (days === 1) return '昨天';
+  if (days < 7) return `${days}天前`;
+
+  return date.toLocaleDateString('zh-CN');
+}
 
 export function RepositoriesPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: repositories, isLoading } = useRepositories();
   const addMutation = useAddRepository();
   const deleteMutation = useDeleteRepository();
@@ -21,6 +45,38 @@ export function RepositoriesPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [scanningRepoId, setScanningRepoId] = useState<string | null>(null);
   const [deletingRepoId, setDeletingRepoId] = useState<string | null>(null);
+
+  // 缓存统计查询
+  const { data: cacheStats } = useQuery({
+    queryKey: ['cache-stats'],
+    queryFn: api.getCacheStats,
+    refetchInterval: 30000, // 每30秒刷新
+  });
+
+  // 清理缓存mutation
+  const clearCacheMutation = useMutation({
+    mutationFn: api.clearRepositoryCache,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+      showToast('缓存已清理');
+    },
+    onError: (error: any) => {
+      showToast(`清理失败: ${error.message || error}`);
+    },
+  });
+
+  // 刷新缓存mutation
+  const refreshCacheMutation = useMutation({
+    mutationFn: api.refreshRepositoryCache,
+    onSuccess: (skills) => {
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
+      showToast(`缓存已刷新，发现 ${skills.length} 个skills`);
+    },
+    onError: (error: any) => {
+      showToast(`刷新失败: ${error.message || error}`);
+    },
+  });
 
   const showToast = (message: string) => {
     setToast(message);
@@ -44,6 +100,16 @@ export function RepositoriesPage() {
         }
       );
     }
+  };
+
+  const handleClearCache = (repoId: string) => {
+    if (confirm('确定要清理此仓库的缓存吗？下次扫描将重新下载。')) {
+      clearCacheMutation.mutate(repoId);
+    }
+  };
+
+  const handleRefreshCache = (repoId: string) => {
+    refreshCacheMutation.mutate(repoId);
   };
 
   return (
@@ -73,6 +139,53 @@ export function RepositoriesPage() {
           )}
         </button>
       </div>
+
+      {/* Cache Statistics */}
+      {cacheStats && (
+        <div
+          className="cyber-card p-6 border-terminal-purple"
+          style={{
+            animation: 'fadeIn 0.3s ease-out',
+            boxShadow: '0 0 20px rgba(168, 85, 247, 0.15)'
+          }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Database className="w-5 h-5 text-terminal-purple" />
+            <h3 className="font-bold text-terminal-purple tracking-wider uppercase">
+              缓存统计
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="cyber-card p-4 bg-background/30">
+              <div className="text-xs font-mono text-terminal-green mb-1 uppercase tracking-wider">
+                总仓库数
+              </div>
+              <div className="text-2xl font-bold text-terminal-cyan">
+                {cacheStats.totalRepositories}
+              </div>
+            </div>
+
+            <div className="cyber-card p-4 bg-background/30">
+              <div className="text-xs font-mono text-terminal-green mb-1 uppercase tracking-wider">
+                已缓存
+              </div>
+              <div className="text-2xl font-bold text-terminal-cyan">
+                {cacheStats.cachedRepositories}
+              </div>
+            </div>
+
+            <div className="cyber-card p-4 bg-background/30">
+              <div className="text-xs font-mono text-terminal-green mb-1 uppercase tracking-wider">
+                缓存大小
+              </div>
+              <div className="text-2xl font-bold text-terminal-cyan">
+                {formatBytes(cacheStats.totalSizeBytes)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Repository Form */}
       {showAddForm && (
@@ -223,6 +336,19 @@ export function RepositoriesPage() {
                         })}
                       </div>
                     )}
+
+                    {/* Cache Status */}
+                    <div className="text-muted-foreground">
+                      {repo.cache_path ? (
+                        <span className="status-indicator text-terminal-green border-terminal-green/30 bg-terminal-green/10">
+                          已缓存 {repo.cached_at && `· ${formatDate(repo.cached_at)}`}
+                        </span>
+                      ) : (
+                        <span className="status-indicator text-terminal-cyan border-terminal-cyan/30 bg-terminal-cyan/10">
+                          未缓存
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -257,6 +383,46 @@ export function RepositoriesPage() {
                       </>
                     )}
                   </button>
+
+                  {/* Cache Management Buttons */}
+                  {repo.cache_path && (
+                    <>
+                      <button
+                        onClick={() => handleRefreshCache(repo.id)}
+                        disabled={refreshCacheMutation.isPending || clearCacheMutation.isPending}
+                        title="刷新缓存（重新下载）"
+                        className="neon-button disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 text-xs"
+                      >
+                        {refreshCacheMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            刷新中
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4" />
+                            刷新缓存
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => handleClearCache(repo.id)}
+                        disabled={refreshCacheMutation.isPending || clearCacheMutation.isPending}
+                        title="清理本地缓存"
+                        className="px-3 py-2 rounded font-mono text-xs border border-terminal-yellow text-terminal-yellow hover:bg-terminal-yellow hover:text-background transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                      >
+                        {clearCacheMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Trash className="w-4 h-4" />
+                            清理缓存
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
 
                   <button
                     onClick={() => {
