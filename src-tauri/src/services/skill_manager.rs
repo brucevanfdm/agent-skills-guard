@@ -299,6 +299,14 @@ impl SkillManager {
                                     .map(|i| format!("{:?}: {}", i.severity, i.description))
                                     .collect()
                             ),
+                            security_level: Some(match report.level {
+                                crate::models::security::SecurityLevel::Safe => "Safe".to_string(),
+                                crate::models::security::SecurityLevel::Low => "Low".to_string(),
+                                crate::models::security::SecurityLevel::Medium => "Medium".to_string(),
+                                crate::models::security::SecurityLevel::High => "High".to_string(),
+                                crate::models::security::SecurityLevel::Critical => "Critical".to_string(),
+                            }),
+                            scanned_at: Some(Utc::now()),
                         };
 
                         // 保存到数据库

@@ -18,6 +18,8 @@ pub struct Skill {
     pub checksum: Option<String>,
     pub security_score: Option<i32>,
     pub security_issues: Option<Vec<String>>,
+    pub security_level: Option<String>,      // 安全等级：Safe/Low/Medium/High/Critical
+    pub scanned_at: Option<DateTime<Utc>>,   // 扫描时间戳
 }
 
 impl Skill {
@@ -44,6 +46,8 @@ impl Skill {
             checksum: None,
             security_score: None,
             security_issues: None,
+            security_level: None,
+            scanned_at: None,
         }
     }
 

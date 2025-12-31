@@ -191,8 +191,8 @@ impl Database {
         conn.execute(
             "INSERT OR REPLACE INTO skills
             (id, name, description, repository_url, repository_owner, file_path, version, author,
-             installed, installed_at, local_path, checksum, security_score, security_issues)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+             installed, installed_at, local_path, checksum, security_score, security_issues, security_level, scanned_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
                 skill.id,
                 skill.name,
@@ -208,6 +208,8 @@ impl Database {
                 skill.checksum,
                 skill.security_score,
                 security_issues_json,
+                skill.security_level,
+                skill.scanned_at.as_ref().map(|d| d.to_rfc3339()),
             ],
         )?;
 
@@ -219,7 +221,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, description, repository_url, repository_owner, file_path, version, author,
-                    installed, installed_at, local_path, checksum, security_score, security_issues
+                    installed, installed_at, local_path, checksum, security_score, security_issues, security_level, scanned_at
              FROM skills"
         )?;
 
@@ -244,6 +246,9 @@ impl Database {
                 checksum: row.get(11)?,
                 security_score: row.get(12)?,
                 security_issues,
+                security_level: row.get(14)?,
+                scanned_at: row.get::<_, Option<String>>(15)?
+                    .and_then(|s| s.parse().ok()),
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
