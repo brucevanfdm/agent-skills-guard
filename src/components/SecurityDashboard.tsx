@@ -2,9 +2,9 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { toast } from "sonner";
 import { Search, Loader2, Shield } from "lucide-react";
 import { SecurityDetailDialog } from "./SecurityDetailDialog";
+import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
 import type { SkillScanResult } from "@/types/security";
 import { countIssuesBySeverity } from "@/lib/security-utils";
 
@@ -16,6 +16,29 @@ export function SecurityDashboard() {
   const [sortBy, setSortBy] = useState<"score" | "name" | "time">("score");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSkill, setSelectedSkill] = useState<SkillScanResult | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // 风险等级选项
+  const levelOptions: CyberSelectOption[] = [
+    { value: "all", label: t('security.levels.all') },
+    { value: "Critical", label: t('security.levels.critical') },
+    { value: "High", label: t('security.levels.high') },
+    { value: "Medium", label: t('security.levels.medium') },
+    { value: "Low", label: t('security.levels.low') },
+    { value: "Safe", label: t('security.levels.safe') },
+  ];
+
+  // 排序选项
+  const sortOptions: CyberSelectOption[] = [
+    { value: "score", label: t('security.sort.score') },
+    { value: "name", label: t('security.sort.name') },
+    { value: "time", label: t('security.sort.time') },
+  ];
 
   // 获取扫描结果
   const { data: scanResults = [], isLoading } = useQuery<SkillScanResult[]>({
@@ -31,10 +54,10 @@ export function SecurityDashboard() {
     try {
       const results = await invoke<SkillScanResult[]>("scan_all_installed_skills");
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
-      toast.success(t("security.dashboard.scanSuccess", { count: results.length }));
+      showToast(t("security.dashboard.scanSuccess", { count: results.length }));
     } catch (error) {
       console.error("Scan failed:", error);
-      toast.error(t("security.dashboard.scanError"));
+      showToast(t("security.dashboard.scanError"));
     } finally {
       setIsScanning(false);
     }
@@ -72,13 +95,23 @@ export function SecurityDashboard() {
     <div className="space-y-6">
       {/* 顶部操作栏 */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{t("security.dashboard.title")}</h1>
+        <h1 className="text-2xl font-bold text-terminal-cyan tracking-wider uppercase">{t("security.dashboard.title")}</h1>
         <button
           onClick={handleScan}
           disabled={isScanning}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+          className="neon-button inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isScanning ? t("security.dashboard.scanning") : t("security.dashboard.scanButton")}
+          {isScanning ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {t("security.dashboard.scanning")}
+            </>
+          ) : (
+            <>
+              <Shield className="w-4 h-4" />
+              {t("security.dashboard.scanButton")}
+            </>
+          )}
         </button>
       </div>
 
@@ -86,37 +119,28 @@ export function SecurityDashboard() {
       <div className="flex flex-wrap items-center gap-4 p-4 bg-card/30 rounded-lg border border-border">
         {/* 风险等级过滤 */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-mono text-muted-foreground">
+          <label className="text-sm font-mono text-terminal-green uppercase tracking-wider whitespace-nowrap">
             {t('security.filterByLevel')}:
           </label>
-          <select
+          <CyberSelect
             value={filterLevel}
-            onChange={(e) => setFilterLevel(e.target.value)}
-            className="px-3 py-1 bg-background border border-border rounded font-mono text-sm"
-          >
-            <option value="all">{t('security.levels.all')}</option>
-            <option value="Critical">{t('security.levels.critical')}</option>
-            <option value="High">{t('security.levels.high')}</option>
-            <option value="Medium">{t('security.levels.medium')}</option>
-            <option value="Low">{t('security.levels.low')}</option>
-            <option value="Safe">{t('security.levels.safe')}</option>
-          </select>
+            onChange={setFilterLevel}
+            options={levelOptions}
+            className="w-[240px]"
+          />
         </div>
 
         {/* 排序选项 */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-mono text-muted-foreground">
+          <label className="text-sm font-mono text-terminal-green uppercase tracking-wider whitespace-nowrap">
             {t('security.sortBy')}:
           </label>
-          <select
+          <CyberSelect
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "score" | "name" | "time")}
-            className="px-3 py-1 bg-background border border-border rounded font-mono text-sm"
-          >
-            <option value="score">{t('security.sort.score')}</option>
-            <option value="name">{t('security.sort.name')}</option>
-            <option value="time">{t('security.sort.time')}</option>
-          </select>
+            onChange={(value) => setSortBy(value as "score" | "name" | "time")}
+            options={sortOptions}
+            className="w-[200px]"
+          />
         </div>
 
         {/* 搜索框 */}
@@ -222,6 +246,22 @@ export function SecurityDashboard() {
         open={selectedSkill !== null}
         onClose={() => setSelectedSkill(null)}
       />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className="fixed bottom-0 left-0 right-0 px-8 py-5 bg-terminal-cyan/15 border-t-2 border-terminal-cyan backdrop-blur-md shadow-2xl z-50 font-mono text-base text-terminal-cyan"
+          style={{
+            animation: 'slideInLeft 0.3s ease-out',
+            boxShadow: '0 -4px 40px rgba(94, 234, 212, 0.4), inset 0 1px 0 rgba(94, 234, 212, 0.2)'
+          }}
+        >
+          <div className="max-w-7xl mx-auto flex items-center">
+            <span className="text-terminal-green mr-3 text-lg">❯</span>
+            <span className="tracking-wide">{toast}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

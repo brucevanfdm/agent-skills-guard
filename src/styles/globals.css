@@ -262,6 +262,61 @@
     @apply text-muted-foreground/50;
   }
 
+  /* Cyber Select */
+  .cyber-select-trigger {
+    @apply w-full flex items-center justify-between gap-2 px-4 py-2;
+    @apply bg-card border border-border rounded font-mono text-sm text-foreground;
+    @apply hover:border-terminal-cyan hover:shadow-[0_0_10px_rgba(94,234,212,0.2)];
+    @apply focus:outline-none focus:border-terminal-cyan focus:ring-1 focus:ring-terminal-cyan;
+    @apply transition-all duration-200;
+    @apply relative;
+  }
+
+  .cyber-select-trigger::before {
+    content: '';
+    @apply absolute left-0 top-0 bottom-0 w-1 bg-terminal-cyan;
+    @apply opacity-0 transition-opacity duration-200;
+  }
+
+  .cyber-select-trigger:hover::before {
+    @apply opacity-100;
+  }
+
+  .cyber-select-dropdown {
+    @apply absolute top-full left-0 right-0 mt-2 z-50;
+    @apply bg-card border border-terminal-cyan rounded overflow-hidden;
+    @apply shadow-[0_0_20px_rgba(94,234,212,0.3)];
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .cyber-select-option {
+    @apply w-full flex items-center justify-between gap-2 pl-8 pr-4 py-3;
+    @apply text-foreground hover:bg-terminal-cyan/10;
+    @apply border-b border-border last:border-b-0;
+    @apply transition-all duration-150;
+    @apply relative;
+  }
+
+  .cyber-select-option::before {
+    content: '▸';
+    @apply absolute left-3 text-terminal-cyan opacity-0;
+    @apply transition-opacity duration-150;
+  }
+
+  .cyber-select-option:hover::before {
+    @apply opacity-100;
+  }
+
+  .cyber-select-option-active {
+    @apply bg-terminal-cyan/20 text-terminal-cyan;
+    @apply border-l-2 border-l-terminal-cyan;
+  }
+
+  .cyber-select-option-active::before {
+    @apply opacity-100;
+  }
+
   /* Glitch text */
   .glitch-text {
     position: relative;

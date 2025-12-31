@@ -168,7 +168,7 @@
   "security": {
     "dashboard": {
       "title": "安全扫描仪表盘",
-      "scanButton": "扫描所有 Skills",
+      "scanButton": "一键扫描",
       "scanning": "扫描中...",
       "loading": "加载中...",
       "noResults": "暂无扫描结果，点击「扫描所有 Skills」开始",

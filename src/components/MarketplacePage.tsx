@@ -8,6 +8,7 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { countIssuesBySeverity } from "@/lib/security-utils";
+import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -65,6 +66,14 @@ export function MarketplacePage() {
       ...repos
     ];
   }, [allSkills, i18n.language, t]);
+
+  // 转换为 CyberSelect 选项格式
+  const repositoryOptions: CyberSelectOption[] = useMemo(() => {
+    return repositories.map((repo) => ({
+      value: repo.owner,
+      label: `${repo.displayName} (${repo.count})`,
+    }));
+  }, [repositories]);
 
   // 筛选逻辑
   const filteredSkills = useMemo(() => {
@@ -146,17 +155,12 @@ export function MarketplacePage() {
           </div>
 
           {/* Repository Filter */}
-          <select
+          <CyberSelect
             value={selectedRepository}
-            onChange={(e) => setSelectedRepository(e.target.value)}
-            className="px-4 py-2 bg-card border border-border rounded font-mono text-sm text-foreground focus:outline-none focus:border-terminal-cyan transition-colors cursor-pointer min-w-[150px]"
-          >
-            {repositories.map((repo) => (
-              <option key={repo.owner} value={repo.owner}>
-                {repo.displayName} ({repo.count})
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedRepository}
+            options={repositoryOptions}
+            className="min-w-[200px]"
+          />
 
           {/* Hide Installed Checkbox */}
           <label className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded font-mono text-sm text-foreground cursor-pointer hover:border-terminal-cyan transition-colors">

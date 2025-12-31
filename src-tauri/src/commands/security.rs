@@ -67,17 +67,46 @@ pub async fn scan_all_installed_skills(
 pub async fn get_scan_results(
     state: State<'_, AppState>,
 ) -> Result<Vec<SkillScanResult>, String> {
+    use crate::models::security::{SecurityIssue, IssueSeverity, IssueCategory};
+
     let skills = state.db.get_skills().map_err(|e| e.to_string())?;
 
     let results: Vec<SkillScanResult> = skills.into_iter()
         .filter(|s| s.installed && s.security_score.is_some())
         .map(|s| {
+            // 解析 security_issues 字符串为 SecurityIssue 对象
+            let issues = if let Some(issue_strings) = &s.security_issues {
+                issue_strings.iter().filter_map(|issue_str| {
+                    // 解析格式: "Severity: description"
+                    let parts: Vec<&str> = issue_str.splitn(2, ": ").collect();
+                    if parts.len() == 2 {
+                        let severity = match parts[0] {
+                            "Critical" => IssueSeverity::Critical,
+                            "Error" => IssueSeverity::Error,
+                            "Warning" => IssueSeverity::Warning,
+                            _ => IssueSeverity::Info,
+                        };
+                        Some(SecurityIssue {
+                            severity,
+                            category: IssueCategory::Other,
+                            description: parts[1].to_string(),
+                            line_number: None,
+                            code_snippet: None,
+                        })
+                    } else {
+                        None
+                    }
+                }).collect()
+            } else {
+                vec![]
+            };
+
             let report = SecurityReport {
                 skill_id: s.id.clone(),
                 score: s.security_score.unwrap_or(0),
                 level: SecurityLevel::from_score(s.security_score.unwrap_or(0)),
-                issues: vec![], // 从数据库恢复 issues 需要反序列化
-                recommendations: vec![],
+                issues,
+                recommendations: vec![], // 建议信息暂时为空，未来可以存储到数据库
                 blocked: false,
                 hard_trigger_issues: vec![],
             };
@@ -87,7 +116,7 @@ pub async fn get_scan_results(
                 skill_name: s.name.clone(),
                 score: s.security_score.unwrap_or(0),
                 level: s.security_level.clone().unwrap_or_else(|| "Unknown".to_string()),
-                scanned_at: s.scanned_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+                scanned_at: s.scanned_at.map(|d| d.to_rfc3339()).unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
                 report,
             }
         })

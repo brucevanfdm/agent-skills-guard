@@ -20,20 +20,33 @@ interface SecurityDetailDialogProps {
 export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDialogProps) {
   const { t } = useTranslation();
 
+  // 使用 useMemo 优化问题分组（必须在条件返回之前调用所有 hooks）
+  const { criticalIssues, highIssues, mediumIssues, lowIssues } = useMemo(
+    () => {
+      if (!result) {
+        return {
+          criticalIssues: [],
+          highIssues: [],
+          mediumIssues: [],
+          lowIssues: [],
+        };
+      }
+
+      const { report } = result;
+      return {
+        criticalIssues: report.issues.filter((i) => i.severity === "Critical"),
+        highIssues: report.issues.filter((i) => i.severity === "Error"),
+        mediumIssues: report.issues.filter((i) => i.severity === "Warning"),
+        lowIssues: report.issues.filter((i) => i.severity === "Info"),
+      };
+    },
+    [result]
+  );
+
+  // 在所有 hooks 调用之后再做条件返回
   if (!result) return null;
 
   const { report } = result;
-
-  // 使用 useMemo 优化问题分组
-  const { criticalIssues, highIssues, mediumIssues, lowIssues } = useMemo(
-    () => ({
-      criticalIssues: report.issues.filter((i) => i.severity === "Critical"),
-      highIssues: report.issues.filter((i) => i.severity === "Error"),
-      mediumIssues: report.issues.filter((i) => i.severity === "Warning"),
-      lowIssues: report.issues.filter((i) => i.severity === "Info"),
-    }),
-    [report.issues]
-  );
 
   return (
     <AlertDialog open={open} onOpenChange={onClose}>

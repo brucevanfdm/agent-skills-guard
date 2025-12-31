@@ -58,11 +58,13 @@ impl SkillManager {
 
         // 更新 skill 信息
         skill.security_score = Some(report.score);
+        skill.security_level = Some(report.level.as_str().to_string());
         skill.security_issues = Some(
             report.issues.iter()
                 .map(|i| format!("{:?}: {}", i.severity, i.description))
                 .collect()
         );
+        skill.scanned_at = Some(Utc::now());
         skill.checksum = Some(self.scanner.calculate_checksum(&content));
 
         Ok((content, report))
