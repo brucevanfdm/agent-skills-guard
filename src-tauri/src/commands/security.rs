@@ -21,7 +21,8 @@ pub async fn scan_all_installed_skills(
 
     for mut skill in installed_skills {
         if let Some(local_path) = &skill.local_path {
-            let skill_file_path = PathBuf::from(local_path);
+            // local_path 是目录路径，需要拼接 SKILL.md 文件名
+            let skill_file_path = PathBuf::from(local_path).join("SKILL.md");
 
             if let Ok(content) = std::fs::read_to_string(&skill_file_path) {
                 match scanner.scan_file(&content, &skill.id) {
