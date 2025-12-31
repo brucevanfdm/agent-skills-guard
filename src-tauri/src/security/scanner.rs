@@ -6,7 +6,7 @@ use sha2::{Sha256, Digest};
 /// 匹配结果（包含规则信息）
 #[derive(Debug, Clone)]
 struct MatchResult {
-    rule_id: String,
+    _rule_id: String,
     rule_name: String,
     severity: Severity,
     category: Category,
@@ -38,7 +38,7 @@ impl SecurityScanner {
             for rule in rules.iter() {
                 if rule.pattern.is_match(line) {
                     matches.push(MatchResult {
-                        rule_id: rule.id.to_string(),
+                        _rule_id: rule.id.to_string(),
                         rule_name: rule.name.to_string(),
                         severity: rule.severity,
                         category: rule.category,

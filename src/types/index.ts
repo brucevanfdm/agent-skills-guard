@@ -14,6 +14,7 @@ export interface Skill {
   name: string;
   description?: string;
   repository_url: string;
+  repository_owner?: string;  // 仓库所有者，如 "anthropics" 或 "local"
   file_path: string;
   version?: string;
   author?: string;

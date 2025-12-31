@@ -4,7 +4,8 @@
     "subtitle": "SECURE_SKILL_MANAGEMENT_PROTOCOL"
   },
   "nav": {
-    "skills": "SKILLS_REGISTRY",
+    "installed": "INSTALLED",
+    "marketplace": "MARKETPLACE",
     "repositories": "REPO_CONFIG"
   },
   "footer": {

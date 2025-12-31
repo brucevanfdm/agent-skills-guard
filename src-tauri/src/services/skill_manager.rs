@@ -285,6 +285,7 @@ impl SkillManager {
                             name,
                             description,
                             repository_url: "local".to_string(),
+                            repository_owner: Some("local".to_string()),
                             file_path: path.to_string_lossy().to_string(),
                             version: None,
                             author: None,
@@ -335,7 +336,7 @@ impl SkillManager {
 
         // 提取 frontmatter 内容
         let frontmatter_lines = &lines[1..=end_index];
-        let frontmatter_str = frontmatter_lines.join("\n");
+        let _frontmatter_str = frontmatter_lines.join("\n");
 
         // 简单的 YAML 解析（只提取 name 和 description）
         let mut name = String::new();

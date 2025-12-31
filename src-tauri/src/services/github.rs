@@ -144,9 +144,26 @@ impl GitHubService {
                     if let Some(remaining) = response.headers().get("x-ratelimit-remaining") {
                         if remaining == "0" {
                             if let Some(reset) = response.headers().get("x-ratelimit-reset") {
-                                anyhow::bail!("GitHub API 速率限制已达上限，请在 {} 之后重试", reset.to_str().unwrap_or("稍后"));
+                                // 将 Unix 时间戳转换为可读格式
+                                if let Ok(reset_str) = reset.to_str() {
+                                    if let Ok(reset_timestamp) = reset_str.parse::<i64>() {
+                                        let now = std::time::SystemTime::now()
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap()
+                                            .as_secs() as i64;
+                                        let wait_seconds = reset_timestamp - now;
+
+                                        if wait_seconds > 0 {
+                                            let wait_minutes = (wait_seconds + 59) / 60; // 向上取整
+                                            anyhow::bail!(
+                                                "GitHub API 速率限制已达上限，请等待约 {} 分钟后重试。\n\n提示：未认证的请求限制为每小时60次，认证后可提升至5000次/小时。",
+                                                wait_minutes
+                                            );
+                                        }
+                                    }
+                                }
                             }
-                            anyhow::bail!("GitHub API 速率限制已达上限，请稍后重试");
+                            anyhow::bail!("GitHub API 速率限制已达上限，请稍后重试（约1小时后）");
                         }
                     }
                     anyhow::bail!("无权限访问该仓库，请检查仓库是否为私有仓库");

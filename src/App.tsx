@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { SkillsPage } from "./components/SkillsPage";
+import { InstalledSkillsPage } from "./components/InstalledSkillsPage";
+import { MarketplacePage } from "./components/MarketplacePage";
 import { RepositoriesPage } from "./components/RepositoriesPage";
 import { api } from "./lib/api";
-import { Terminal, Database, Zap } from "lucide-react";
+import { Package, ShoppingCart, Database as DatabaseIcon, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { WindowControls } from "./components/WindowControls";
@@ -19,7 +20,7 @@ const reactQueryClient = new QueryClient();
 
 function AppContent() {
   const { t } = useTranslation();
-  const [currentTab, setCurrentTab] = useState<"skills" | "repositories">("skills");
+  const [currentTab, setCurrentTab] = useState<"installed" | "marketplace" | "repositories">("installed");
   const [localScanMessage, setLocalScanMessage] = useState<string | null>(null);
   const [showScanAnimation, setShowScanAnimation] = useState(false);
   const queryClient = useQueryClient();
@@ -115,19 +116,38 @@ function AppContent() {
         <div className="container mx-auto px-6">
           <div className="flex gap-1">
             <button
-              onClick={() => setCurrentTab("skills")}
+              onClick={() => setCurrentTab("installed")}
               className={`
                 relative px-6 py-3 font-mono text-sm font-medium transition-all duration-200
-                ${currentTab === "skills"
+                ${currentTab === "installed"
                   ? "text-terminal-cyan border-b-2 border-terminal-cyan"
                   : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
                 }
               `}
             >
               <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4" />
-                <span>{t('nav.skills')}</span>
-                {currentTab === "skills" && (
+                <Package className="w-4 h-4" />
+                <span>{t('nav.installed')}</span>
+                {currentTab === "installed" && (
+                  <span className="text-terminal-green">●</span>
+                )}
+              </div>
+            </button>
+
+            <button
+              onClick={() => setCurrentTab("marketplace")}
+              className={`
+                relative px-6 py-3 font-mono text-sm font-medium transition-all duration-200
+                ${currentTab === "marketplace"
+                  ? "text-terminal-cyan border-b-2 border-terminal-cyan"
+                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                }
+              `}
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4" />
+                <span>{t('nav.marketplace')}</span>
+                {currentTab === "marketplace" && (
                   <span className="text-terminal-green">●</span>
                 )}
               </div>
@@ -144,7 +164,7 @@ function AppContent() {
               `}
             >
               <div className="flex items-center gap-2">
-                <Database className="w-4 h-4" />
+                <DatabaseIcon className="w-4 h-4" />
                 <span>{t('nav.repositories')}</span>
                 {currentTab === "repositories" && (
                   <span className="text-terminal-green">●</span>
@@ -163,7 +183,8 @@ function AppContent() {
               animation: 'fadeIn 0.4s ease-out'
             }}
           >
-            {currentTab === "skills" && <SkillsPage />}
+            {currentTab === "installed" && <InstalledSkillsPage />}
+            {currentTab === "marketplace" && <MarketplacePage />}
             {currentTab === "repositories" && <RepositoriesPage />}
           </div>
         </div>

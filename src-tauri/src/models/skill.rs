@@ -8,6 +8,7 @@ pub struct Skill {
     pub name: String,
     pub description: Option<String>,
     pub repository_url: String,
+    pub repository_owner: Option<String>,  // 仓库所有者，如 "anthropics" 或 "local"
     pub file_path: String,
     pub version: Option<String>,
     pub author: Option<String>,
@@ -25,11 +26,15 @@ impl Skill {
         repository_url: String,
         file_path: String,
     ) -> Self {
+        // 自动解析 repository_owner
+        let repository_owner = Self::parse_repository_owner(&repository_url);
+
         Self {
             id: format!("{}::{}", repository_url, file_path),
             name,
             description: None,
             repository_url,
+            repository_owner: Some(repository_owner),
             file_path,
             version: None,
             author: None,
@@ -40,6 +45,23 @@ impl Skill {
             security_score: None,
             security_issues: None,
         }
+    }
+
+    /// 从 repository_url 解析仓库所有者
+    pub fn parse_repository_owner(repository_url: &str) -> String {
+        if repository_url == "local" {
+            return "local".to_string();
+        }
+
+        // 解析 GitHub URL: https://github.com/anthropics/skills
+        if let Some(start) = repository_url.find("github.com/") {
+            let after_github = &repository_url[start + 11..];
+            if let Some(slash_pos) = after_github.find('/') {
+                return after_github[..slash_pos].to_string();
+            }
+        }
+
+        "unknown".to_string()
     }
 }
 

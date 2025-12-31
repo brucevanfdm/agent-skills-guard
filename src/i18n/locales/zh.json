@@ -4,7 +4,8 @@
     "subtitle": "安全技能管理协议"
   },
   "nav": {
-    "skills": "技能注册表",
+    "installed": "已安装",
+    "marketplace": "技能市场",
     "repositories": "仓库配置"
   },
   "footer": {

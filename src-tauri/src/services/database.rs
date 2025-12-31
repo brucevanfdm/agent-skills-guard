@@ -51,6 +51,7 @@ impl Database {
                 name TEXT NOT NULL,
                 description TEXT,
                 repository_url TEXT NOT NULL,
+                repository_owner TEXT,
                 file_path TEXT NOT NULL,
                 version TEXT,
                 author TEXT,
@@ -73,6 +74,48 @@ impl Database {
                 checksum TEXT NOT NULL,
                 FOREIGN KEY(skill_id) REFERENCES skills(id)
             )",
+            [],
+        )?;
+
+        // 释放锁以便调用迁移方法
+        drop(conn);
+
+        // 执行数据库迁移
+        self.migrate_add_repository_owner()?;
+
+        Ok(())
+    }
+
+    /// 数据库迁移：添加 repository_owner 列
+    fn migrate_add_repository_owner(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        // 尝试添加列（如果列已存在会失败，这是正常的）
+        let _ = conn.execute(
+            "ALTER TABLE skills ADD COLUMN repository_owner TEXT",
+            [],
+        );
+
+        // 为现有记录填充 repository_owner
+        conn.execute(
+            r#"
+            UPDATE skills
+            SET repository_owner = CASE
+                WHEN repository_url = 'local' THEN 'local'
+                WHEN repository_url LIKE '%github.com/%' THEN
+                    substr(
+                        repository_url,
+                        instr(repository_url, 'github.com/') + 11,
+                        CASE
+                            WHEN instr(substr(repository_url, instr(repository_url, 'github.com/') + 11), '/') > 0
+                            THEN instr(substr(repository_url, instr(repository_url, 'github.com/') + 11), '/') - 1
+                            ELSE length(substr(repository_url, instr(repository_url, 'github.com/') + 11))
+                        END
+                    )
+                ELSE 'unknown'
+            END
+            WHERE repository_owner IS NULL
+            "#,
             [],
         )?;
 
@@ -137,14 +180,15 @@ impl Database {
 
         conn.execute(
             "INSERT OR REPLACE INTO skills
-            (id, name, description, repository_url, file_path, version, author,
+            (id, name, description, repository_url, repository_owner, file_path, version, author,
              installed, installed_at, local_path, checksum, security_score, security_issues)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 skill.id,
                 skill.name,
                 skill.description,
                 skill.repository_url,
+                skill.repository_owner,
                 skill.file_path,
                 skill.version,
                 skill.author,
@@ -164,13 +208,13 @@ impl Database {
     pub fn get_skills(&self) -> Result<Vec<Skill>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, repository_url, file_path, version, author,
+            "SELECT id, name, description, repository_url, repository_owner, file_path, version, author,
                     installed, installed_at, local_path, checksum, security_score, security_issues
              FROM skills"
         )?;
 
         let skills = stmt.query_map([], |row| {
-            let security_issues: Option<String> = row.get(12)?;
+            let security_issues: Option<String> = row.get(13)?;
             let security_issues = security_issues
                 .and_then(|s| serde_json::from_str(&s).ok());
 
@@ -179,15 +223,16 @@ impl Database {
                 name: row.get(1)?,
                 description: row.get(2)?,
                 repository_url: row.get(3)?,
-                file_path: row.get(4)?,
-                version: row.get(5)?,
-                author: row.get(6)?,
-                installed: row.get::<_, i32>(7)? != 0,
-                installed_at: row.get::<_, Option<String>>(8)?
+                repository_owner: row.get(4)?,
+                file_path: row.get(5)?,
+                version: row.get(6)?,
+                author: row.get(7)?,
+                installed: row.get::<_, i32>(8)? != 0,
+                installed_at: row.get::<_, Option<String>>(9)?
                     .and_then(|s| s.parse().ok()),
-                local_path: row.get(9)?,
-                checksum: row.get(10)?,
-                security_score: row.get(11)?,
+                local_path: row.get(10)?,
+                checksum: row.get(11)?,
+                security_score: row.get(12)?,
                 security_issues,
             })
         })?
