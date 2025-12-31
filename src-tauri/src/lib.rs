@@ -63,6 +63,9 @@ pub fn run() {
             commands::uninstall_skill,
             commands::delete_skill,
             commands::scan_local_skills,
+            commands::clear_repository_cache,
+            commands::refresh_repository_cache,
+            commands::get_cache_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -184,3 +184,104 @@ pub async fn scan_local_skills(
     manager.scan_local_skills()
         .map_err(|e| e.to_string())
 }
+
+/// 清理指定仓库的缓存
+#[tauri::command]
+pub async fn clear_repository_cache(
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<(), String> {
+    let repo = state.db.get_repository(&repo_id)
+        .map_err(|e| e.to_string())?
+        .ok_or("仓库不存在")?;
+
+    if let Some(cache_path) = &repo.cache_path {
+        let cache_path_buf = std::path::PathBuf::from(cache_path);
+
+        // 删除整个仓库缓存目录（包括archive.zip和extracted/）
+        if let Some(parent) = cache_path_buf.parent() {
+            if parent.exists() {
+                std::fs::remove_dir_all(parent)
+                    .map_err(|e| format!("删除缓存目录失败: {}", e))?;
+
+                log::info!("已删除缓存目录: {:?}", parent);
+            }
+        }
+
+        // 清除数据库中的缓存信息
+        state.db.clear_repository_cache_metadata(&repo_id)
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+/// 刷新仓库缓存（清理后重新扫描）
+#[tauri::command]
+pub async fn refresh_repository_cache(
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<Vec<Skill>, String> {
+    // 先清理缓存
+    clear_repository_cache(state.clone(), repo_id.clone()).await?;
+
+    // 重新扫描（会自动下载新版本）
+    scan_repository(state, repo_id).await
+}
+
+/// 获取缓存统计信息
+#[tauri::command]
+pub async fn get_cache_stats(
+    state: State<'_, AppState>,
+) -> Result<CacheStats, String> {
+    let repos = state.db.get_repositories()
+        .map_err(|e| e.to_string())?;
+
+    let mut total_cached = 0;
+    let mut total_size: u64 = 0;
+
+    for repo in &repos {
+        if let Some(cache_path) = &repo.cache_path {
+            if let Some(parent) = std::path::PathBuf::from(cache_path).parent() {
+                if parent.exists() {
+                    total_cached += 1;
+
+                    // 计算目录大小
+                    if let Ok(size) = dir_size(parent) {
+                        total_size += size;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(CacheStats {
+        total_repositories: repos.len(),
+        cached_repositories: total_cached,
+        total_size_bytes: total_size,
+    })
+}
+
+/// 计算目录大小
+fn dir_size(path: &std::path::Path) -> Result<u64, std::io::Error> {
+    use walkdir::WalkDir;
+
+    let mut size = 0;
+
+    for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+        if entry.file_type().is_file() {
+            size += entry.metadata()?.len();
+        }
+    }
+
+    Ok(size)
+}
+
+/// 缓存统计信息
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheStats {
+    pub total_repositories: usize,
+    pub cached_repositories: usize,
+    pub total_size_bytes: u64,
+}
