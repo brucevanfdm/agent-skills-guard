@@ -1,6 +1,6 @@
 use crate::models::{Repository, Skill};
 use anyhow::{Result, Context};
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, params, OptionalExtension};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -154,7 +154,8 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, url, name, description, enabled, scan_subdirs, added_at, last_scanned, cache_path, cached_at, cached_commit_sha
-             FROM repositories"
+             FROM repositories
+             ORDER BY added_at DESC"
         )?;
 
         let repos = stmt.query_map([], |row| {
@@ -165,7 +166,7 @@ impl Database {
                 description: row.get(3)?,
                 enabled: row.get::<_, i32>(4)? != 0,
                 scan_subdirs: row.get::<_, i32>(5)? != 0,
-                added_at: row.get::<_, String>(6)?.parse().unwrap(),
+                added_at: row.get::<_, String>(6)?.parse().unwrap_or_else(|_| chrono::Utc::now()),
                 last_scanned: row.get::<_, Option<String>>(7)?
                     .and_then(|s| s.parse().ok()),
                 cache_path: row.get(8)?,
@@ -287,5 +288,75 @@ impl Database {
         );
 
         Ok(())
+    }
+
+    /// 更新仓库缓存信息
+    pub fn update_repository_cache(
+        &self,
+        repo_id: &str,
+        cache_path: &str,
+        cached_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute(
+            "UPDATE repositories
+             SET cache_path = ?1, cached_at = ?2, last_scanned = ?3
+             WHERE id = ?4",
+            params![
+                cache_path,
+                cached_at.to_rfc3339(),
+                cached_at.to_rfc3339(),
+                repo_id,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    /// 清除仓库缓存信息（但不删除文件）
+    pub fn clear_repository_cache_metadata(&self, repo_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute(
+            "UPDATE repositories
+             SET cache_path = NULL, cached_at = NULL
+             WHERE id = ?1",
+            params![repo_id],
+        )?;
+
+        Ok(())
+    }
+
+    /// 获取单个仓库信息
+    pub fn get_repository(&self, repo_id: &str) -> Result<Option<Repository>> {
+        let conn = self.conn.lock().unwrap();
+
+        let mut stmt = conn.prepare(
+            "SELECT id, url, name, description, enabled, scan_subdirs,
+                    added_at, last_scanned, cache_path, cached_at, cached_commit_sha
+             FROM repositories
+             WHERE id = ?1"
+        )?;
+
+        let repo = stmt.query_row(params![repo_id], |row| {
+            Ok(Repository {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                name: row.get(2)?,
+                description: row.get(3)?,
+                enabled: row.get::<_, i32>(4)? != 0,
+                scan_subdirs: row.get::<_, i32>(5)? != 0,
+                added_at: row.get::<_, String>(6)?.parse().unwrap_or_else(|_| chrono::Utc::now()),
+                last_scanned: row.get::<_, Option<String>>(7)?
+                    .and_then(|s| s.parse().ok()),
+                cache_path: row.get(8)?,
+                cached_at: row.get::<_, Option<String>>(9)?
+                    .and_then(|s| s.parse().ok()),
+                cached_commit_sha: row.get(10)?,
+            })
+        }).optional()?;
+
+        Ok(repo)
     }
 }
