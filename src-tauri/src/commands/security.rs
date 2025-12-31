@@ -1,18 +1,17 @@
+use crate::commands::AppState;
 use crate::models::security::{SecurityReport, SkillScanResult, SecurityLevel};
 use crate::models::Skill;
 use crate::security::SecurityScanner;
-use crate::services::database::Database;
 use anyhow::Result;
 use std::path::PathBuf;
-use std::sync::Arc;
 use tauri::State;
 
 /// 扫描所有已安装的 skills
 #[tauri::command]
 pub async fn scan_all_installed_skills(
-    db: State<'_, Arc<Database>>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<SkillScanResult>, String> {
-    let skills = db.get_skills().map_err(|e| e.to_string())?;
+    let skills = state.db.get_skills().map_err(|e| e.to_string())?;
     let installed_skills: Vec<Skill> = skills.into_iter()
         .filter(|s| s.installed && s.local_path.is_some())
         .collect();
@@ -38,7 +37,7 @@ pub async fn scan_all_installed_skills(
                         skill.scanned_at = Some(chrono::Utc::now());
 
                         // 保存到数据库
-                        if let Err(e) = db.save_skill(&skill) {
+                        if let Err(e) = state.db.save_skill(&skill) {
                             eprintln!("Failed to save skill {}: {}", skill.name, e);
                         }
 
@@ -65,9 +64,9 @@ pub async fn scan_all_installed_skills(
 /// 获取缓存的扫描结果
 #[tauri::command]
 pub async fn get_scan_results(
-    db: State<'_, Arc<Database>>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<SkillScanResult>, String> {
-    let skills = db.get_skills().map_err(|e| e.to_string())?;
+    let skills = state.db.get_skills().map_err(|e| e.to_string())?;
 
     let results: Vec<SkillScanResult> = skills.into_iter()
         .filter(|s| s.installed && s.security_score.is_some())
