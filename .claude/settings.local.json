@@ -44,7 +44,22 @@
       "Bash(timeout /t 15 /nobreak)",
       "Bash(dir:*)",
       "Bash(pnpm tauri:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(node --version:*)",
+      "Bash(pnpm --version:*)",
+      "Bash(rustc:*)",
+      "Bash(brew --version:*)",
+      "Bash(xcode-select -p:*)",
+      "Bash(brew install:*)",
+      "Bash(curl:*)",
+      "Bash(sh:*)",
+      "Bash(cargo --version:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(lsof:*)",
+      "Bash(open http://localhost:5173/)",
+      "Bash(pkill:*)",
+      "Bash(xargs kill:*)"
     ]
   }
 }

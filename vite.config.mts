@@ -17,6 +17,13 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    host: "localhost",
+    cors: true,
+    hmr: {
+      protocol: "ws",
+      host: "localhost",
+      port: 5173,
+    },
     watch: {
       ignored: ["**/src-tauri/**"],
     },
@@ -26,5 +33,6 @@ export default defineConfig({
     target: "esnext",
     minify: "esbuild",
     sourcemap: false,
+    cssCodeSplit: false,
   },
 });
