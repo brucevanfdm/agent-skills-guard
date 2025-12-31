@@ -67,6 +67,9 @@ tauri-plugin-opener = "2.0"
 # ZIP解压
 zip = "2.2"
 
+# OS 插件
+tauri-plugin-os = "2.0"
+
 
 [features]
 default = ["custom-protocol"]
