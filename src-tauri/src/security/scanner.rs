@@ -140,6 +140,7 @@ impl SecurityScanner {
             Category::Privilege => IssueCategory::ProcessExecution,
             Category::Secrets => IssueCategory::DataExfiltration,
             Category::Persistence => IssueCategory::ProcessExecution,
+            Category::SensitiveFileAccess => IssueCategory::FileSystem,
         }
     }
 
@@ -181,6 +182,7 @@ impl SecurityScanner {
         let has_secrets = matches.iter().any(|m| matches!(m.category, Category::Secrets));
         let has_persistence = matches.iter().any(|m| matches!(m.category, Category::Persistence));
         let has_privilege = matches.iter().any(|m| matches!(m.category, Category::Privilege));
+        let has_sensitive_file_access = matches.iter().any(|m| matches!(m.category, Category::SensitiveFileAccess));
 
         if has_destructive {
             recommendations.push("包含破坏性操作（如删除文件），存在极高风险".to_string());
@@ -202,6 +204,9 @@ impl SecurityScanner {
         }
         if has_privilege {
             recommendations.push("包含权限提升操作，请确认必要性".to_string());
+        }
+        if has_sensitive_file_access {
+            recommendations.push("包含敏感文件访问操作（如密钥、配置文件），请确认必要性".to_string());
         }
 
         if recommendations.is_empty() {

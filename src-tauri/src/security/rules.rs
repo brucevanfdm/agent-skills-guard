@@ -21,6 +21,7 @@ pub enum Category {
     Privilege,        // 权限提升
     Secrets,          // 敏感泄露
     Persistence,      // 持久化
+    SensitiveFileAccess,  // 敏感文件访问
 }
 
 /// 置信度等级
@@ -443,6 +444,86 @@ lazy_static! {
             Confidence::High,
             "使用GitHub Secrets或环境变量，不要硬编码Token",
             Some("CWE-798"),
+        ),
+
+        // H. 敏感文件访问
+        PatternRule::new(
+            "READ_SSH_PRIVATE_KEY",
+            "读取SSH私钥",
+            r"(cat|less|head|tail|vim|nano|open)\s+.*\.ssh/(id_rsa|id_dsa|id_ecdsa|id_ed25519)($|\s)",
+            Severity::High,
+            Category::SensitiveFileAccess,
+            70,
+            "读取SSH私钥文件",
+            false,
+            Confidence::High,
+            "避免直接读取私钥文件，使用ssh-agent管理密钥",
+            Some("CWE-522"),
+        ),
+        PatternRule::new(
+            "READ_AWS_CREDENTIALS",
+            "读取AWS凭证",
+            r"(cat|less|head|tail|vim|nano|open)\s+.*\.aws/credentials",
+            Severity::High,
+            Category::SensitiveFileAccess,
+            70,
+            "读取AWS凭证文件",
+            false,
+            Confidence::High,
+            "使用AWS IAM角色或环境变量，避免读取凭证文件",
+            Some("CWE-522"),
+        ),
+        PatternRule::new(
+            "READ_ENV_FILE",
+            "读取.env文件",
+            r"(cat|less|head|tail|vim|nano|open)\s+.*\.env($|\s)",
+            Severity::Medium,
+            Category::SensitiveFileAccess,
+            50,
+            "读取环境变量配置文件",
+            false,
+            Confidence::Medium,
+            "确保.env文件不包含敏感信息，或使用密钥管理服务",
+            Some("CWE-522"),
+        ),
+        PatternRule::new(
+            "READ_PASSWD",
+            "读取passwd文件",
+            r"(cat|less|head|tail)\s+/etc/passwd",
+            Severity::Medium,
+            Category::SensitiveFileAccess,
+            45,
+            "读取系统用户信息",
+            false,
+            Confidence::High,
+            "确认是否需要读取用户信息，避免信息泄露",
+            Some("CWE-200"),
+        ),
+        PatternRule::new(
+            "READ_SHADOW",
+            "读取shadow文件",
+            r"(cat|less|head|tail)\s+/etc/shadow",
+            Severity::Critical,
+            Category::SensitiveFileAccess,
+            85,
+            "读取系统密码哈希文件",
+            true,
+            Confidence::High,
+            "绝不应读取shadow文件，这是严重的安全风险",
+            Some("CWE-522"),
+        ),
+        PatternRule::new(
+            "READ_GIT_CREDENTIALS",
+            "读取Git凭证",
+            r"(cat|less|head|tail|vim|nano|open)\s+.*\.git-credentials",
+            Severity::High,
+            Category::SensitiveFileAccess,
+            65,
+            "读取Git凭证存储文件",
+            false,
+            Confidence::High,
+            "使用SSH密钥或凭证管理器，避免明文存储Git凭证",
+            Some("CWE-522"),
         ),
     ];
 
