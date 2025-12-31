@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
@@ -65,30 +65,32 @@ export function SecurityDashboard() {
   };
 
   // 过滤和排序
-  const filteredAndSortedResults = scanResults
-    .filter((result) => {
-      // 等级过滤
-      if (filterLevel !== "all" && result.level !== filterLevel) {
-        return false;
-      }
-      // 搜索过滤
-      if (searchQuery && !result.skill_name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "score":
-          return a.score - b.score; // 低分在前
-        case "name":
-          return a.skill_name.localeCompare(b.skill_name);
-        case "time":
-          return new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime();
-        default:
-          return 0;
-      }
-    });
+  const filteredAndSortedResults = useMemo(() => {
+    return scanResults
+      .filter((result) => {
+        // 等级过滤
+        if (filterLevel !== "all" && result.level !== filterLevel) {
+          return false;
+        }
+        // 搜索过滤
+        if (searchQuery && !result.skill_name.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "score":
+            return a.score - b.score; // 低分在前
+          case "name":
+            return a.skill_name.localeCompare(b.skill_name);
+          case "time":
+            return new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime();
+          default:
+            return 0;
+        }
+      });
+  }, [scanResults, filterLevel, searchQuery, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -132,7 +134,7 @@ export function SecurityDashboard() {
           </label>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as "score" | "name" | "time")}
             className="px-3 py-1 bg-background border border-border rounded font-mono text-sm"
           >
             <option value="score">{t('security.sort.score')}</option>
