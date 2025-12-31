@@ -33,37 +33,6 @@ interface SkillScanResult {
   report: SecurityReport;
 }
 
-function SecurityBadge({ level }: { level: string }) {
-  const colors = {
-    Safe: "bg-green-500/20 text-green-500 border-green-500/50",
-    Low: "bg-blue-500/20 text-blue-500 border-blue-500/50",
-    Medium: "bg-yellow-500/20 text-yellow-500 border-yellow-500/50",
-    High: "bg-orange-500/20 text-orange-500 border-orange-500/50",
-    Critical: "bg-red-500/20 text-red-500 border-red-500/50",
-  };
-
-  return (
-    <span className={`px-2 py-1 rounded text-xs font-mono border ${colors[level as keyof typeof colors] || colors.Safe}`}>
-      {level}
-    </span>
-  );
-}
-
-function ScoreDisplay({ score }: { score: number }) {
-  const getColor = (score: number) => {
-    if (score >= 90) return "text-green-500";
-    if (score >= 70) return "text-yellow-500";
-    if (score >= 50) return "text-orange-500";
-    return "text-red-500";
-  };
-
-  return (
-    <span className={`text-2xl font-bold font-mono ${getColor(score)}`}>
-      {score}
-    </span>
-  );
-}
-
 export function SecurityDashboard() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -73,7 +42,7 @@ export function SecurityDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   // TODO: 任务 4.4 将实现详情对话框功能
   const [selectedSkill, setSelectedSkill] = useState<SkillScanResult | null>(null);
-  console.log(selectedSkill); // 临时使用，避免 lint 警告
+  void selectedSkill; // Explicitly mark as used for future task 4.4
 
   // 获取扫描结果
   const { data: scanResults = [], isLoading } = useQuery<SkillScanResult[]>({
@@ -228,47 +197,84 @@ export function SecurityDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredAndSortedResults.map((result) => (
-                <tr key={result.skill_id} className="hover:bg-background/50 transition-colors">
-                  <td className="px-6 py-4 font-mono text-sm">
-                    {result.skill_name}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <ScoreDisplay score={result.score} />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <SecurityBadge level={result.level} />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2 text-xs font-mono">
-                      {result.report.issues.filter(i => i.severity === "Critical").length > 0 && (
-                        <span className="text-red-500">C:{result.report.issues.filter(i => i.severity === "Critical").length}</span>
-                      )}
-                      {result.report.issues.filter(i => i.severity === "Error").length > 0 && (
-                        <span className="text-orange-500">H:{result.report.issues.filter(i => i.severity === "Error").length}</span>
-                      )}
-                      {result.report.issues.filter(i => i.severity === "Warning").length > 0 && (
-                        <span className="text-yellow-500">M:{result.report.issues.filter(i => i.severity === "Warning").length}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center text-xs font-mono text-muted-foreground">
-                    {new Date(result.scanned_at).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => setSelectedSkill(result)}
-                      className="px-3 py-1 text-xs font-mono border border-terminal-cyan text-terminal-cyan rounded hover:bg-terminal-cyan/10"
-                    >
-                      {t('security.table.viewDetails')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredAndSortedResults.map((result) => {
+                const criticalCount = result.report.issues.filter(i => i.severity === "Critical").length;
+                const errorCount = result.report.issues.filter(i => i.severity === "Error").length;
+                const warningCount = result.report.issues.filter(i => i.severity === "Warning").length;
+
+                return (
+                  <tr key={result.skill_id} className="hover:bg-background/50 transition-colors">
+                    <td className="px-6 py-4 font-mono text-sm">
+                      {result.skill_name}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <ScoreDisplay score={result.score} />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <SecurityBadge level={result.level} />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2 text-xs font-mono">
+                        {criticalCount > 0 && (
+                          <span className="text-red-500">C:{criticalCount}</span>
+                        )}
+                        {errorCount > 0 && (
+                          <span className="text-orange-500">H:{errorCount}</span>
+                        )}
+                        {warningCount > 0 && (
+                          <span className="text-yellow-500">M:{warningCount}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center text-xs font-mono text-muted-foreground">
+                      {new Date(result.scanned_at).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => setSelectedSkill(result)}
+                        className="px-3 py-1 text-xs font-mono border border-terminal-cyan text-terminal-cyan rounded hover:bg-terminal-cyan/10"
+                      >
+                        {t('security.table.viewDetails')}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
     </div>
+  );
+}
+
+function SecurityBadge({ level }: { level: string }) {
+  const colors = {
+    Safe: "bg-green-500/20 text-green-500 border-green-500/50",
+    Low: "bg-blue-500/20 text-blue-500 border-blue-500/50",
+    Medium: "bg-yellow-500/20 text-yellow-500 border-yellow-500/50",
+    High: "bg-orange-500/20 text-orange-500 border-orange-500/50",
+    Critical: "bg-red-500/20 text-red-500 border-red-500/50",
+  };
+
+  return (
+    <span className={`px-2 py-1 rounded text-xs font-mono border ${colors[level as keyof typeof colors] || colors.Safe}`}>
+      {level}
+    </span>
+  );
+}
+
+function ScoreDisplay({ score }: { score: number }) {
+  const getColor = (score: number) => {
+    if (score >= 90) return "text-green-500";
+    if (score >= 70) return "text-yellow-500";
+    if (score >= 50) return "text-orange-500";
+    return "text-red-500";
+  };
+
+  return (
+    <span className={`text-2xl font-bold font-mono ${getColor(score)}`}>
+      {score}
+    </span>
   );
 }
