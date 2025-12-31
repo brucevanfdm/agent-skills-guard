@@ -183,6 +183,19 @@
       "lastScan": "最后扫描",
       "actions": "操作",
       "viewDetails": "查看详情"
+    },
+    "detail": {
+      "scanTime": "扫描时间",
+      "securityScore": "安全评分",
+      "close": "关闭",
+      "recommendations": "建议",
+      "lineNumber": "行号",
+      "issues": {
+        "critical": "严重问题",
+        "high": "高风险问题",
+        "medium": "中风险问题",
+        "low": "低风险问题"
+      }
     }
   }
 }

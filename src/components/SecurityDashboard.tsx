@@ -5,34 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { Search, Loader2, Shield } from "lucide-react";
 import { SecurityDetailDialog } from "./SecurityDetailDialog";
-
-// TypeScript 接口定义
-interface SecurityIssue {
-  severity: string;
-  category: string;
-  description: string;
-  line_number?: number;
-  code_snippet?: string;
-}
-
-interface SecurityReport {
-  skill_id: string;
-  score: number;
-  level: string;
-  issues: SecurityIssue[];
-  recommendations: string[];
-  blocked: boolean;
-  hard_trigger_issues: string[];
-}
-
-interface SkillScanResult {
-  skill_id: string;
-  skill_name: string;
-  score: number;
-  level: string;
-  scanned_at: string;
-  report: SecurityReport;
-}
+import type { SkillScanResult } from "@/types/security";
 
 export function SecurityDashboard() {
   const { t } = useTranslation();

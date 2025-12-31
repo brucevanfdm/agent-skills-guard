@@ -7,34 +7,9 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Shield, AlertTriangle, Info } from "lucide-react";
-import { useState } from "react";
-
-interface SecurityIssue {
-  severity: string;
-  category: string;
-  description: string;
-  line_number?: number;
-  code_snippet?: string;
-}
-
-interface SecurityReport {
-  skill_id: string;
-  score: number;
-  level: string;
-  issues: SecurityIssue[];
-  recommendations: string[];
-  blocked: boolean;
-  hard_trigger_issues: string[];
-}
-
-interface SkillScanResult {
-  skill_id: string;
-  skill_name: string;
-  score: number;
-  level: string;
-  scanned_at: string;
-  report: SecurityReport;
-}
+import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import type { SkillScanResult, SecurityIssue } from "@/types/security";
 
 interface SecurityDetailDialogProps {
   result: SkillScanResult | null;
@@ -43,15 +18,22 @@ interface SecurityDetailDialogProps {
 }
 
 export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDialogProps) {
+  const { t } = useTranslation();
+
   if (!result) return null;
 
   const { report } = result;
 
-  // 按严重程度分组
-  const criticalIssues = report.issues.filter(i => i.severity === "Critical");
-  const highIssues = report.issues.filter(i => i.severity === "Error");
-  const mediumIssues = report.issues.filter(i => i.severity === "Warning");
-  const lowIssues = report.issues.filter(i => i.severity === "Info");
+  // 使用 useMemo 优化问题分组
+  const { criticalIssues, highIssues, mediumIssues, lowIssues } = useMemo(
+    () => ({
+      criticalIssues: report.issues.filter((i) => i.severity === "Critical"),
+      highIssues: report.issues.filter((i) => i.severity === "Error"),
+      mediumIssues: report.issues.filter((i) => i.severity === "Warning"),
+      lowIssues: report.issues.filter((i) => i.severity === "Info"),
+    }),
+    [report.issues]
+  );
 
   return (
     <AlertDialog open={open} onOpenChange={onClose}>
@@ -62,7 +44,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
             <div>
               <div className="text-xl">{result.skill_name}</div>
               <div className="text-sm text-muted-foreground font-normal mt-1">
-                扫描时间：{new Date(result.scanned_at).toLocaleString()}
+                {t("security.detail.scanTime")}：{new Date(result.scanned_at).toLocaleString()}
               </div>
             </div>
           </AlertDialogTitle>
@@ -71,7 +53,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
         {/* 总体评分 */}
         <div className="flex items-center justify-between p-6 bg-card/50 rounded-lg border border-border">
           <div>
-            <div className="text-sm text-muted-foreground mb-1">安全评分</div>
+            <div className="text-sm text-muted-foreground mb-1">{t("security.detail.securityScore")}</div>
             <div className={`text-5xl font-bold font-mono ${
               result.score >= 90 ? 'text-green-500' :
               result.score >= 70 ? 'text-yellow-500' :
@@ -97,7 +79,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
         <div className="space-y-4">
           {criticalIssues.length > 0 && (
             <IssueSection
-              title="严重问题"
+              title={t("security.detail.issues.critical")}
               icon={<AlertTriangle className="w-5 h-5 text-red-500" />}
               issues={criticalIssues}
               color="red"
@@ -106,7 +88,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
 
           {highIssues.length > 0 && (
             <IssueSection
-              title="高风险问题"
+              title={t("security.detail.issues.high")}
               icon={<AlertTriangle className="w-5 h-5 text-orange-500" />}
               issues={highIssues}
               color="orange"
@@ -116,7 +98,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
 
           {mediumIssues.length > 0 && (
             <IssueSection
-              title="中风险问题"
+              title={t("security.detail.issues.medium")}
               icon={<Info className="w-5 h-5 text-yellow-500" />}
               issues={mediumIssues}
               color="yellow"
@@ -126,7 +108,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
 
           {lowIssues.length > 0 && (
             <IssueSection
-              title="低风险问题"
+              title={t("security.detail.issues.low")}
               icon={<Info className="w-5 h-5 text-blue-500" />}
               issues={lowIssues}
               color="blue"
@@ -138,7 +120,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
         {/* 建议区域 */}
         {report.recommendations.length > 0 && (
           <div className="p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
-            <div className="font-mono text-sm font-bold mb-2">建议：</div>
+            <div className="font-mono text-sm font-bold mb-2">{t("security.detail.recommendations")}：</div>
             <ul className="space-y-1 text-sm">
               {report.recommendations.map((rec, idx) => (
                 <li key={idx} className="flex items-start gap-2">
@@ -151,7 +133,7 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
         )}
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>关闭</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose}>{t("security.detail.close")}</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -169,20 +151,43 @@ function IssueSection({
   title: string;
   icon: React.ReactNode;
   issues: SecurityIssue[];
-  color: string;
+  color: "red" | "orange" | "yellow" | "blue";
   defaultCollapsed?: boolean;
 }) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
-  const borderColorClass = `border-${color}-500/50`;
-  const bgColorClass = `bg-${color}-500/10`;
-  const hoverBgColorClass = `hover:bg-${color}-500/20`;
+  // 使用颜色映射对象，而不是动态字符串拼接
+  const colorClasses = {
+    red: {
+      border: "border-red-500/50",
+      bg: "bg-red-500/10",
+      hoverBg: "hover:bg-red-500/20",
+    },
+    orange: {
+      border: "border-orange-500/50",
+      bg: "bg-orange-500/10",
+      hoverBg: "hover:bg-orange-500/20",
+    },
+    yellow: {
+      border: "border-yellow-500/50",
+      bg: "bg-yellow-500/10",
+      hoverBg: "hover:bg-yellow-500/20",
+    },
+    blue: {
+      border: "border-blue-500/50",
+      bg: "bg-blue-500/10",
+      hoverBg: "hover:bg-blue-500/20",
+    },
+  };
+
+  const classes = colorClasses[color];
 
   return (
-    <div className={`border rounded-lg overflow-hidden ${borderColorClass}`}>
+    <div className={`border rounded-lg overflow-hidden ${classes.border}`}>
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className={`w-full flex items-center justify-between p-4 ${bgColorClass} ${hoverBgColorClass} transition-colors`}
+        className={`w-full flex items-center justify-between p-4 ${classes.bg} ${classes.hoverBg} transition-colors`}
       >
         <div className="flex items-center gap-2">
           {icon}
@@ -200,7 +205,7 @@ function IssueSection({
               {issue.code_snippet && (
                 <div className="mt-2">
                   <div className="text-xs text-muted-foreground mb-1">
-                    行号：{issue.line_number}
+                    {t("security.detail.lineNumber")}：{issue.line_number}
                   </div>
                   <pre className="p-2 bg-background rounded text-xs font-mono overflow-x-auto">
                     <code>{issue.code_snippet}</code>

@@ -183,6 +183,19 @@
       "lastScan": "Last Scan",
       "actions": "Actions",
       "viewDetails": "View Details"
+    },
+    "detail": {
+      "scanTime": "Scan Time",
+      "securityScore": "Security Score",
+      "close": "Close",
+      "recommendations": "Recommendations",
+      "lineNumber": "Line",
+      "issues": {
+        "critical": "Critical Issues",
+        "high": "High Risk Issues",
+        "medium": "Medium Risk Issues",
+        "low": "Low Risk Issues"
+      }
     }
   }
 }
