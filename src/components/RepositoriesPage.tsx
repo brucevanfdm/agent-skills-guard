@@ -145,10 +145,10 @@ export function RepositoriesPage() {
       {/* Cache Statistics */}
       {cacheStats && (
         <div
-          className="cyber-card p-6 border-terminal-purple"
+          className="cyber-card p-6 border-terminal-purple bg-gradient-to-br from-card via-muted to-card"
           style={{
             animation: 'fadeIn 0.3s ease-out',
-            boxShadow: '0 0 20px rgba(168, 85, 247, 0.15)'
+            boxShadow: '0 0 20px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(168, 85, 247, 0.1)'
           }}
         >
           <div className="flex items-center gap-2 mb-4">
@@ -159,29 +159,32 @@ export function RepositoriesPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <div className="cyber-card p-4 bg-background/30">
-              <div className="text-xs font-mono text-terminal-green mb-1 uppercase tracking-wider">
+            <div className="cyber-card p-4 bg-background/40 border-terminal-cyan/30 hover:border-terminal-cyan hover:shadow-[0_0_15px_rgba(94,234,212,0.2)] transition-all duration-300">
+              <div className="text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider flex items-center gap-1">
+                <span className="text-terminal-cyan">▸</span>
                 总仓库数
               </div>
-              <div className="text-2xl font-bold text-terminal-cyan">
+              <div className="text-3xl font-bold text-terminal-cyan tabular-nums">
                 {cacheStats.totalRepositories}
               </div>
             </div>
 
-            <div className="cyber-card p-4 bg-background/30">
-              <div className="text-xs font-mono text-terminal-green mb-1 uppercase tracking-wider">
+            <div className="cyber-card p-4 bg-background/40 border-terminal-green/30 hover:border-terminal-green hover:shadow-[0_0_15px_rgba(74,222,128,0.2)] transition-all duration-300">
+              <div className="text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider flex items-center gap-1">
+                <span className="text-terminal-cyan">▸</span>
                 已缓存
               </div>
-              <div className="text-2xl font-bold text-terminal-cyan">
+              <div className="text-3xl font-bold text-terminal-green tabular-nums">
                 {cacheStats.cachedRepositories}
               </div>
             </div>
 
-            <div className="cyber-card p-4 bg-background/30">
-              <div className="text-xs font-mono text-terminal-green mb-1 uppercase tracking-wider">
+            <div className="cyber-card p-4 bg-background/40 border-terminal-purple/30 hover:border-terminal-purple hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all duration-300">
+              <div className="text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider flex items-center gap-1">
+                <span className="text-terminal-cyan">▸</span>
                 缓存大小
               </div>
-              <div className="text-2xl font-bold text-terminal-cyan">
+              <div className="text-3xl font-bold text-terminal-purple tabular-nums">
                 {formatBytes(cacheStats.totalSizeBytes)}
               </div>
             </div>
@@ -342,11 +345,11 @@ export function RepositoriesPage() {
                     {/* Cache Status */}
                     <div className="text-muted-foreground">
                       {repo.cache_path ? (
-                        <span className="status-indicator text-terminal-green border-terminal-green/30 bg-terminal-green/10">
+                        <span className="status-indicator text-terminal-green border-terminal-green/40 bg-terminal-green/15 hover:bg-terminal-green/25 transition-colors duration-200">
                           已缓存 {repo.cached_at && `· ${formatDate(repo.cached_at)}`}
                         </span>
                       ) : (
-                        <span className="status-indicator text-terminal-cyan border-terminal-cyan/30 bg-terminal-cyan/10">
+                        <span className="status-indicator text-muted-foreground border-border bg-background/50">
                           未缓存
                         </span>
                       )}
@@ -393,7 +396,7 @@ export function RepositoriesPage() {
                         onClick={() => handleRefreshCache(repo.id)}
                         disabled={refreshCacheMutation.isPending || clearCacheMutation.isPending}
                         title="刷新缓存（重新下载）"
-                        className="neon-button disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 text-xs"
+                        className="px-3 py-2 rounded font-mono text-xs border border-terminal-purple text-terminal-purple hover:bg-terminal-purple hover:text-background hover:shadow-[0_0_10px_rgba(168,85,247,0.4)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
                       >
                         {refreshCacheMutation.isPending ? (
                           <>
@@ -412,7 +415,7 @@ export function RepositoriesPage() {
                         onClick={() => handleClearCache(repo.id)}
                         disabled={refreshCacheMutation.isPending || clearCacheMutation.isPending}
                         title="清理本地缓存"
-                        className="px-3 py-2 rounded font-mono text-xs border border-terminal-yellow text-terminal-yellow hover:bg-terminal-yellow hover:text-background transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                        className="px-3 py-2 rounded font-mono text-xs border-2 border-terminal-red text-terminal-red hover:bg-terminal-red hover:text-background hover:shadow-[0_0_10px_rgba(239,68,68,0.4)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
                       >
                         {clearCacheMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
