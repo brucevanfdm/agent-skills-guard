@@ -59,7 +59,10 @@
       "Bash(lsof:*)",
       "Bash(open http://localhost:5173/)",
       "Bash(pkill:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(cargo build:*)",
+      "Bash(git show:*)",
+      "Bash(find:*)"
     ]
   }
 }
