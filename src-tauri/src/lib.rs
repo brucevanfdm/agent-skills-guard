@@ -8,10 +8,62 @@ use commands::security::{scan_all_installed_skills, get_scan_results, scan_skill
 use services::{Database, SkillManager};
 use std::sync::Arc;
 use tauri::Manager;
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState};
 use tokio::sync::Mutex;
 
 const MAIN_WINDOW_LABEL: &str = "main";
+const MENU_SHOW: &str = "show";
+const MENU_HIDE: &str = "hide";
+const MENU_QUIT: &str = "quit";
+
+fn create_tray_menu(app: &tauri::AppHandle) -> Result<tauri::menu::Menu<tauri::Wry>, tauri::Error> {
+    let show_item = MenuItemBuilder::with_id(MENU_SHOW, "显示窗口").build(app)?;
+    let hide_item = MenuItemBuilder::with_id(MENU_HIDE, "隐藏窗口").build(app)?;
+    let quit_item = MenuItemBuilder::with_id(MENU_QUIT, "退出").build(app)?;
+
+    MenuBuilder::new(app)
+        .item(&show_item)
+        .item(&hide_item)
+        .separator()
+        .item(&quit_item)
+        .build()
+}
+
+fn handle_menu_event(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
+    log::debug!("菜单事件: {}", event.id().as_ref());
+
+    match event.id().as_ref() {
+        MENU_SHOW => {
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+                if let Err(e) = window.show() {
+                    log::warn!("显示窗口失败: {}", e);
+                }
+                if let Err(e) = window.set_focus() {
+                    log::warn!("设置窗口焦点失败: {}", e);
+                }
+            } else {
+                log::error!("无法获取主窗口");
+            }
+        }
+        MENU_HIDE => {
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+                if let Err(e) = window.hide() {
+                    log::warn!("隐藏窗口失败: {}", e);
+                }
+            } else {
+                log::error!("无法获取主窗口");
+            }
+        }
+        MENU_QUIT => {
+            log::info!("用户通过托盘菜单退出应用");
+            app.exit(0);
+        }
+        _ => {
+            log::warn!("未知的菜单事件: {}", event.id().as_ref());
+        }
+    }
+}
 
 fn handle_tray_event(tray: &tauri::tray::TrayIcon<tauri::Wry>, event: tauri::tray::TrayIconEvent) {
     if let tauri::tray::TrayIconEvent::Click {
@@ -94,10 +146,15 @@ pub fn run() {
                 .ok_or("无法获取默认窗口图标")?
                 .clone();
 
+            let app_handle = app.handle();
+            let menu = create_tray_menu(&app_handle)?;
+
             let tray = TrayIconBuilder::new()
                 .icon(icon)
                 .tooltip("Agent Skills Guard")
+                .menu(&menu)
                 .on_tray_icon_event(handle_tray_event)
+                .on_menu_event(handle_menu_event)
                 .build(app)?;
 
             // 存储托盘实例到 app state
