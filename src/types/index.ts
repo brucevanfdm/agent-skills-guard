@@ -7,6 +7,10 @@ export interface Repository {
   scan_subdirs: boolean;
   added_at: string;
   last_scanned?: string;
+  // 新增:缓存字段
+  cache_path?: string;
+  cached_at?: string;
+  cached_commit_sha?: string;
 }
 
 export interface Skill {

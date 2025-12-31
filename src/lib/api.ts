@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Repository, Skill } from "../types";
+import type { CacheStats } from "../types/cache";
 
 export const api = {
   // Repository APIs
@@ -43,5 +44,18 @@ export const api = {
   // Scan local skills directory
   async scanLocalSkills(): Promise<Skill[]> {
     return invoke("scan_local_skills");
+  },
+
+  // 缓存管理
+  async clearRepositoryCache(repoId: string): Promise<void> {
+    return invoke("clear_repository_cache", { repoId });
+  },
+
+  async refreshRepositoryCache(repoId: string): Promise<Skill[]> {
+    return invoke("refresh_repository_cache", { repoId });
+  },
+
+  async getCacheStats(): Promise<CacheStats> {
+    return invoke("get_cache_stats");
   },
 };
