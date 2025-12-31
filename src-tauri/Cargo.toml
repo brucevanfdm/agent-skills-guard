@@ -14,7 +14,7 @@ tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
 # Tauri 核心
-tauri = { version = "2.8", features = ["devtools"] }
+tauri = { version = "2.8", features = ["devtools", "tray-icon"] }
 tauri-plugin-dialog = "2.4"
 tauri-plugin-process = "2.0"
 tauri-plugin-store = "2.0"

@@ -28,6 +28,11 @@
     }
   },
   "app": {
+    "trayIcon": {
+      "iconPath": "icons/tray-icon.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false
+    },
     "windows": [
       {
         "title": "Agent Skills Guard",
