@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { InstalledSkillsPage } from "./components/InstalledSkillsPage";
 import { MarketplacePage } from "./components/MarketplacePage";
 import { RepositoriesPage } from "./components/RepositoriesPage";
-import { api } from "./lib/api";
-import { Package, ShoppingCart, Database as DatabaseIcon, Zap } from "lucide-react";
+import { SecurityDashboard } from "./components/SecurityDashboard";
+import { Package, ShoppingCart, Database as DatabaseIcon, Shield } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { WindowControls } from "./components/WindowControls";
@@ -13,68 +13,18 @@ import { Toaster } from "sonner";
 // 全局类型声明
 declare const __APP_VERSION__: string;
 
-// 动画延迟常量
-const SCAN_INIT_DELAY = 800;
-const SCAN_MESSAGE_DURATION = 2500;
-
 const reactQueryClient = new QueryClient();
 
 function AppContent() {
   const { t } = useTranslation();
-  const [currentTab, setCurrentTab] = useState<"installed" | "marketplace" | "repositories">("installed");
-  const [localScanMessage, setLocalScanMessage] = useState<string | null>(null);
-  const [showScanAnimation, setShowScanAnimation] = useState(false);
-  const queryClient = useQueryClient();
+  const [currentTab, setCurrentTab] = useState<"security" | "installed" | "marketplace" | "repositories">("security");
 
-  // Scan local skills on app startup
-  useEffect(() => {
-    const initLocalSkills = async () => {
-      setShowScanAnimation(true);
-      setLocalScanMessage(t('scan.initializing'));
-
-      await new Promise(resolve => setTimeout(resolve, SCAN_INIT_DELAY));
-
-      try {
-        const skills = await api.scanLocalSkills();
-        queryClient.invalidateQueries({ queryKey: ["skills"] });
-        if (skills.length > 0) {
-          setLocalScanMessage(t('scan.complete', { count: skills.length }));
-        } else {
-          setLocalScanMessage(t('scan.noSkills'));
-        }
-      } catch (error) {
-        console.error("Failed to scan local skills:", error);
-        setLocalScanMessage(t('scan.error'));
-      } finally {
-        setTimeout(() => {
-          setShowScanAnimation(false);
-          setLocalScanMessage(null);
-        }, SCAN_MESSAGE_DURATION);
-      }
-    };
-    initLocalSkills();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryClient]);
+  // Removed automatic local skills scan on startup - security dashboard now handles scanning
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background relative">
       {/* Matrix background effect */}
       <div className="matrix-bg"></div>
-
-      {/* Scan notification banner */}
-      {showScanAnimation && localScanMessage && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-terminal-cyan/20 via-terminal-purple/20 to-terminal-cyan/20 border-t border-terminal-cyan/50 backdrop-blur-sm"
-          style={{ animation: 'fadeIn 0.3s ease-out' }}
-        >
-          <div className="container mx-auto px-6 py-3 flex items-center gap-3">
-            <Zap className="w-4 h-4 text-terminal-cyan animate-pulse" />
-            <span className="font-mono text-sm text-terminal-cyan terminal-cursor">
-              {localScanMessage}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <header className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur-sm shadow-lg z-40">
@@ -117,6 +67,25 @@ function AppContent() {
       <nav className="flex-shrink-0 border-b border-border bg-card/30 backdrop-blur-sm z-30">
         <div className="container mx-auto px-6">
           <div className="flex gap-1">
+            <button
+              onClick={() => setCurrentTab("security")}
+              className={`
+                relative px-6 py-3 font-mono text-sm font-medium transition-all duration-200
+                ${currentTab === "security"
+                  ? "text-terminal-cyan border-b-2 border-terminal-cyan"
+                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                }
+              `}
+            >
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span>{t('nav.security')}</span>
+                {currentTab === "security" && (
+                  <span className="text-terminal-green">●</span>
+                )}
+              </div>
+            </button>
+
             <button
               onClick={() => setCurrentTab("installed")}
               className={`
@@ -185,6 +154,7 @@ function AppContent() {
               animation: 'fadeIn 0.4s ease-out'
             }}
           >
+            {currentTab === "security" && <SecurityDashboard />}
             {currentTab === "installed" && <InstalledSkillsPage />}
             {currentTab === "marketplace" && <MarketplacePage />}
             {currentTab === "repositories" && <RepositoriesPage />}
