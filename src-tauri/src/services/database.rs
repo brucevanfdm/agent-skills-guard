@@ -296,17 +296,19 @@ impl Database {
         repo_id: &str,
         cache_path: &str,
         cached_at: chrono::DateTime<chrono::Utc>,
+        cached_commit_sha: Option<&str>,
     ) -> Result<()> {
         let conn = self.conn.lock().unwrap();
 
         conn.execute(
             "UPDATE repositories
-             SET cache_path = ?1, cached_at = ?2, last_scanned = ?3
-             WHERE id = ?4",
+             SET cache_path = ?1, cached_at = ?2, last_scanned = ?3, cached_commit_sha = ?4
+             WHERE id = ?5",
             params![
                 cache_path,
                 cached_at.to_rfc3339(),
                 cached_at.to_rfc3339(),
+                cached_commit_sha,
                 repo_id,
             ],
         )?;
@@ -320,7 +322,7 @@ impl Database {
 
         conn.execute(
             "UPDATE repositories
-             SET cache_path = NULL, cached_at = NULL
+             SET cache_path = NULL, cached_at = NULL, cached_commit_sha = NULL
              WHERE id = ?1",
             params![repo_id],
         )?;
