@@ -83,6 +83,7 @@ impl Database {
         // 执行数据库迁移
         self.migrate_add_repository_owner()?;
         self.migrate_add_cache_fields()?;
+        self.migrate_add_security_enhancement_fields()?;
 
         Ok(())
     }
@@ -284,6 +285,25 @@ impl Database {
         // 添加 cached_commit_sha 列
         let _ = conn.execute(
             "ALTER TABLE repositories ADD COLUMN cached_commit_sha TEXT",
+            [],
+        );
+
+        Ok(())
+    }
+
+    /// 数据库迁移：添加安全扫描增强字段
+    fn migrate_add_security_enhancement_fields(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        // 添加 security_level 列
+        let _ = conn.execute(
+            "ALTER TABLE skills ADD COLUMN security_level TEXT",
+            [],
+        );
+
+        // 添加 scanned_at 列
+        let _ = conn.execute(
+            "ALTER TABLE skills ADD COLUMN scanned_at TEXT",
             [],
         );
 
