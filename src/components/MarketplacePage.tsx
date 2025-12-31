@@ -1,10 +1,21 @@
 import { useState, useMemo } from "react";
 import { useSkills, useInstallSkill, useUninstallSkill, useDeleteSkill } from "../hooks/useSkills";
 import { Skill } from "../types";
-import { Download, Trash2, AlertTriangle, Loader2, Package, Search, ChevronDown, ChevronUp, FolderOpen } from "lucide-react";
+import { SecurityReport } from "../types/security";
+import { Download, Trash2, AlertTriangle, Loader2, Package, Search, ChevronDown, ChevronUp, FolderOpen, XCircle, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "./ui/alert-dialog";
 
 export function MarketplacePage() {
   const { t, i18n } = useTranslation();
@@ -20,6 +31,10 @@ export function MarketplacePage() {
   const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
   const [uninstallingSkillId, setUninstallingSkillId] = useState<string | null>(null);
   const [deletingSkillId, setDeletingSkillId] = useState<string | null>(null);
+  const [pendingInstall, setPendingInstall] = useState<{
+    skill: Skill;
+    report: SecurityReport;
+  } | null>(null);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -167,18 +182,76 @@ export function MarketplacePage() {
               key={skill.id}
               skill={skill}
               index={index}
-              onInstall={() => {
-                setInstallingSkillId(skill.id);
-                installMutation.mutate(skill.id, {
-                  onSuccess: () => {
-                    setInstallingSkillId(null);
-                    showToast(t('skills.toast.installed'));
-                  },
-                  onError: (error: any) => {
-                    setInstallingSkillId(null);
-                    showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
-                  },
-                });
+              onInstall={async () => {
+                try {
+                  setInstallingSkillId(skill.id);
+
+                  // 扫描 Skill（使用已有的 security_score 或进行实时扫描）
+                  let report: SecurityReport | null = null;
+
+                  // 如果 skill 已有 local_path，说明已下载，可以直接扫描
+                  if (skill.local_path) {
+                    try {
+                      report = await invoke<SecurityReport>("scan_skill_archive", {
+                        archivePath: skill.local_path
+                      });
+                    } catch (scanError) {
+                      console.warn("扫描失败，将继续安装:", scanError);
+                    }
+                  }
+
+                  // 如果没有扫描报告但有缓存的评分，构造一个简单的报告
+                  if (!report && skill.security_score != null) {
+                    report = {
+                      skill_id: skill.id,
+                      score: skill.security_score,
+                      level: skill.security_score >= 90 ? "Safe" :
+                             skill.security_score >= 70 ? "Low" :
+                             skill.security_score >= 50 ? "Medium" : "High",
+                      issues: (skill.security_issues || []).map(issue => ({
+                        severity: "Warning",
+                        category: "Unknown",
+                        description: issue
+                      })),
+                      recommendations: [],
+                      blocked: false,
+                      hard_trigger_issues: []
+                    };
+                  }
+
+                  // 判断是否需要用户确认
+                  if (report) {
+                    // 如果被阻止，显示错误
+                    if (report.blocked) {
+                      setInstallingSkillId(null);
+                      showToast("该 Skill 存在严重安全风险，已被阻止安装");
+                      setPendingInstall({ skill, report });
+                      return;
+                    }
+
+                    // 如果评分低于 70，显示确认对话框
+                    if (report.score < 70) {
+                      setInstallingSkillId(null);
+                      setPendingInstall({ skill, report });
+                      return;
+                    }
+                  }
+
+                  // 安全评分 >= 70 或无扫描结果，直接安装
+                  installMutation.mutate(skill.id, {
+                    onSuccess: () => {
+                      setInstallingSkillId(null);
+                      showToast(t('skills.toast.installed'));
+                    },
+                    onError: (error: any) => {
+                      setInstallingSkillId(null);
+                      showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
+                    },
+                  });
+                } catch (error: any) {
+                  setInstallingSkillId(null);
+                  showToast(`安装准备失败: ${error.message || error}`);
+                }
               }}
               onUninstall={() => {
                 setUninstallingSkillId(skill.id);
@@ -251,6 +324,30 @@ export function MarketplacePage() {
           </div>
         </div>
       )}
+
+      {/* Install Confirmation Dialog */}
+      <InstallConfirmDialog
+        open={pendingInstall !== null}
+        onClose={() => setPendingInstall(null)}
+        onConfirm={() => {
+          if (pendingInstall) {
+            setInstallingSkillId(pendingInstall.skill.id);
+            setPendingInstall(null);
+            installMutation.mutate(pendingInstall.skill.id, {
+              onSuccess: () => {
+                setInstallingSkillId(null);
+                showToast(t('skills.toast.installed'));
+              },
+              onError: (error: any) => {
+                setInstallingSkillId(null);
+                showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
+              },
+            });
+          }
+        }}
+        report={pendingInstall?.report || null}
+        skillName={pendingInstall?.skill.name || ""}
+      />
     </div>
   );
 }
@@ -600,5 +697,127 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <p className="text-terminal-cyan mb-1">{label}:</p>
       <p className="text-muted-foreground break-all">{value}</p>
     </div>
+  );
+}
+
+interface InstallConfirmDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  report: SecurityReport | null;
+  skillName: string;
+}
+
+function InstallConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  report,
+  skillName
+}: InstallConfirmDialogProps) {
+  if (!report) return null;
+
+  const isMediumRisk = report.score >= 50 && report.score < 70;
+  const isHighRisk = report.score < 50 || report.blocked;
+
+  return (
+    <AlertDialog open={open} onOpenChange={onClose}>
+      <AlertDialogContent className="max-w-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            {isHighRisk ? (
+              <XCircle className="w-6 h-6 text-red-500" />
+            ) : isMediumRisk ? (
+              <AlertTriangle className="w-6 h-6 text-yellow-500" />
+            ) : (
+              <CheckCircle className="w-6 h-6 text-green-500" />
+            )}
+            安全扫描结果
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-4">
+              <div>
+                准备安装: <span className="font-mono font-bold">{skillName}</span>
+              </div>
+
+              {/* 评分 */}
+              <div className="flex items-center justify-between p-4 bg-card/50 rounded-lg">
+                <span className="text-sm">安全评分:</span>
+                <span className={`text-3xl font-bold font-mono ${
+                  report.score >= 90 ? 'text-green-500' :
+                  report.score >= 70 ? 'text-yellow-500' :
+                  report.score >= 50 ? 'text-orange-500' : 'text-red-500'
+                }`}>
+                  {report.score}
+                </span>
+              </div>
+
+              {/* 问题摘要 */}
+              {report.issues.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-bold">检测到的问题:</div>
+                  <div className="flex gap-4 text-sm">
+                    {report.issues.filter(i => i.severity === "Critical").length > 0 && (
+                      <span className="text-red-500">
+                        严重: {report.issues.filter(i => i.severity === "Critical").length}
+                      </span>
+                    )}
+                    {report.issues.filter(i => i.severity === "Error").length > 0 && (
+                      <span className="text-orange-500">
+                        高风险: {report.issues.filter(i => i.severity === "Error").length}
+                      </span>
+                    )}
+                    {report.issues.filter(i => i.severity === "Warning").length > 0 && (
+                      <span className="text-yellow-500">
+                        中风险: {report.issues.filter(i => i.severity === "Warning").length}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 建议 */}
+              {report.recommendations.length > 0 && (
+                <div className={`p-3 rounded-lg ${
+                  isHighRisk ? 'bg-red-500/10 border border-red-500/50' :
+                  isMediumRisk ? 'bg-yellow-500/10 border border-yellow-500/50' :
+                  'bg-green-500/10 border border-green-500/50'
+                }`}>
+                  <ul className="space-y-1 text-sm">
+                    {report.recommendations.slice(0, 3).map((rec, idx) => (
+                      <li key={idx}>• {rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 警告信息 */}
+              {isHighRisk && (
+                <div className="p-3 bg-red-500/20 border border-red-500 rounded-lg text-sm">
+                  <strong>⚠️ 强烈建议不要安装此 Skill！</strong>
+                  <br />
+                  检测到严重安全威胁，可能危害您的系统或数据。
+                </div>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>取消</AlertDialogCancel>
+          {!report.blocked && (
+            <button
+              onClick={onConfirm}
+              className={`px-4 py-2 rounded font-mono ${
+                isHighRisk ? 'bg-red-500 hover:bg-red-600' :
+                isMediumRisk ? 'bg-yellow-500 hover:bg-yellow-600' :
+                'bg-green-500 hover:bg-green-600'
+              } text-white`}
+            >
+              {isHighRisk ? '仍然安装' : isMediumRisk ? '谨慎安装' : '安装'}
+            </button>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
