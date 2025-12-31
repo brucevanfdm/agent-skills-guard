@@ -198,19 +198,33 @@ pub async fn clear_repository_cache(
     if let Some(cache_path) = &repo.cache_path {
         let cache_path_buf = std::path::PathBuf::from(cache_path);
 
+        // 验证缓存路径是否在预期的缓存目录中
+        let expected_cache_base = dirs::cache_dir()
+            .ok_or("无法获取缓存目录".to_string())?
+            .join("agent-skills-guard")
+            .join("repositories");
+
         // 删除整个仓库缓存目录（包括archive.zip和extracted/）
         if let Some(parent) = cache_path_buf.parent() {
-            if parent.exists() {
-                std::fs::remove_dir_all(parent)
-                    .map_err(|e| format!("删除缓存目录失败: {}", e))?;
+            // 安全检查：确保路径在预期的缓存目录中
+            if !parent.starts_with(&expected_cache_base) {
+                return Err("缓存路径无效".to_string());
+            }
 
-                log::info!("已删除缓存目录: {:?}", parent);
+            // 先清除数据库中的缓存信息
+            state.db.clear_repository_cache_metadata(&repo_id)
+                .map_err(|e| e.to_string())?;
+
+            // 然后删除文件（即使失败也不影响数据库一致性）
+            if parent.exists() {
+                if let Err(e) = std::fs::remove_dir_all(parent) {
+                    log::warn!("删除缓存目录失败，但数据库已清理: {:?}，错误: {}", parent, e);
+                    // 不返回错误，因为数据库已经一致
+                } else {
+                    log::info!("已删除缓存目录: {:?}", parent);
+                }
             }
         }
-
-        // 清除数据库中的缓存信息
-        state.db.clear_repository_cache_metadata(&repo_id)
-            .map_err(|e| e.to_string())?;
     }
 
     Ok(())
