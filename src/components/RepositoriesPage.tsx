@@ -103,15 +103,11 @@ export function RepositoriesPage() {
   };
 
   const handleClearCache = (repoId: string) => {
-    if (confirm(t('repositories.cache.confirmClear'))) {
-      clearCacheMutation.mutate(repoId);
-    }
+    clearCacheMutation.mutate(repoId);
   };
 
   const handleRefreshCache = (repoId: string) => {
-    if (confirm(t('repositories.cache.confirmRefresh'))) {
-      refreshCacheMutation.mutate(repoId);
-    }
+    refreshCacheMutation.mutate(repoId);
   };
 
   return (
@@ -365,6 +361,8 @@ export function RepositoriesPage() {
                       scanMutation.mutate(repo.id, {
                         onSuccess: (skills) => {
                           setScanningRepoId(null);
+                          queryClient.invalidateQueries({ queryKey: ['repositories'] });
+                          queryClient.invalidateQueries({ queryKey: ['cache-stats'] });
                           showToast(t('repositories.toast.foundSkills', { count: skills.length }));
                         },
                         onError: (error: any) => {
