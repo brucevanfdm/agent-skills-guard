@@ -1,286 +1,333 @@
-# 🛡️ Agent Skills Guard
+# Agent Skills Guard
 
-一个基于批判与自我批判理论构建的 Claude Code Agent Skills 安全管理工具。
+<div align="center">
 
-## 📋 项目背景
+**为 Claude Code Agent 打造的智能技能安全管理器**
 
-### 批判性分析
+[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](https://github.com/yourusername/agent-skills-guard)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org)
+[![React](https://img.shields.io/badge/React-18.3-61dafb.svg)](https://reactjs.org)
+[![Tauri](https://img.shields.io/badge/Tauri-2.8-ffc131.svg)](https://tauri.app)
 
-在分析现有 Claude Code Skills 生态系统后，我们发现了以下关键问题：
+</div>
 
-1. **安全缺陷**：Skills 直接从 GitHub 下载并执行，缺少安全检查机制
-2. **权限滥用风险**：Skills 可能包含恶意代码（文件系统操作、网络请求、进程执行）
-3. **缺少审计机制**：用户无法了解 Skills 的安全状况
-4. **管理分散**：Skills 管理功能嵌入在大型应用中，难以独立使用
+---
 
-### 设计理念
+## 📖 项目简介
 
-基于**批判与自我批判**的方法论，本项目：
+**Agent Skills Guard** 是一个专为 [Claude Code](https://claude.com/claude-code) Agent 设计的开源安全管理工具。它通过先进的静态分析和基于规则的扫描引擎，为你的 Claude Code 技能（Skills）提供全方位的安全防护，让你放心地安装和使用第三方技能。
 
-- ✅ **批判现状**：识别现有方案的安全缺陷
-- ✅ **自我批判**：避免过度设计，聚焦 MVP 核心功能
-- ✅ **安全优先**：实现代码静态分析和安全评分机制
-- ✅ **用户透明**：向用户展示安全风险，由用户做出决策
+### 🎯 核心价值
+
+- **🛡️ 安全第一**：60+ 条安全规则，覆盖破坏性操作、命令注入、权限提升等 8 大类别
+- **🔍 智能扫描**：自动扫描本地和远程技能，生成详细的安全报告和修复建议
+- **📦 技能市场**：集成 GitHub 仓库，一键安装社区优质技能
+- **🌐 多语言支持**：中英文界面，适应全球开发者
+- **🎨 Cyber 主题**：科技感十足的终端风格 UI，操作体验极佳
+- **⚡ 高性能**：Rust 后端 + React 前端，原生性能，轻量级安装包
+
+---
 
 ## ✨ 核心功能
 
-### 1. 🔍 安全扫描
+### 1️⃣ 安全仪表盘（Overview）
 
-- **静态代码分析**：检测危险操作模式
-  - 文件系统操作（删除、写入）
-  - 网络请求（数据外传风险）
-  - 进程执行（命令注入）
-  - 代码混淆检测
-- **安全评分**：0-100 分评分体系
-  - 90-100：✅ 安全
-  - 70-89：⚠️ 低风险
-  - 50-69：⚠️ 中风险
-  - <50：🚫 高风险（禁止安装）
+实时监控你的技能安全状态：
 
-### 2. 📦 Skills 管理
+- **统计卡片**：已安装技能数、总问题数、高危问题数
+- **扫描状态**：最近扫描时间、扫描进度、快速操作
+- **问题汇总**：按严重程度分类的问题统计（Critical/High/Medium/Low）
+- **问题列表**：详细的安全问题清单，支持点击查看详情和源代码
 
-- 从 GitHub 仓库自动扫描 Skills
-- 一键安装/卸载到 `~/.claude/skills/`
-- 查看已安装 Skills 列表
-- 安全评分可视化
+### 2️⃣ 已安装技能（Installed Skills）
 
-### 3. 🗂️ 仓库配置
+管理你本地的所有技能：
 
-- 添加自定义 GitHub 仓库
-- 支持子目录递归扫描
-- 仓库启用/禁用管理
+- 查看技能详情（名称、描述、作者、版本、仓库地址）
+- 查看安全评分和风险等级（Safe / Low Risk / Medium Risk / High Risk）
+- 一键卸载或删除技能
+- 批量扫描所有已安装技能
+- 快速打开技能目录
 
-### 4. 💾 数据持久化
+### 3️⃣ 技能市场（Marketplace）
 
-- SQLite 数据库存储
-- Skills 元数据管理
-- 安装历史记录
+发现并安装优质技能：
 
-## 🏗️ 技术架构
+- 浏览来自不同仓库的技能
+- 实时搜索和过滤
+- 查看技能详细信息和安全评估
+- 安装前自动安全扫描
+- 风险提示和确认机制（检测到高风险时需确认）
 
-```
-┌─────────────────────────────────────────────┐
-│           Frontend (React + TS)             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │   UI     │  │  Hooks   │  │  Query   │  │
-│  └──────────┘  └──────────┘  └──────────┘  │
-└─────────────────┬───────────────────────────┘
-                  │ Tauri IPC
-┌─────────────────▼───────────────────────────┐
-│          Backend (Tauri + Rust)             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ Commands │  │ Services │  │  Models  │  │
-│  │          │  │          │  │          │  │
-│  │ ├ Skills │  │ ├ GitHub │  │ ├ Skill  │  │
-│  │ ├ Repos  │  │ ├ Scanner│  │ ├ Repo   │  │
-│  │          │  │ ├ Database  │ ├ Security│  │
-│  └──────────┘  └──────────┘  └──────────┘  │
-└─────────────────────────────────────────────┘
-```
+### 4️⃣ 仓库管理（Repositories）
 
-### 技术栈
+灵活管理你的技能来源：
 
-**前端**
+- 添加/删除 GitHub 仓库
+- 扫描仓库中的所有技能
+- 查看缓存统计（文件数、大小、更新时间）
+- 清理缓存、刷新缓存
+- 支持多仓库同时管理
 
-- React 18
-- TypeScript
-- TailwindCSS 3
-- TanStack Query (数据缓存)
-- Lucide React (图标)
+---
 
-**后端**
+## 🔒 安全扫描引擎
 
-- Tauri 2.8
-- Rust
-- SQLite (rusqlite)
-- reqwest (HTTP 客户端)
-- tokio (异步运行时)
+### 规则类别
+
+Agent Skills Guard 内置 **60+ 条安全规则**，覆盖以下类别：
+
+| 类别                          | 说明           | 示例                                        |
+| ----------------------------- | -------------- | ------------------------------------------- |
+| **Destructive**         | 破坏性操作     | `rm -rf /`, `dd if=/dev/zero`, `mkfs` |
+| **RemoteExec**          | 远程代码执行   | `curl \| sh`, `wget \| bash`              |
+| **CmdInjection**        | 命令注入       | `eval`, `exec`, `system()`            |
+| **Network**             | 未授权网络请求 | 未经许可的 HTTP 请求、数据外传              |
+| **Privilege**           | 权限提升       | `sudo`, `su`, `setuid`                |
+| **Secrets**             | 敏感信息泄露   | API keys, tokens, passwords                 |
+| **Persistence**         | 持久化         | cron, systemd, 启动项                       |
+| **SensitiveFileAccess** | 敏感文件访问   | `/etc/passwd`, SSH keys, `.env`         |
+
+### 风险等级
+
+- **Critical**（严重）：立即阻止安装，需要修复
+- **High**（高危）：强烈建议修复
+- **Medium**（中危）：建议审查和修复
+- **Low**（低危）：提示注意
+
+### 安全评分系统
+
+- **90-100 分**：✅ 安全（Safe / Green）
+- **70-89 分**：⚠️ 低风险（Low Risk / Yellow）
+- **50-69 分**：🔶 中风险（Medium Risk / Orange）
+- **0-49 分**：🚨 高风险（High Risk / Red）
+
+### 扫描报告内容
+
+每次扫描生成详细报告：
+
+- 问题描述和位置（文件路径、行号）
+- 严重程度和类别
+- 代码片段（高亮显示问题代码）
+- 修复建议（Remediation）
+- 是否阻止安装（Blocked）
+
+---
 
 ## 🚀 快速开始
 
-### 环境要求
+### 前置要求
 
-- Node.js 18+
-- pnpm 8+
-- Rust 1.85+
-- Tauri CLI 2.8+
+确保你已安装以下环境：
 
-### 安装依赖
+- **Node.js** 20+
+- **pnpm** 10.10.0+（推荐使用 pnpm）
+- **Rust** 1.70+（通过 [rustup](https://rustup.rs/) 安装）
+- **系统依赖**：
+  - macOS: Xcode Command Line Tools
+  - Windows: Visual Studio Build Tools
+
+### 安装步骤
+
+1. **克隆仓库**
 
 ```bash
-# 安装前端依赖
+git clone https://github.com/yourusername/agent-skills-guard.git
+cd agent-skills-guard
+```
+
+2. **安装依赖**
+
+```bash
 pnpm install
-
-# 构建 Rust 后端（自动）
-pnpm tauri build
 ```
 
-### 开发模式
+3. **运行开发环境**
 
 ```bash
-# 启动开发服务器（热重载）
 pnpm dev
-
-# 或分别启动前后端
-pnpm dev:renderer  # 前端
-pnpm tauri dev     # Tauri
 ```
+
+应用会自动打开，Vite 开发服务器运行在 `http://localhost:5173`。
+
+---
+
+## 🛠️ 开发指南
+
+### 可用脚本
+
+| 命令                     | 说明                                   |
+| ------------------------ | -------------------------------------- |
+| `pnpm dev`             | 启动 Tauri + Vite 开发服务器（热重载） |
+| `pnpm dev:renderer`    | 仅启动 Vite 前端开发服务器             |
+| `pnpm build`           | 构建生产环境应用（生成安装包）         |
+| `pnpm build:renderer`  | 仅构建前端（输出到 `dist/`）         |
+| `pnpm typecheck`       | 运行 TypeScript 类型检查               |
+| `pnpm format`          | 格式化代码（Prettier）                 |
+| `pnpm format:check`    | 检查代码格式                           |
+| `pnpm test:unit`       | 运行单元测试（Vitest）                 |
+| `pnpm test:unit:watch` | 监视模式运行测试                       |
 
 ### 构建生产版本
 
 ```bash
-# 构建跨平台应用
 pnpm build
-
-# 输出位置
-# Windows: src-tauri/target/release/agent-skills-guard.exe
-# macOS: src-tauri/target/release/bundle/macos/
 ```
 
-## 📖 使用指南
+构建产物位置：
 
-### 1. 添加仓库
-
-1. 点击「仓库配置」标签
-2. 点击「添加仓库」
-3. 输入仓库名称和 GitHub URL
-   - 例如: `https://github.com/anthropics/anthropic-quickstarts`
-4. 点击「确认添加」
-
-### 2. 扫描 Skills
-
-1. 在仓库列表中点击「扫描」按钮
-2. 等待扫描完成
-3. 切换到「Skills 管理」标签查看结果
-
-### 3. 安装 Skills
-
-1. 在 Skills 列表中查看安全评分
-2. 点击「详情」查看安全问题
-3. 安全评分 ≥ 50 分的 Skill 可以安装
-4. 点击「安装」按钮
-
-### 4. 卸载 Skills
-
-1. 在「已安装」过滤器下查看已安装的 Skills
-2. 点击「卸载」按钮
-
-## 🔒 安全机制
-
-### 代码扫描规则
-
-```rust
-// 危险文件系统操作
-rm -rf /, chmod 777, os.system()
-
-// 网络请求
-curl | bash, requests.post()
-
-// 数据泄露风险
-AWS_ACCESS_KEY, API_KEY, PASSWORD
-
-// 代码混淆
-base64.b64decode, \\x{hex}
-```
-
-### 评分机制
-
-- **Critical 问题**：-30 分
-- **Error 问题**：-20 分
-- **Warning 问题**：-10 分
-- **Info 问题**：-5 分
-
-基础分 100 分，扣分后 < 50 分禁止安装。
-
-## 📂 项目结构
-
-```
-agent-skills-guard/
-├── src/                      # 前端源码
-│   ├── components/           # UI 组件
-│   │   ├── SkillsPage.tsx
-│   │   └── RepositoriesPage.tsx
-│   ├── hooks/                # React Hooks
-│   │   ├── useSkills.ts
-│   │   └── useRepositories.ts
-│   ├── lib/                  # 工具库
-│   │   └── api.ts            # Tauri API 封装
-│   ├── types/                # TypeScript 类型
-│   └── App.tsx               # 主应用
-│
-├── src-tauri/                # 后端源码
-│   └── src/
-│       ├── models/           # 数据模型
-│       │   ├── skill.rs
-│       │   ├── repository.rs
-│       │   └── security.rs
-│       ├── security/         # 安全模块
-│       │   ├── scanner.rs    # 代码扫描器
-│       │   └── rules.rs      # 扫描规则
-│       ├── services/         # 业务逻辑
-│       │   ├── github.rs     # GitHub API
-│       │   ├── skill_manager.rs
-│       │   └── database.rs   # SQLite DAO
-│       ├── commands/         # Tauri Commands
-│       └── lib.rs            # 入口文件
-│
-├── package.json
-├── Cargo.toml
-└── README.md
-```
-
-## 🛣️ Roadmap
-
-### ✅ MVP (v0.1.0)
-
-- [X] GitHub 仓库扫描
-- [X] 安全代码分析
-- [X] Skills 安装/卸载
-- [X] SQLite 数据持久化
-
-### 🔮 未来计划
-
-- [ ] 版本管理和更新检测
-- [ ] Skills 依赖冲突检测
-- [ ] 沙箱隔离运行
-- [ ] 云端同步配置
-- [ ] 社区评分系统
-
-## 🤝 贡献指南
-
-欢迎提交 Issue 和 Pull Request！
-
-### 开发原则
-
-1. **批判性思维**：识别问题，提出改进
-2. **自我批判**：避免过度设计，保持简洁
-3. **安全优先**：任何功能都要考虑安全影响
-4. **用户透明**：向用户清晰展示风险
-
-### 提交前检查
-
-```bash
-# 类型检查
-pnpm typecheck
-
-# 代码格式化
-pnpm format
-
-# Rust 检查
-cd src-tauri && cargo clippy && cargo test
-```
-
-## 📄 License
-
-MIT © Bruce
-
-## 🙏 致谢
-
-本项目参考了以下项目的技术架构：
-
-- [cc-switch](https://github.com/farion1231/cc-switch) - Tauri + React 架构设计
-- Claude Code - Skills 生态系统
+- **Windows**: `src-tauri/target/release/bundle/msi/Agent Skills Guard_0.9.0_x64_en-US.msi`
+- **macOS**: `src-tauri/target/release/bundle/dmg/Agent Skills Guard_0.9.0_aarch64.dmg`
 
 ---
 
-**⚠️ 免责声明**：本工具仅提供安全检查建议，无法保证 100% 检测所有恶意代码。请用户自行评估风险后安装 Skills。
+## 📁 项目结构
+
+```
+agent-skills-guard/
+├── src/                          # 前端源代码（React + TypeScript）
+│   ├── components/              # React 组件
+│   │   ├── ui/                  # UI 基础组件（Radix UI）
+│   │   ├── overview/            # Overview 页面子组件
+│   │   ├── OverviewPage.tsx     # 安全仪表盘
+│   │   ├── InstalledSkillsPage.tsx  # 已安装技能
+│   │   ├── MarketplacePage.tsx  # 技能市场
+│   │   ├── RepositoriesPage.tsx # 仓库配置
+│   │   ├── WindowControls.tsx   # 窗口控制
+│   │   └── LanguageSwitcher.tsx # 语言切换
+│   ├── hooks/                   # React Hooks
+│   ├── lib/                     # 工具函数和 API 调用
+│   ├── i18n/                    # 国际化（中英文）
+│   ├── types/                   # TypeScript 类型定义
+│   ├── styles/                  # 全局样式（Cyber 主题）
+│   ├── App.tsx                  # 主应用组件
+│   └── main.tsx                 # 入口文件
+│
+├── src-tauri/                   # Tauri 后端（Rust）
+│   ├── src/
+│   │   ├── models/              # 数据模型（Skill, Repository, Security）
+│   │   ├── services/            # 业务服务
+│   │   │   ├── database.rs      # SQLite 数据库
+│   │   │   ├── github.rs        # GitHub API
+│   │   │   └── skill_manager.rs # 技能管理（下载、安装、扫描）
+│   │   ├── security/            # 安全扫描模块 ⭐
+│   │   │   ├── rules.rs         # 安全规则引擎（60+ 规则）
+│   │   │   └── scanner.rs       # 安全扫描器
+│   │   ├── commands/            # Tauri 命令（前后端通信）
+│   │   ├── lib.rs               # 库入口（托盘、菜单）
+│   │   └── main.rs              # 主入口
+│   ├── icons/                   # 应用图标
+│   ├── Cargo.toml               # Rust 依赖配置
+│   └── tauri.conf.json          # Tauri 应用配置
+│
+├── test-skills/                 # 测试用技能样例
+├── docs/                        # 文档
+├── package.json                 # 前端依赖配置
+├── vite.config.mts              # Vite 配置
+├── tailwind.config.js           # Tailwind 配置
+└── tsconfig.json                # TypeScript 配置
+```
+
+---
+
+## 🎨 技术栈
+
+### 前端
+
+- **框架**: React 18.3 + TypeScript 5.9
+- **构建工具**: Vite 5.0
+- **UI 组件**: Radix UI（无障碍组件库）
+- **样式**: Tailwind CSS 3.4 + Cyber 主题
+- **动画**: Framer Motion 12.23
+- **图标**: Lucide React
+- **状态管理**: TanStack Query v5.90（数据获取和缓存）
+- **表单**: React Hook Form 7.65 + Zod 4.1
+- **国际化**: i18next 25.5 + react-i18next 16.0
+- **通知**: Sonner 2.0
+- **测试**: Vitest 2.0 + Testing Library
+
+### 后端
+
+- **框架**: Tauri 2.8（Rust 跨平台桌面应用）
+- **数据库**: rusqlite 0.32（SQLite）
+- **HTTP 客户端**: reqwest 0.12
+- **异步运行时**: tokio 1.40
+- **序列化**: serde + serde_json + serde_yaml
+- **错误处理**: thiserror + anyhow
+- **文件系统**: walkdir 2.5 + tempfile 3.13
+- **加密和哈希**: sha2 0.10 + hex 0.4
+- **正则表达式**: regex 1.11
+- **压缩**: zip 2.2
+
+---
+
+## 🗂️ 技能存储
+
+默认技能目录：`~/.claude/skills/`
+
+目录结构：
+
+```
+~/.claude/skills/
+├── skill-name-1/
+│   └── SKILL.md
+├── skill-name-2/
+│   └── SKILL.md
+└── ...
+```
+
+每个技能由一个 `SKILL.md` 文件定义。
+
+---
+
+## 🌍 国际化
+
+支持语言：
+
+- 🇺🇸 English
+- 🇨🇳 简体中文
+
+切换方式：点击右上角的语言切换器
+
+翻译文件位置：
+
+- `src/i18n/locales/en.json`
+- `src/i18n/locales/zh.json`
+
+---
+
+## 📋 路线图
+
+- [X] 核心安全扫描引擎
+- [X] 技能市场和仓库管理
+- [X] Cyber 主题 UI
+- [X] 中英文双语支持
+- [X] 跨平台支持（Windows / macOS ）
+- [ ] 技能仓库的增量更新
+- [ ] 安全扫描增强
+- [ ] 程序本身的自动更新
+- [ ] ...
+
+---
+
+## 📜 许可证
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+---
+
+## 📧 联系方式
+
+如有问题或建议，请通过以下方式联系：
+
+- GitHub Issues
+- Email: brucevanfdm@gmail.com
+
+---
+
+<div align="center">
+
+**⭐ 如果这个项目对你有帮助，请给它一个 Star！⭐**
+
+</div>
