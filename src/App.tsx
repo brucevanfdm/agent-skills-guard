@@ -40,9 +40,9 @@ function AppContent() {
         <h1 className="text-2xl font-bold text-terminal-cyan text-glow tracking-wider">
           {t('header.title')}
         </h1>
-        <p className="text-xs text-muted-foreground font-mono mt-1 tracking-wide">
+        {/* <p className="text-xs text-muted-foreground font-mono mt-1 tracking-wide">
           <span className="text-terminal-green">&gt;</span> {t('header.subtitle')}
-        </p>
+        </p> */}
       </div>
     </div>
   );
@@ -201,7 +201,7 @@ function AppContent() {
         <div className="w-full px-6 py-3">
           <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
             <span className="text-terminal-green">❯</span>
-            <span>agent-skills-guard</span>
+            <span>Agent-Skills-Guard </span>
             <span className="text-terminal-cyan">{t('footer.version')}{__APP_VERSION__}</span>
             <span className="mx-2">•</span>
             <span className="text-terminal-purple">{t('footer.status')}</span>
