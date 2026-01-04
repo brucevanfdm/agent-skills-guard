@@ -100,7 +100,11 @@
       "search": "SEARCH_INSTALLED_SKILLS...",
       "clearSearch": "CLEAR_SEARCH",
       "noResults": "No skills found containing \"{{query}}\"",
-      "empty": "NO_INSTALLED_SKILLS_YET"
+      "empty": "NO_INSTALLED_SKILLS_YET",
+      "scanLocal": "SCAN_LOCAL",
+      "scanning": "SCANNING...",
+      "scanCompleted": "SCAN_COMPLETE: {{count}} SKILLS_FOUND",
+      "scanFailed": "SCAN_FAILED: {{error}}"
     },
     "folder": {
       "opened": "FOLDER_OPENED",

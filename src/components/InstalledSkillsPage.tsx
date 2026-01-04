@@ -1,21 +1,27 @@
 import { useState, useMemo } from "react";
 import { useInstalledSkills, useUninstallSkill } from "../hooks/useSkills";
 import { Skill } from "../types";
-import { Trash2, Loader2, FolderOpen, Package, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, Loader2, FolderOpen, Package, Search, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
+import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { api } from "../lib/api";
 
 interface InstalledSkillsPageProps {
   onNavigateToOverview: () => void;
 }
 
 export function InstalledSkillsPage({ onNavigateToOverview }: InstalledSkillsPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: installedSkills, isLoading } = useInstalledSkills();
   const uninstallMutation = useUninstallSkill();
+  const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRepository, setSelectedRepository] = useState("all");
+  const [isScanning, setIsScanning] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [uninstallingSkillId, setUninstallingSkillId] = useState<string | null>(null);
 
@@ -23,6 +29,58 @@ export function InstalledSkillsPage({ onNavigateToOverview }: InstalledSkillsPag
     setToast(message);
     setTimeout(() => setToast(null), 3000);
   };
+
+  // 添加扫描本地技能的 mutation
+  const scanMutation = useMutation({
+    mutationFn: async () => {
+      setIsScanning(true);
+      const localSkills = await api.scanLocalSkills();
+      return localSkills;
+    },
+    onSuccess: (localSkills) => {
+      queryClient.invalidateQueries({ queryKey: ["installedSkills"] });
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
+      showToast(t('skills.installedPage.scanCompleted', { count: localSkills.length }));
+    },
+    onError: (error: any) => {
+      showToast(t('skills.installedPage.scanFailed', { error: error.message }));
+    },
+    onSettled: () => {
+      setIsScanning(false);
+    },
+  });
+
+  // 提取所有仓库及其技能数量
+  const repositories = useMemo(() => {
+    if (!installedSkills) return [];
+    const ownerMap = new Map<string, number>();
+
+    installedSkills.forEach((skill) => {
+      const owner = skill.repository_owner || "unknown";
+      ownerMap.set(owner, (ownerMap.get(owner) || 0) + 1);
+    });
+
+    const repos = Array.from(ownerMap.entries())
+      .map(([owner, count]) => ({
+        owner,
+        count,
+        displayName: owner === "local" ? t('skills.marketplace.localRepo') : `@${owner}`
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    return [
+      { owner: "all", count: installedSkills.length, displayName: t('skills.marketplace.allRepos') },
+      ...repos
+    ];
+  }, [installedSkills, i18n.language, t]);
+
+  // 转换为 CyberSelect 选项格式
+  const repositoryOptions: CyberSelectOption[] = useMemo(() => {
+    return repositories.map((repo) => ({
+      value: repo.owner,
+      label: `${repo.displayName} (${repo.count})`,
+    }));
+  }, [repositories]);
 
   // 搜索过滤和排序
   const filteredSkills = useMemo(() => {
@@ -40,13 +98,20 @@ export function InstalledSkillsPage({ onNavigateToOverview }: InstalledSkillsPag
       );
     }
 
+    // 仓库过滤
+    if (selectedRepository !== "all") {
+      skills = skills.filter(
+        (skill) => skill.repository_owner === selectedRepository
+      );
+    }
+
     // 按安装时间排序，最近安装的在前
     return [...skills].sort((a, b) => {
       const timeA = a.installed_at ? new Date(a.installed_at).getTime() : 0;
       const timeB = b.installed_at ? new Date(b.installed_at).getTime() : 0;
       return timeB - timeA; // 降序排列
     });
-  }, [installedSkills, searchQuery]);
+  }, [installedSkills, searchQuery, selectedRepository]);
 
   const getSecurityBadge = (score?: number) => {
     if (score == null) {
@@ -100,16 +165,46 @@ export function InstalledSkillsPage({ onNavigateToOverview }: InstalledSkillsPag
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder={t('skills.installedPage.search')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-terminal-cyan transition-colors"
+        {/* Filters Row */}
+        <div className="flex gap-3 items-center flex-wrap">
+          {/* Search Bar */}
+          <div className="relative flex-1 min-w-[300px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={t('skills.installedPage.search')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-terminal-cyan transition-colors"
+            />
+          </div>
+
+          {/* Repository Filter */}
+          <CyberSelect
+            value={selectedRepository}
+            onChange={setSelectedRepository}
+            options={repositoryOptions}
+            className="min-w-[200px]"
           />
+
+          {/* Scan Local Skills Button */}
+          <button
+            onClick={() => scanMutation.mutate()}
+            disabled={isScanning}
+            className="neon-button disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          >
+            {isScanning ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t('skills.installedPage.scanning')}
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                {t('skills.installedPage.scanLocal')}
+              </>
+            )}
+          </button>
         </div>
       </div>
 
