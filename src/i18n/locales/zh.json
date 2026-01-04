@@ -126,6 +126,8 @@
     "newRepository": "新仓库",
     "repoName": "仓库名称：",
     "githubUrl": "GitHub 链接：",
+    "urlHint": "输入完整的 GitHub 仓库链接",
+    "nameHint": "自动从 URL 提取，可手动修改",
     "confirmAdd": "确认添加",
     "adding": "添加中...",
     "loading": "加载仓库中...",

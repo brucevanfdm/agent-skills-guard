@@ -83,6 +83,36 @@ export function RepositoriesPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // 添加从 GitHub URL 提取用户名的函数
+  const extractRepoNameFromUrl = (url: string): string => {
+    try {
+      // 支持多种 GitHub URL 格式
+      // https://github.com/owner/repo
+      // https://github.com/owner/repo.git
+      // git@github.com:owner/repo.git
+      const match = url.match(/github\.com[:/]([^/]+)\//);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
+  // 当 URL 变化时自动提取仓库名称（仅当名称为空时）
+  const handleUrlChange = (url: string) => {
+    setNewRepoUrl(url);
+
+    // 只在名称为空时自动填充
+    if (!newRepoName) {
+      const extracted = extractRepoNameFromUrl(url);
+      if (extracted) {
+        setNewRepoName(extracted);
+      }
+    }
+  };
+
   const handleAddRepository = () => {
     if (newRepoUrl && newRepoName) {
       addMutation.mutate(
@@ -205,6 +235,24 @@ export function RepositoriesPage() {
           </div>
 
           <div className="space-y-4">
+            {/* 先输入 GitHub URL */}
+            <div>
+              <label className="block text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider">
+                {t('repositories.githubUrl')}
+              </label>
+              <input
+                type="text"
+                value={newRepoUrl}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                placeholder="https://github.com/owner/repo"
+                className="terminal-input font-mono"
+              />
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                {t('repositories.urlHint')}
+              </p>
+            </div>
+
+            {/* 然后显示仓库名称（自动提取，支持手动修改） */}
             <div>
               <label className="block text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider">
                 {t('repositories.repoName')}
@@ -213,22 +261,12 @@ export function RepositoriesPage() {
                 type="text"
                 value={newRepoName}
                 onChange={(e) => setNewRepoName(e.target.value)}
-                placeholder="Anthropic Official Skills"
+                placeholder="owner"
                 className="terminal-input font-mono"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider">
-                {t('repositories.githubUrl')}
-              </label>
-              <input
-                type="text"
-                value={newRepoUrl}
-                onChange={(e) => setNewRepoUrl(e.target.value)}
-                placeholder="https://github.com/owner/repo"
-                className="terminal-input font-mono"
-              />
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                {t('repositories.nameHint')}
+              </p>
             </div>
           </div>
 
@@ -251,7 +289,11 @@ export function RepositoriesPage() {
               )}
             </button>
             <button
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                setShowAddForm(false);
+                setNewRepoUrl("");
+                setNewRepoName("");
+              }}
               className="px-4 py-2 rounded font-mono text-xs border border-muted-foreground text-muted-foreground hover:border-terminal-purple hover:text-terminal-purple transition-all duration-200"
               disabled={addMutation.isPending}
             >

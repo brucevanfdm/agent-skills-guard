@@ -126,6 +126,8 @@
     "newRepository": "NEW_REPOSITORY",
     "repoName": "repo_name:",
     "githubUrl": "github_url:",
+    "urlHint": "Enter the full GitHub repository URL",
+    "nameHint": "Auto-extracted from URL, can be modified",
     "confirmAdd": "CONFIRM_ADD",
     "adding": "ADDING...",
     "loading": "Loading_Repositories...",
