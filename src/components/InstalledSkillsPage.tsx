@@ -26,17 +26,28 @@ export function InstalledSkillsPage({ onNavigateToOverview }: InstalledSkillsPag
     setTimeout(() => setToast(null), 3000);
   };
 
-  // 搜索过滤
+  // 搜索过滤和排序
   const filteredSkills = useMemo(() => {
     if (!installedSkills) return [];
-    if (!searchQuery) return installedSkills;
 
-    const query = searchQuery.toLowerCase();
-    return installedSkills.filter(
-      (skill) =>
-        skill.name.toLowerCase().includes(query) ||
-        skill.description?.toLowerCase().includes(query)
-    );
+    let skills = installedSkills;
+
+    // 搜索过滤
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      skills = skills.filter(
+        (skill) =>
+          skill.name.toLowerCase().includes(query) ||
+          skill.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // 按安装时间排序，最近安装的在前
+    return [...skills].sort((a, b) => {
+      const timeA = a.installed_at ? new Date(a.installed_at).getTime() : 0;
+      const timeB = b.installed_at ? new Date(b.installed_at).getTime() : 0;
+      return timeB - timeA; // 降序排列
+    });
   }, [installedSkills, searchQuery]);
 
   const getSecurityBadge = (score?: number) => {

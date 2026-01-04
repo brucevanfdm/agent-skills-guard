@@ -30,9 +30,6 @@ export function MarketplacePage() {
   const [selectedRepository, setSelectedRepository] = useState("all");
   const [hideInstalled, setHideInstalled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
-  const [uninstallingSkillId, setUninstallingSkillId] = useState<string | null>(null);
-  const [deletingSkillId, setDeletingSkillId] = useState<string | null>(null);
   const [pendingInstall, setPendingInstall] = useState<{
     skill: Skill;
     report: SecurityReport;
@@ -189,8 +186,6 @@ export function MarketplacePage() {
               index={index}
               onInstall={async () => {
                 try {
-                  setInstallingSkillId(skill.id);
-
                   // 扫描 Skill（使用已有的 security_score 或进行实时扫描）
                   let report: SecurityReport | null = null;
 
@@ -228,7 +223,6 @@ export function MarketplacePage() {
                   if (report) {
                     // 如果被阻止，显示错误
                     if (report.blocked) {
-                      setInstallingSkillId(null);
                       showToast(t('skills.marketplace.install.blocked'));
                       setPendingInstall({ skill, report });
                       return;
@@ -236,7 +230,6 @@ export function MarketplacePage() {
 
                     // 如果评分低于 70，显示确认对话框
                     if (report.score < 70) {
-                      setInstallingSkillId(null);
                       setPendingInstall({ skill, report });
                       return;
                     }
@@ -245,48 +238,39 @@ export function MarketplacePage() {
                   // 安全评分 >= 70 或无扫描结果，直接安装
                   installMutation.mutate(skill.id, {
                     onSuccess: () => {
-                      setInstallingSkillId(null);
                       showToast(t('skills.toast.installed'));
                     },
                     onError: (error: any) => {
-                      setInstallingSkillId(null);
                       showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
                     },
                   });
                 } catch (error: any) {
-                  setInstallingSkillId(null);
                   showToast(`${t('skills.marketplace.install.preparationFailed')}: ${error.message || error}`);
                 }
               }}
               onUninstall={() => {
-                setUninstallingSkillId(skill.id);
                 uninstallMutation.mutate(skill.id, {
                   onSuccess: () => {
-                    setUninstallingSkillId(null);
                     showToast(t('skills.toast.uninstalled'));
                   },
                   onError: (error: any) => {
-                    setUninstallingSkillId(null);
                     showToast(`${t('skills.toast.uninstallFailed')}: ${error.message || error}`);
                   },
                 });
               }}
               onDelete={() => {
-                setDeletingSkillId(skill.id);
                 deleteMutation.mutate(skill.id, {
                   onSuccess: () => {
-                    setDeletingSkillId(null);
                     showToast(t('skills.toast.deleted'));
                   },
                   onError: (error: any) => {
-                    setDeletingSkillId(null);
                     showToast(`${t('skills.toast.deleteFailed')}: ${error.message || error}`);
                   },
                 });
               }}
-              isInstalling={installingSkillId === skill.id}
-              isUninstalling={uninstallingSkillId === skill.id}
-              isDeleting={deletingSkillId === skill.id}
+              isInstalling={installMutation.isPending && installMutation.variables === skill.id}
+              isUninstalling={uninstallMutation.isPending && uninstallMutation.variables === skill.id}
+              isDeleting={deleteMutation.isPending && deleteMutation.variables === skill.id}
               isAnyOperationPending={installMutation.isPending || uninstallMutation.isPending || deleteMutation.isPending}
               getSecurityBadge={getSecurityBadge}
               t={t}
@@ -336,15 +320,12 @@ export function MarketplacePage() {
         onClose={() => setPendingInstall(null)}
         onConfirm={() => {
           if (pendingInstall) {
-            setInstallingSkillId(pendingInstall.skill.id);
             setPendingInstall(null);
             installMutation.mutate(pendingInstall.skill.id, {
               onSuccess: () => {
-                setInstallingSkillId(null);
                 showToast(t('skills.toast.installed'));
               },
               onError: (error: any) => {
-                setInstallingSkillId(null);
                 showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
               },
             });
