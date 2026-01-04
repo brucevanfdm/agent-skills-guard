@@ -1,0 +1,17 @@
+blocked_message: "⛔ Severe security threat detected, installation blocked!"
+score_warning_severe: "⚠️ This skill poses severe security risks, installation not recommended"
+score_warning_medium: "⚠️ This skill poses moderate security risks, use with caution"
+no_issues: "✅ No obvious security issues found"
+
+file_location: "File: %{file}, Line: %{line}"
+hard_trigger_issue: "%{rule_name} (File: %{file}, Line: %{line}): %{description}"
+
+recommendations:
+  destructive: "Contains destructive operations (e.g., file deletion), extremely high risk"
+  remote_exec: "Contains remote code execution, extremely high risk"
+  cmd_injection: "Contains command injection risk, please review code logic"
+  network: "Contains network requests, verify target addresses are trusted"
+  secrets: "Sensitive information leakage risk detected (keys, passwords, etc.)"
+  persistence: "Contains persistence operations (e.g., crontab), use with caution"
+  privilege: "Contains privilege escalation operations, verify necessity"
+  sensitive_file: "Contains sensitive file access (e.g., keys, config files), verify necessity"

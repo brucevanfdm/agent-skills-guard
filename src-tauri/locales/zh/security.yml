@@ -1,0 +1,17 @@
+blocked_message: "⛔ 检测到严重安全威胁，已阻止安装！"
+score_warning_severe: "⚠️ 此 skill 存在严重安全风险，建议不要安装"
+score_warning_medium: "⚠️ 此 skill 存在中等安全风险，请谨慎使用"
+no_issues: "✅ 未发现明显安全问题"
+
+file_location: "文件: %{file}, 行 %{line}"
+hard_trigger_issue: "%{rule_name} (文件: %{file}, 行 %{line}): %{description}"
+
+recommendations:
+  destructive: "包含破坏性操作（如删除文件），存在极高风险"
+  remote_exec: "包含远程代码执行，存在极高风险"
+  cmd_injection: "包含命令注入风险，请检查代码逻辑"
+  network: "包含网络请求操作，请确认目标地址可信"
+  secrets: "检测到敏感信息泄露风险（密钥、密码等）"
+  persistence: "包含持久化操作（如 crontab），请谨慎"
+  privilege: "包含权限提升操作，请确认必要性"
+  sensitive_file: "包含敏感文件访问操作（如密钥、配置文件），请确认必要性"
