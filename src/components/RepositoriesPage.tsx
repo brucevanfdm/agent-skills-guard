@@ -44,6 +44,7 @@ export function RepositoriesPage() {
   const [newRepoName, setNewRepoName] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [scanningRepoId, setScanningRepoId] = useState<string | null>(null);
+  const [refreshingRepoId, setRefreshingRepoId] = useState<string | null>(null);
   const [deletingRepoId, setDeletingRepoId] = useState<string | null>(null);
 
   // 缓存统计查询
@@ -398,11 +399,14 @@ export function RepositoriesPage() {
                     onClick={() => {
                       if (repo.cache_path) {
                         // 已缓存：重新扫描
+                        setRefreshingRepoId(repo.id);
                         refreshCacheMutation.mutate(repo.id, {
                           onSuccess: (skills) => {
+                            setRefreshingRepoId(null);
                             showToast(t('repositories.toast.foundSkills', { count: skills.length }));
                           },
                           onError: (error: any) => {
+                            setRefreshingRepoId(null);
                             showToast(`${t('repositories.toast.scanError')}${error.message || error}`);
                           },
                         });
@@ -424,7 +428,7 @@ export function RepositoriesPage() {
                     disabled={scanMutation.isPending || refreshCacheMutation.isPending || deleteMutation.isPending}
                     className="neon-button disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 text-xs"
                   >
-                    {(scanningRepoId === repo.id && scanMutation.isPending) || refreshCacheMutation.isPending ? (
+                    {(scanningRepoId === repo.id && scanMutation.isPending) || (refreshingRepoId === repo.id && refreshCacheMutation.isPending) ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         {repo.cache_path ? t('repositories.rescanning') : t('repositories.scanning')}
