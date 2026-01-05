@@ -266,6 +266,16 @@ impl Database {
         Ok(())
     }
 
+    /// 删除指定仓库的所有未安装技能
+    pub fn delete_uninstalled_skills_by_repository_url(&self, repository_url: &str) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let deleted_count = conn.execute(
+            "DELETE FROM skills WHERE repository_url = ?1 AND installed = 0",
+            params![repository_url]
+        )?;
+        Ok(deleted_count)
+    }
+
     /// 删除 skill
     pub fn delete_skill(&self, skill_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
