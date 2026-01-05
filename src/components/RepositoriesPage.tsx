@@ -118,11 +118,24 @@ export function RepositoriesPage() {
       addMutation.mutate(
         { url: newRepoUrl, name: newRepoName },
         {
-          onSuccess: () => {
+          onSuccess: (repoId) => {
             setNewRepoUrl("");
             setNewRepoName("");
             setShowAddForm(false);
             showToast(t('repositories.toast.added'));
+
+            // 自动触发扫描
+            setScanningRepoId(repoId);
+            scanMutation.mutate(repoId, {
+              onSuccess: (skills) => {
+                setScanningRepoId(null);
+                showToast(t('repositories.toast.foundSkills', { count: skills.length }));
+              },
+              onError: (error: any) => {
+                setScanningRepoId(null);
+                showToast(`${t('repositories.toast.scanError')}${error.message || error}`);
+              },
+            });
           },
           onError: (error: any) => {
             showToast(`${t('repositories.toast.error')}${error.message || error}`);
@@ -403,8 +416,6 @@ export function RepositoriesPage() {
                       scanMutation.mutate(repo.id, {
                         onSuccess: (skills) => {
                           setScanningRepoId(null);
-                          queryClient.invalidateQueries({ queryKey: ['repositories'] });
-                          queryClient.invalidateQueries({ queryKey: ['cache-stats'] });
                           showToast(t('repositories.toast.foundSkills', { count: skills.length }));
                         },
                         onError: (error: any) => {

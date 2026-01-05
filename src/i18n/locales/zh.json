@@ -163,7 +163,7 @@
       "daysAgo": "{{days}}天前"
     },
     "toast": {
-      "added": "仓库已添加 // 扫描技能中...",
+      "added": "仓库已添加，扫描技能中...",
       "error": "错误：",
       "foundSkills": "发现 {{count}} 个技能",
       "scanError": "扫描错误："

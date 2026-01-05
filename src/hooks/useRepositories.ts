@@ -10,15 +10,12 @@ export function useRepositories() {
 
 export function useAddRepository() {
   const queryClient = useQueryClient();
-  const scanMutation = useScanRepository();
 
   return useMutation({
     mutationFn: ({ url, name }: { url: string; name: string }) =>
       api.addRepository(url, name),
-    onSuccess: (repoId) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
-      // Auto-trigger scan immediately after adding repository
-      scanMutation.mutate(repoId);
     },
   });
 }
@@ -41,6 +38,8 @@ export function useScanRepository() {
     mutationFn: (repoId: string) => api.scanRepository(repoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+      queryClient.invalidateQueries({ queryKey: ["cache-stats"] });
     },
   });
 }
