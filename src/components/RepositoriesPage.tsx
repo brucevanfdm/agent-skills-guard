@@ -454,7 +454,7 @@ export function RepositoriesPage() {
                         },
                       });
                     }}
-                    disabled={scanMutation.isPending || deleteMutation.isPending}
+                    disabled={scanMutation.isPending || refreshCacheMutation.isPending || deleteMutation.isPending}
                     className="px-3 py-2 rounded font-mono text-xs border border-terminal-red text-terminal-red hover:bg-terminal-red hover:text-background transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {deletingRepoId === repo.id ? (
