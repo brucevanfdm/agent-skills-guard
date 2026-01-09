@@ -15,11 +15,16 @@ export function useInstalledSkills() {
   });
 }
 
+interface InstallSkillVariables {
+  skillId: string;
+  installPath?: string;
+}
+
 export function useInstallSkill() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({ skillId, installPath }: { skillId: string; installPath?: string }) =>
+  return useMutation<unknown, Error, InstallSkillVariables>({
+    mutationFn: ({ skillId, installPath }) =>
       api.installSkill(skillId, installPath),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skills"] });
@@ -30,7 +35,7 @@ export function useInstallSkill() {
 export function useUninstallSkill() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<unknown, Error, string>({
     mutationFn: (skillId: string) => api.uninstallSkill(skillId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skills"] });

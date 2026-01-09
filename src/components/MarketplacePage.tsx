@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSkills, useInstallSkill, useUninstallSkill, useDeleteSkill } from "../hooks/useSkills";
 import { Skill } from "../types";
 import { SecurityReport } from "../types/security";
-import { Download, Trash2, AlertTriangle, Loader2, Package, Search, ChevronDown, ChevronUp, FolderOpen, XCircle, CheckCircle } from "lucide-react";
+import { Download, Trash2, AlertTriangle, Loader2, Package, Search, FolderOpen, XCircle, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
@@ -273,7 +273,7 @@ export function MarketplacePage() {
                   },
                 });
               }}
-              isInstalling={installMutation.isPending && installMutation.variables === skill.id}
+              isInstalling={installMutation.isPending && installMutation.variables?.skillId === skill.id}
               isUninstalling={uninstallMutation.isPending && uninstallMutation.variables === skill.id}
               isDeleting={deletingSkillId === skill.id}
               isPreparing={preparingSkillId === skill.id}
@@ -440,7 +440,6 @@ function SkillCard({
   getSecurityBadge,
   t
 }: SkillCardProps) {
-  const [showDetails, setShowDetails] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const showLocalToast = (message: string) => {
@@ -587,87 +586,28 @@ function SkillCard({
       <div className="flex items-center gap-4 mb-3 text-xs font-mono flex-wrap">
         <span className="text-muted-foreground">
           <span className="text-terminal-green">{t('skills.repo')}</span>{" "}
-          {skill.repository_url.split("/").slice(-2).join("/")}
+          <a
+            href={skill.repository_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-terminal-cyan hover:underline break-all"
+          >
+            {skill.repository_url}
+          </a>
         </span>
         <span className="text-muted-foreground">
           <span className="text-terminal-purple">{t('skills.path')}</span> {skill.file_path}
         </span>
-      </div>
-
-      {/* Details Toggle */}
-      <button
-        onClick={() => setShowDetails(!showDetails)}
-        className="flex items-center gap-2 text-xs font-mono text-terminal-cyan hover:text-terminal-cyan/80 transition-colors mt-4 group/details"
-      >
-        {showDetails ? (
-          <>
-            <ChevronUp className="w-4 h-4 transition-transform group-hover/details:translate-y-[-2px]" />
-            {t('skills.collapseDetails')}
-          </>
-        ) : (
-          <>
-            <ChevronDown className="w-4 h-4 transition-transform group-hover/details:translate-y-[2px]" />
-            {t('skills.expandDetails')}
-          </>
+        {skill.local_path && (
+          <button
+            onClick={handleOpenFolder}
+            className="text-muted-foreground hover:text-terminal-cyan transition-colors flex items-center gap-1"
+            title={t('skills.localPath')}
+          >
+            <FolderOpen className="w-3 h-3" />
+          </button>
         )}
-      </button>
-
-      {/* Details Panel */}
-      {showDetails && (
-        <div
-          className="mt-4 p-4 bg-muted/50 border border-border rounded space-y-3"
-          style={{ animation: 'fadeIn 0.3s ease-out' }}
-        >
-          <DetailItem label={t('skills.fullRepository')} value={skill.repository_url} />
-          {skill.version && <DetailItem label={t('skills.version')} value={skill.version} />}
-          {skill.author && <DetailItem label={t('skills.author')} value={skill.author} />}
-          {skill.local_path && (
-            <div className="text-xs font-mono">
-              <p className="text-terminal-cyan mb-1">{t('skills.localPath')}:</p>
-              <button
-                onClick={handleOpenFolder}
-                className="text-muted-foreground break-all hover:text-terminal-cyan transition-colors flex items-center gap-2 group"
-              >
-                <FolderOpen className="w-4 h-4 flex-shrink-0 group-hover:text-terminal-cyan" />
-                <span className="text-left">{skill.local_path}</span>
-              </button>
-            </div>
-          )}
-
-          {skill.security_score != null && (
-            <div className="text-xs font-mono">
-              <p className="text-terminal-cyan mb-1">{t('skills.securityAnalysis')}</p>
-              <p className="text-muted-foreground">
-                {skill.security_score}/100 {" "}
-                {skill.security_score >= 90 && t('skills.safe')}
-                {skill.security_score >= 70 && skill.security_score < 90 && t('skills.lowRiskLabel')}
-                {skill.security_score >= 50 && skill.security_score < 70 && t('skills.mediumRiskLabel')}
-                {skill.security_score < 50 && t('skills.highRiskInstallNotRecommended')}
-              </p>
-            </div>
-          )}
-
-          {skill.security_issues && skill.security_issues.length > 0 && (
-            <div className="text-xs font-mono">
-              <p className="text-terminal-red mb-2">{t('skills.securityIssuesDetected')}</p>
-              <div className="space-y-1 pl-4 border-l-2 border-terminal-red/30">
-                {skill.security_issues.map((issue, idx) => (
-                  <p key={idx} className="text-muted-foreground">
-                    <span className="text-terminal-red">[{idx + 1}]</span> {issue}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {skill.installed_at && (
-            <DetailItem
-              label={t('skills.installedAt')}
-              value={new Date(skill.installed_at).toLocaleString('zh-CN')}
-            />
-          )}
-        </div>
-      )}
+      </div>
 
       {/* Local Toast for Folder Open Feedback */}
       {toast && (
@@ -684,15 +624,6 @@ function SkillCard({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-xs font-mono">
-      <p className="text-terminal-cyan mb-1">{label}:</p>
-      <p className="text-muted-foreground break-all">{value}</p>
     </div>
   );
 }

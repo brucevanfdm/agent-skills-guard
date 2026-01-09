@@ -124,42 +124,6 @@ export function InstalledSkillsPage() {
     return skills;
   }, [installedSkills, searchQuery, selectedRepository]);
 
-  const getSecurityBadge = (score?: number) => {
-    if (score == null) {
-      return (
-        <span className="status-indicator text-muted-foreground border-muted-foreground/30 bg-muted/10">
-          {t('skills.notScanned')}
-        </span>
-      );
-    }
-
-    if (score >= 90) {
-      return (
-        <span className="status-indicator text-terminal-green border-terminal-green/30 bg-terminal-green/10">
-          {t('skills.secure')}_{score}
-        </span>
-      );
-    } else if (score >= 70) {
-      return (
-        <span className="status-indicator text-terminal-yellow border-terminal-yellow/30 bg-terminal-yellow/10">
-          {t('skills.lowRisk')}_{score}
-        </span>
-      );
-    } else if (score >= 50) {
-      return (
-        <span className="status-indicator text-terminal-orange border-terminal-orange/30 bg-terminal-orange/10">
-          {t('skills.medRisk')}_{score}
-        </span>
-      );
-    } else {
-      return (
-        <span className="status-indicator text-terminal-red border-terminal-red/30 bg-terminal-red/10">
-          {t('skills.highRisk')}_{score}
-        </span>
-      );
-    }
-  };
-
   return (
     <div className="space-y-6" style={{ animation: 'slideInLeft 0.5s ease-out' }}>
       {/* Header Section */}
@@ -247,7 +211,6 @@ export function InstalledSkillsPage() {
               }}
               isUninstalling={uninstallingSkillId === skill.id}
               isAnyOperationPending={uninstallMutation.isPending}
-              getSecurityBadge={getSecurityBadge}
               t={t}
             />
           ))}
@@ -296,7 +259,6 @@ interface SkillCardProps {
   onUninstall: () => void;
   isUninstalling: boolean;
   isAnyOperationPending: boolean;
-  getSecurityBadge: (score?: number) => React.ReactNode;
   t: (key: string, options?: any) => string;
 }
 
@@ -306,7 +268,6 @@ function SkillCard({
   onUninstall,
   isUninstalling,
   isAnyOperationPending,
-  getSecurityBadge,
   t
 }: SkillCardProps) {
   const [toast, setToast] = useState<string | null>(null);
@@ -340,7 +301,7 @@ function SkillCard({
       {/* Top Bar */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          {/* Skill Name with Repository Tag and Status */}
+          {/* Skill Name with Repository Tag */}
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <h3 className="text-lg font-bold text-foreground tracking-wide">
               {skill.name}
@@ -356,18 +317,6 @@ function SkillCard({
             `}>
               {formatRepositoryTag(skill)}
             </span>
-
-            <span className="status-installed">{t('skills.installed')}</span>
-          </div>
-
-          {/* Security Badge & Score */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {getSecurityBadge(skill.security_score)}
-            {skill.security_score != null && (
-              <span className="font-mono text-xs text-muted-foreground">
-                {t('skills.score')}: <span className="text-terminal-cyan">{skill.security_score}/100</span>
-              </span>
-            )}
           </div>
         </div>
 
@@ -394,23 +343,23 @@ function SkillCard({
       </div>
 
       {/* Description */}
-      <p className="text-sm text-muted-foreground mb-4 font-mono">
+      <p className="text-sm text-muted-foreground mb-3 font-mono">
         {skill.description || t('skills.noDescription')}
       </p>
 
       {/* Skill Info */}
       <div className="space-y-2">
-        {/* Local Path - Clickable to open folder */}
-        {skill.local_path && (
-          <div className="flex items-start gap-2 text-xs font-mono">
-            <span className="text-terminal-cyan whitespace-nowrap">{t('skills.localPath')}:</span>
-            <button
-              onClick={handleOpenFolder}
-              className="text-muted-foreground break-all hover:text-terminal-cyan transition-colors flex items-center gap-2 group flex-1 text-left"
-            >
-              <FolderOpen className="w-3.5 h-3.5 flex-shrink-0 group-hover:text-terminal-cyan" />
-              <span>{skill.local_path}</span>
-            </button>
+        {/* Security Score */}
+        {skill.security_score != null && (
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span className="text-terminal-cyan">{t('skills.marketplace.install.securityScore')}:</span>
+            <span className={`font-bold ${
+              skill.security_score >= 90 ? 'text-terminal-green' :
+              skill.security_score >= 70 ? 'text-terminal-yellow' :
+              skill.security_score >= 50 ? 'text-terminal-orange' : 'text-terminal-red'
+            }`}>
+              {skill.security_score}/100
+            </span>
           </div>
         )}
 
@@ -427,6 +376,20 @@ function SkillCard({
                 minute: '2-digit'
               })}
             </span>
+          </div>
+        )}
+
+        {/* Local Path - Clickable to open folder */}
+        {skill.local_path && (
+          <div className="flex items-start gap-2 text-xs font-mono">
+            <span className="text-terminal-cyan whitespace-nowrap">{t('skills.localPath')}:</span>
+            <button
+              onClick={handleOpenFolder}
+              className="text-muted-foreground break-all hover:text-terminal-cyan transition-colors flex items-center gap-2 group flex-1 text-left"
+            >
+              <FolderOpen className="w-3.5 h-3.5 flex-shrink-0 group-hover:text-terminal-cyan" />
+              <span>{skill.local_path}</span>
+            </button>
           </div>
         )}
       </div>
