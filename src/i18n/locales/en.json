@@ -253,6 +253,13 @@
   },
   "overview": {
     "title": "SYSTEM_OVERVIEW",
+    "subtitle": "Managing {{count}} skills securely",
+    "section": {
+      "statistics": "STATISTICS",
+      "scanStatus": "SCAN_STATUS",
+      "riskDistribution": "RISK_DISTRIBUTION",
+      "issueDetails": "ISSUE_DETAILS"
+    },
     "statistics": {
       "installedSkills": "INSTALLED_SKILLS",
       "repositories": "REPOSITORIES",
@@ -288,6 +295,10 @@
       "viewDetails": "VIEW_DETAILS",
       "viewFullReport": "VIEW_FULL_REPORT",
       "noIssues": "EXCELLENT! ALL_SKILLS_ARE_SAFE",
+      "skillSafe": "This skill is safe",
+      "noCriticalIssues": "Great! No critical risk skills",
+      "noMediumIssues": "Good! No medium risk skills",
+      "noSafeSkills": "No safe skills found",
       "lastScanned": "LAST_SCANNED: {{time}}",
       "openDirectory": "OPEN_DIR",
       "uninstall": "UNINSTALL",

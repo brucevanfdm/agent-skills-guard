@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Package, FolderGit, Shield } from "lucide-react";
+import { Package, FolderGit, Shield, Cpu } from "lucide-react";
 
 interface StatisticsCardsProps {
   installedCount: number;
@@ -12,28 +12,37 @@ const cards = [
     key: 'installedSkills',
     color: 'terminal-cyan',
     icon: Package,
-    hoverBorder: 'hover:border-terminal-cyan/50',
-    hoverShadow: 'hover:shadow-terminal-cyan/20',
+    bgGlow: 'from-terminal-cyan/5 to-transparent',
+    borderColor: 'border-terminal-cyan/30',
+    hoverBorder: 'hover:border-terminal-cyan/60',
+    hoverShadow: 'hover:shadow-[0_0_30px_rgba(94,234,212,0.3)]',
     accentBar: 'bg-terminal-cyan',
     textClass: 'text-terminal-cyan',
+    glowColor: 'rgba(94, 234, 212, 0.4)',
   },
   {
     key: 'repositories',
     color: 'terminal-green',
     icon: FolderGit,
-    hoverBorder: 'hover:border-terminal-green/50',
-    hoverShadow: 'hover:shadow-terminal-green/20',
+    bgGlow: 'from-terminal-green/5 to-transparent',
+    borderColor: 'border-terminal-green/30',
+    hoverBorder: 'hover:border-terminal-green/60',
+    hoverShadow: 'hover:shadow-[0_0_30px_rgba(74,222,128,0.3)]',
     accentBar: 'bg-terminal-green',
     textClass: 'text-terminal-green',
+    glowColor: 'rgba(74, 222, 128, 0.4)',
   },
   {
     key: 'scannedSkills',
     color: 'terminal-purple',
     icon: Shield,
-    hoverBorder: 'hover:border-terminal-purple/50',
-    hoverShadow: 'hover:shadow-terminal-purple/20',
+    bgGlow: 'from-terminal-purple/5 to-transparent',
+    borderColor: 'border-terminal-purple/30',
+    hoverBorder: 'hover:border-terminal-purple/60',
+    hoverShadow: 'hover:shadow-[0_0_30px_rgba(192,132,252,0.3)]',
     accentBar: 'bg-terminal-purple',
     textClass: 'text-terminal-purple',
+    glowColor: 'rgba(192, 132, 252, 0.4)',
   },
 ];
 
@@ -46,7 +55,7 @@ export function StatisticsCards({
   const counts = [installedCount, repositoryCount, scannedCount];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
       {cards.map((card, index) => {
         const Icon = card.icon;
         const count = counts[index];
@@ -55,49 +64,123 @@ export function StatisticsCards({
           <div
             key={card.key}
             className={`
-              bg-card border border-border
-              rounded-lg p-6
-              hover:shadow-lg ${card.hoverBorder} ${card.hoverShadow}
+              relative overflow-hidden rounded-lg
+              bg-gradient-to-br ${card.bgGlow} bg-card
+              border ${card.borderColor}
+              ${card.hoverBorder} ${card.hoverShadow}
               transition-all duration-300
-              relative overflow-hidden
+              group cursor-pointer
             `}
             style={{
-              animation: `fadeIn 0.4s ease-out ${index * 0.05}s`,
-              animationFillMode: 'backwards'
+              animation: `fadeIn 0.5s ease-out ${index * 0.08}s`,
+              animationFillMode: 'backwards',
+              backdropFilter: 'blur(10px)',
             }}
           >
-            {/* 左侧赛博朋克风格竖线 */}
-            <div className={`absolute top-0 left-0 w-1 h-full ${card.accentBar} opacity-70`}></div>
+            {/* 赛博朋克网格背景 */}
+            <div
+              className="absolute inset-0 opacity-10"
+              style={{
+                backgroundImage: `
+                  linear-gradient(${card.glowColor} 1px, transparent 1px),
+                  linear-gradient(90deg, ${card.glowColor} 1px, transparent 1px)
+                `,
+                backgroundSize: '20px 20px',
+              }}
+            />
 
-            {/* 顶部角落装饰 */}
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-border/30 rounded-tr-lg"></div>
+            {/* 左侧动态发光竖线 */}
+            <div className={`absolute top-0 left-0 w-1.5 h-full ${card.accentBar} transition-all duration-300 group-hover:w-2`}>
+              <div
+                className="absolute inset-0 animate-pulse"
+                style={{
+                  boxShadow: `0 0 15px ${card.glowColor}, 0 0 30px ${card.glowColor}`,
+                }}
+              />
+            </div>
 
-            {/* 背景六边形装饰 */}
-            <div className={`absolute -bottom-4 -right-4 w-24 h-24 ${card.textClass} opacity-5`}>
+            {/* 顶部扫描线动画 */}
+            <div
+              className={`absolute top-0 left-0 right-0 h-px ${card.accentBar} opacity-30`}
+              style={{
+                animation: `scan-line 3s ease-in-out infinite`,
+                animationDelay: `${index * 0.5}s`,
+              }}
+            />
+
+            {/* 角落装饰 - 四个角落 */}
+            <div className={`absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 ${card.borderColor} rounded-tl-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
+            <div className={`absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 ${card.borderColor} rounded-tr-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
+            <div className={`absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 ${card.borderColor} rounded-bl-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
+            <div className={`absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 ${card.borderColor} rounded-br-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
+
+            {/* 背景六边形装饰 - 多层叠加 */}
+            <div className={`absolute -bottom-8 -right-8 w-32 h-32 ${card.textClass} opacity-5`}>
               <svg viewBox="0 0 100 100" className="w-full h-full">
                 <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="currentColor" />
               </svg>
             </div>
+            <div className={`absolute -bottom-6 -right-6 w-24 h-24 ${card.textClass} opacity-5`}>
+              <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(30deg)' }}>
+                <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="currentColor" />
+              </svg>
+            </div>
+
+            {/* CPU 芯片装饰 */}
+            <div className={`absolute top-3 right-3 ${card.textClass} opacity-10 group-hover:opacity-20 transition-opacity`}>
+              <Cpu className="w-6 h-6" />
+            </div>
 
             {/* 内容区 */}
-            <div className="relative pl-3">
+            <div className="relative p-6 pl-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className={`text-4xl font-bold ${card.textClass} font-mono mb-2`}>
+                  {/* 数字显示 - 带发光效果 */}
+                  <div
+                    className={`text-5xl font-bold ${card.textClass} font-mono mb-2 group-hover:scale-105 transition-transform duration-300`}
+                    style={{
+                      textShadow: `0 0 20px ${card.glowColor}`,
+                    }}
+                  >
                     {count}
                   </div>
-                  <div className="text-sm text-muted-foreground font-medium uppercase tracking-wide">
+                  {/* 标签 */}
+                  <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${card.accentBar} animate-pulse`} />
                     {t(`overview.statistics.${card.key}`)}
                   </div>
                 </div>
-                <div className="ml-4">
-                  <Icon className={`w-8 h-8 ${card.textClass} opacity-40`} />
+                {/* 图标 */}
+                <div
+                  className={`ml-4 p-3 rounded-lg ${card.bgGlow} ${card.borderColor} ${card.textClass} group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}
+                  style={{
+                    boxShadow: `0 0 15px ${card.glowColor}20`,
+                  }}
+                >
+                  <Icon className="w-8 h-8" />
                 </div>
               </div>
             </div>
 
-            {/* 底部扫描线效果 */}
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-30"></div>
+            {/* 底部数据流装饰线 */}
+            <div className="absolute bottom-0 left-0 right-0 h-1 overflow-hidden opacity-30">
+              <div
+                className={`h-full w-1/3 ${card.accentBar}`}
+                style={{
+                  animation: 'dataFlow 2s ease-in-out infinite',
+                  marginLeft: '-33%',
+                }}
+              />
+            </div>
+
+            {/* 悬停时的边框发光效果 */}
+            <div
+              className={`absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}
+              style={{
+                boxShadow: `inset 0 0 20px ${card.glowColor}30, 0 0 20px ${card.glowColor}20`,
+                border: `1px solid ${card.glowColor}40`,
+              }}
+            />
           </div>
         );
       })}

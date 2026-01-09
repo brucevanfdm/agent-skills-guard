@@ -156,6 +156,16 @@
     }
   }
 
+  /* Data flow animation */
+  @keyframes dataFlow {
+    0% {
+      margin-left: -33%;
+    }
+    100% {
+      margin-left: 100%;
+    }
+  }
+
   .animate-scan-line {
     animation: scan-line 2s ease-in-out infinite;
   }

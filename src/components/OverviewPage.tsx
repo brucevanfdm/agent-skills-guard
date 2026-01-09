@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle, Shield } from "lucide-react";
 import type { SkillScanResult } from "@/types/security";
 import type { Skill, Repository } from "@/types";
 import { api } from "@/lib/api";
@@ -227,26 +227,35 @@ export function OverviewPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8" style={{ animation: 'slideInLeft 0.5s ease-out' }}>
       {/* 页面标题 - 添加扫描按钮 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-terminal-cyan tracking-wider uppercase">
-          {t('overview.title')}
-        </h1>
+      <div className="flex items-center justify-between pb-4 border-b border-border">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-terminal-cyan rounded-full animate-pulse" />
+            <h1 className="text-2xl font-bold text-terminal-cyan tracking-wider uppercase" style={{ fontFamily: 'Orbitron, monospace' }}>
+              {t('overview.title')}
+            </h1>
+          </div>
+          <p className="text-xs text-muted-foreground font-mono pl-7">
+            <span className="text-terminal-green">&gt;</span> {t('overview.subtitle', { count: statistics.installedCount })}
+          </p>
+        </div>
 
-        {/* 一键扫描按钮 */}
+        {/* 一键扫描按钮 - 赛博朋克风格 */}
         <button
           onClick={() => scanMutation.mutate()}
           disabled={isScanning}
           className="
             relative
-            px-6 py-2.5
-            bg-terminal-cyan text-background
+            px-6 py-3
+            bg-terminal-cyan/10 text-terminal-cyan
             font-mono font-medium text-sm uppercase tracking-wider
-            rounded
-            hover:bg-terminal-cyan/90 hover:shadow-lg hover:shadow-terminal-cyan/30
+            rounded border border-terminal-cyan/30
+            hover:bg-terminal-cyan hover:text-background
+            hover:shadow-[0_0_20px_rgba(94,234,212,0.4)]
             disabled:opacity-50 disabled:cursor-not-allowed
-            transition-all duration-200
+            transition-all duration-300
             flex items-center gap-2
             overflow-hidden
             group
@@ -255,7 +264,10 @@ export function OverviewPage() {
           {/* 按钮扫描线效果 */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
 
-          {isScanning && <Loader2 className="w-4 h-4 animate-spin" />}
+          {/* 左侧发光条 */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-terminal-cyan animate-pulse" />
+
+          {isScanning && <Loader2 className="w-4 h-4 animate-spin relative z-10" />}
           <span className="relative z-10">
             {isScanning
               ? t('overview.scanStatus.scanning')
@@ -266,46 +278,93 @@ export function OverviewPage() {
       </div>
 
       {/* 第一行：统计卡片 */}
-      <StatisticsCards
-        installedCount={statistics.installedCount}
-        repositoryCount={statistics.repositoryCount}
-        scannedCount={statistics.scannedCount}
-      />
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-terminal-cyan animate-pulse" />
+          {t('overview.section.statistics')}
+        </div>
+        <StatisticsCards
+          installedCount={statistics.installedCount}
+          repositoryCount={statistics.repositoryCount}
+          scannedCount={statistics.scannedCount}
+        />
+      </div>
 
-      {/* 第二行：扫描状态卡片（移除 onScan prop） */}
-      <ScanStatusCard
-        lastScanTime={lastScanTime}
-        scannedCount={statistics.scannedCount}
-        totalCount={statistics.installedCount}
-        issueCount={issueCount}
-        isScanning={isScanning}
-      />
+      {/* 第二行：扫描状态卡片 */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-terminal-green animate-pulse" />
+          {t('overview.section.scanStatus')}
+        </div>
+        <ScanStatusCard
+          lastScanTime={lastScanTime}
+          scannedCount={statistics.scannedCount}
+          totalCount={statistics.installedCount}
+          issueCount={issueCount}
+          isScanning={isScanning}
+        />
+      </div>
 
       {/* 第三行：问题汇总卡片 */}
-      <IssuesSummaryCard
-        issuesByLevel={issuesByLevel}
-        filterLevel={filterLevel}
-        onFilterChange={setFilterLevel}
-      />
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-terminal-yellow animate-pulse" />
+          {t('overview.section.riskDistribution')}
+        </div>
+        <IssuesSummaryCard
+          issuesByLevel={issuesByLevel}
+          filterLevel={filterLevel}
+          onFilterChange={setFilterLevel}
+        />
+      </div>
 
       {/* 第四行：问题详情列表 */}
-      {filteredIssues.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-lg">
-          <div className="text-lg font-medium mb-2">
-            {filterLevel ? t('security.noResults') : t('overview.issues.noIssues')}
-          </div>
-          {!filterLevel && lastScanTime && (
-            <div className="text-sm">
-              {t('overview.issues.lastScanned', { time: lastScanTime.toLocaleString() })}
-            </div>
-          )}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-terminal-red animate-pulse" />
+          {t('overview.section.issueDetails')}
         </div>
-      ) : (
-        <IssuesList
-          issues={filteredIssues}
-          onOpenDirectory={handleOpenDirectory}
-        />
-      )}
+        {filteredIssues.length === 0 ? (
+          <div className="text-center py-16 bg-card/50 border border-border/50 rounded-lg backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4">
+              {/* 根据筛选等级显示不同的图标 */}
+              {filterLevel === 'Critical' ? (
+                <div className="w-16 h-16 rounded-full bg-terminal-green/10 border border-terminal-green/30 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-terminal-green" />
+                </div>
+              ) : filterLevel === 'Medium' ? (
+                <div className="w-16 h-16 rounded-full bg-terminal-green/10 border border-terminal-green/30 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-terminal-green" />
+                </div>
+              ) : filterLevel === 'Safe' ? (
+                <div className="w-16 h-16 rounded-full bg-terminal-green/10 border border-terminal-green/30 flex items-center justify-center">
+                  <Shield className="w-8 h-8 text-terminal-green" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-terminal-green/10 border border-terminal-green/30 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-terminal-green" />
+                </div>
+              )}
+              <div className="text-lg font-medium text-foreground">
+                {filterLevel === 'Critical' ? t('overview.issues.noCriticalIssues') :
+                 filterLevel === 'Medium' ? t('overview.issues.noMediumIssues') :
+                 filterLevel === 'Safe' ? t('overview.issues.noSafeSkills') :
+                 t('overview.issues.noIssues')}
+              </div>
+              {!filterLevel && lastScanTime && (
+                <div className="text-sm text-muted-foreground font-mono">
+                  {t('overview.issues.lastScanned', { time: lastScanTime.toLocaleString() })}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <IssuesList
+            issues={filteredIssues}
+            onOpenDirectory={handleOpenDirectory}
+          />
+        )}
+      </div>
     </div>
   );
 }

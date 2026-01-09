@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FolderOpen, Trash2, ChevronDown, ChevronUp, AlertTriangle, AlertCircle, Info, Eye } from "lucide-react";
+import { FolderOpen, Trash2, ChevronDown, ChevronUp, AlertTriangle, AlertCircle, Info, Eye, CheckCircle } from "lucide-react";
 import type { SkillScanResult } from "@/types/security";
 import { SecurityDetailDialog } from "../SecurityDetailDialog";
 import { api } from "@/lib/api";
@@ -236,7 +236,13 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
 
             {/* 问题预览区 */}
             <div className="p-5 bg-muted/20 relative pl-6">
-              {!isExpanded ? (
+              {/* 如果是安全的技能（0个问题），显示简单的安全状态 */}
+              {issue.report.issues.length === 0 ? (
+                <div className="flex items-center gap-3 text-sm text-terminal-green font-mono">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">{t('overview.issues.skillSafe')}</span>
+                </div>
+              ) : !isExpanded ? (
                 // 折叠状态：显示摘要
                 <div
                   onClick={() => toggleExpanded(issue.skill_id)}
@@ -277,12 +283,6 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
                     const mappedSeverity = mapSeverityTo3Levels(item.severity);
                     const IssueIcon = levelConfig[mappedSeverity]?.icon || AlertCircle;
                     const issueColor = levelConfig[mappedSeverity]?.color || "";
-
-                    // 调试日志
-                    if (idx === 0) {
-                      console.log('🔍 Issue item:', item);
-                      console.log('📁 file_path:', item.file_path);
-                    }
 
                     return (
                       <div key={idx} className="flex items-start gap-3 text-sm p-3 rounded bg-card/50 border border-border/30 hover:border-border/60 transition-all">

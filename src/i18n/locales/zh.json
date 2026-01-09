@@ -253,6 +253,13 @@
   },
   "overview": {
     "title": "系统概览",
+    "subtitle": "安全管理 {{count}} 个技能",
+    "section": {
+      "statistics": "统计数据",
+      "scanStatus": "扫描状态",
+      "riskDistribution": "风险分布",
+      "issueDetails": "问题详情"
+    },
     "statistics": {
       "installedSkills": "已安装技能",
       "repositories": "已添加仓库",
@@ -288,6 +295,10 @@
       "viewDetails": "查看详情",
       "viewFullReport": "查看完整报告",
       "noIssues": "太棒了！所有技能都很安全",
+      "skillSafe": "这个技能很安全",
+      "noCriticalIssues": "太好了！没有严重风险的技能",
+      "noMediumIssues": "很好！没有中风险的技能",
+      "noSafeSkills": "暂无安全的技能",
       "lastScanned": "最近扫描：{{time}}",
       "openDirectory": "打开目录",
       "uninstall": "卸载",
