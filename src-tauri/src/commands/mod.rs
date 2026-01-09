@@ -210,9 +210,10 @@ pub async fn prepare_skill_installation(
 pub async fn confirm_skill_installation(
     state: State<'_, AppState>,
     skill_id: String,
+    install_path: Option<String>,
 ) -> Result<(), String> {
     let manager = state.skill_manager.lock().await;
-    manager.confirm_skill_installation(&skill_id)
+    manager.confirm_skill_installation(&skill_id, install_path)
         .map_err(|e| e.to_string())
 }
 
@@ -403,4 +404,43 @@ pub async fn open_skill_directory(local_path: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// 获取默认的用户目录安装路径
+#[tauri::command]
+pub async fn get_default_install_path() -> Result<String, String> {
+    let user_path = dirs::home_dir()
+        .ok_or("无法获取用户主目录")?
+        .join(".claude")
+        .join("skills");
+
+    Ok(user_path.to_string_lossy().to_string())
+}
+
+/// 打开文件夹选择器，让用户选择自定义安装路径
+#[tauri::command]
+pub async fn select_custom_install_path(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let folder_path = app.dialog()
+        .file()
+        .set_title("选择技能安装目录")
+        .blocking_pick_folder();
+
+    if let Some(file_path) = folder_path {
+        // 转换为 PathBuf
+        let path = std::path::PathBuf::from(file_path.to_string());
+
+        // 验证路径可写
+        let test_file = path.join(".write_test");
+        match std::fs::write(&test_file, "test") {
+            Ok(_) => {
+                let _ = std::fs::remove_file(&test_file);
+                Ok(Some(path.to_string_lossy().to_string()))
+            }
+            Err(_) => Err("选择的目录不可写，请检查权限".to_string())
+        }
+    } else {
+        Ok(None)
+    }
 }

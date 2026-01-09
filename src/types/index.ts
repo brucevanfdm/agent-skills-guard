@@ -39,3 +39,9 @@ export enum SecurityLevel {
 }
 
 export type { CacheStats } from './cache';
+
+export interface InstallPathSelection {
+  type: 'user' | 'recent' | 'custom';
+  path: string;
+  displayName: string;
+}

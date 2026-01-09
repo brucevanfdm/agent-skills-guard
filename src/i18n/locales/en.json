@@ -113,6 +113,18 @@
       "opened": "FOLDER_OPENED",
       "openFailed": "OPEN_FOLDER_FAILED: {{error}}"
     },
+    "pathSelection": {
+      "selectPath": "Select Installation Path",
+      "selectInstallPath": "Select Installation Location",
+      "selectPathDescription": "Please select installation location for {{skillName}}",
+      "userDirectory": "User Directory (Default)",
+      "recentPaths": "Recent Paths",
+      "recent": "Recent",
+      "customPath": "Choose Custom Path...",
+      "selecting": "Selecting...",
+      "confirm": "Confirm Install",
+      "cancel": "Cancel"
+    },
     "toast": {
       "installed": "[SUCCESS] SKILL_INSTALLED",
       "installFailed": "[ERROR] INSTALL_FAILED",

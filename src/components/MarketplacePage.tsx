@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSkills, useInstallSkill, useUninstallSkill, useDeleteSkill } from "../hooks/useSkills";
 import { Skill } from "../types";
 import { SecurityReport } from "../types/security";
@@ -8,7 +9,10 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { countIssuesBySeverity } from "@/lib/security-utils";
+import { addRecentInstallPath } from "@/lib/storage";
 import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
+import { SimplePathSelectionDialog } from "./SimplePathSelectionDialog";
+import { InstallPathSelector } from "./InstallPathSelector";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -21,6 +25,7 @@ import {
 
 export function MarketplacePage() {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: allSkills, isLoading } = useSkills();
   const installMutation = useInstallSkill();
   const uninstallMutation = useUninstallSkill();
@@ -36,6 +41,7 @@ export function MarketplacePage() {
   } | null>(null);
   const [preparingSkillId, setPreparingSkillId] = useState<string | null>(null);
   const [deletingSkillId, setDeletingSkillId] = useState<string | null>(null);
+  const [pathSelectionPending, setPathSelectionPending] = useState<Skill | null>(null);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -229,23 +235,15 @@ export function MarketplacePage() {
                   console.log('[INFO] 扫描完成，评分:', report.score);
                   setPreparingSkillId(null);
 
-                  // 判断是否需要用户确认
+                  // 判断是否需要安全警告
                   if (report.score < 70 || report.blocked) {
-                    console.log('[INFO] 需要用户确认，显示安全警告弹窗');
+                    console.log('[INFO] 需要用户确认，显示安全警告弹窗（带路径选择）');
                     setPendingInstall({ skill, report });
-                    return;
+                  } else {
+                    // 评分 >= 70 且未被阻止，显示简化的路径选择弹窗
+                    console.log('[INFO] 安全评分良好，显示路径选择弹窗');
+                    setPathSelectionPending(skill);
                   }
-
-                  // 第二阶段：评分 >= 70 且未被阻止，直接确认安装
-                  console.log('[INFO] 安全评分良好，直接确认安装');
-                  await invoke("confirm_skill_installation", {
-                    skillId: skill.id,
-                  });
-
-                  showToast(t('skills.toast.installed'));
-
-                  // 刷新技能列表
-                  installMutation.mutate(skill.id);
                 } catch (error: any) {
                   console.error('[ERROR] 安装失败:', error);
                   setPreparingSkillId(null);
@@ -339,18 +337,25 @@ export function MarketplacePage() {
           }
           setPendingInstall(null);
         }}
-        onConfirm={async () => {
+        onConfirm={async (selectedPath) => {
           // 用户点击"继续"，确认安装
           if (pendingInstall) {
             try {
               await invoke("confirm_skill_installation", {
                 skillId: pendingInstall.skill.id,
+                installPath: selectedPath,
               });
+
+              // 保存到最近路径
+              addRecentInstallPath(selectedPath);
+
               console.log('[INFO] 用户确认安装');
-              showToast(t('skills.toast.installed'));
 
               // 刷新技能列表
-              installMutation.mutate(pendingInstall.skill.id);
+              await queryClient.invalidateQueries({ queryKey: ["skills"] });
+
+              // 数据刷新完成后显示 toast
+              showToast(t('skills.toast.installed'));
             } catch (error: any) {
               console.error('[ERROR] 确认安装失败:', error);
               showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
@@ -360,6 +365,47 @@ export function MarketplacePage() {
         }}
         report={pendingInstall?.report || null}
         skillName={pendingInstall?.skill.name || ""}
+      />
+
+      {/* Simple Path Selection Dialog (for low-risk skills) */}
+      <SimplePathSelectionDialog
+        open={pathSelectionPending !== null}
+        skillName={pathSelectionPending?.name || ''}
+        onClose={async () => {
+          if (pathSelectionPending) {
+            try {
+              await invoke("cancel_skill_installation", {
+                skillId: pathSelectionPending.id,
+              });
+            } catch (error: any) {
+              console.error('[ERROR] 取消安装失败:', error);
+            }
+          }
+          setPathSelectionPending(null);
+        }}
+        onConfirm={async (selectedPath) => {
+          if (pathSelectionPending) {
+            try {
+              await invoke("confirm_skill_installation", {
+                skillId: pathSelectionPending.id,
+                installPath: selectedPath,
+              });
+
+              // 保存到最近路径
+              addRecentInstallPath(selectedPath);
+
+              // 刷新技能列表
+              await queryClient.invalidateQueries({ queryKey: ["skills"] });
+
+              // 数据刷新完成后显示 toast
+              showToast(t('skills.toast.installed'));
+            } catch (error: any) {
+              console.error('[ERROR] 确认安装失败:', error);
+              showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
+            }
+          }
+          setPathSelectionPending(null);
+        }}
       />
     </div>
   );
@@ -654,7 +700,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 interface InstallConfirmDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (selectedPath: string) => void;
   report: SecurityReport | null;
   skillName: string;
 }
@@ -667,6 +713,7 @@ function InstallConfirmDialog({
   skillName
 }: InstallConfirmDialogProps) {
   const { t } = useTranslation();
+  const [selectedPath, setSelectedPath] = useState<string>('');
 
   const isMediumRisk = report ? report.score >= 50 && report.score < 70 : false;
   const isHighRisk = report ? report.score < 50 || report.blocked : false;
@@ -768,11 +815,18 @@ function InstallConfirmDialog({
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {/* 路径选择器 */}
+        <div className="py-4 border-t border-border">
+          <InstallPathSelector onSelect={setSelectedPath} />
+        </div>
+
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>{t('skills.marketplace.install.cancel')}</AlertDialogCancel>
           <button
-            onClick={onConfirm}
-            className={`px-4 py-2 rounded font-mono ${
+            onClick={() => onConfirm(selectedPath)}
+            disabled={!selectedPath}
+            className={`px-4 py-2 rounded font-mono disabled:opacity-50 ${
               isHighRisk ? 'bg-red-500 hover:bg-red-600' :
               isMediumRisk ? 'bg-yellow-500 hover:bg-yellow-600' :
               'bg-green-500 hover:bg-green-600'

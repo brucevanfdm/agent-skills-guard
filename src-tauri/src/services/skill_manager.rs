@@ -302,8 +302,9 @@ impl SkillManager {
     }
 
     /// 确认安装技能：标记为已安装
-    pub fn confirm_skill_installation(&self, skill_id: &str) -> Result<()> {
+    pub fn confirm_skill_installation(&self, skill_id: &str, install_path: Option<String>) -> Result<()> {
         use anyhow::Context;
+        use std::path::PathBuf;
 
         log::info!("Confirming installation for skill: {}", skill_id);
 
@@ -311,6 +312,35 @@ impl SkillManager {
             .into_iter()
             .find(|s| s.id == skill_id)
             .context("未找到该技能")?;
+
+        // 如果指定了新的安装路径，需要移动文件
+        if let Some(new_base_path) = install_path {
+            let current_path = skill.local_path.as_ref()
+                .context("技能尚未下载")?;
+
+            let current_dir = PathBuf::from(current_path);
+            let new_base_dir = PathBuf::from(&new_base_path);
+
+            // 获取技能目录名（当前路径的最后一个部分）
+            let skill_dir_name = current_dir.file_name()
+                .context("无效的技能目录名")?;
+            let new_dir = new_base_dir.join(skill_dir_name);
+
+            // 确保目标基础目录存在
+            std::fs::create_dir_all(&new_base_dir)
+                .context("无法创建目标目录")?;
+
+            // 移动文件
+            if new_dir != current_dir {
+                std::fs::rename(&current_dir, &new_dir)
+                    .context("移动技能文件失败，请检查目标路径权限")?;
+
+                log::info!("Moved skill from {:?} to {:?}", current_dir, new_dir);
+
+                // 更新 local_path
+                skill.local_path = Some(new_dir.to_string_lossy().to_string());
+            }
+        }
 
         // 标记为已安装
         skill.installed = true;
@@ -405,22 +435,42 @@ impl SkillManager {
 
     /// 扫描本地 ~/.claude/skills/ 目录，导入未追踪的技能
     pub fn scan_local_skills(&self) -> Result<Vec<Skill>> {
+        use std::collections::HashSet;
+
         let mut scanned_skills = Vec::new();  // 所有扫描到的技能
         let mut imported_skills = Vec::new(); // 新导入的技能（用于日志）
 
-        // 检查技能目录是否存在
-        if !self.skills_dir.exists() {
-            log::info!("Skills directory does not exist: {:?}", self.skills_dir);
-            return Ok(scanned_skills);
-        }
-
-        log::info!("Scanning local skills directory: {:?}", self.skills_dir);
-
-        // 获取当前数据库中的所有技能（用于去重）
+        // 获取当前数据库中的所有技能（用于去重和提取路径）
         let existing_skills = self.db.get_skills()?;
 
-        // 遍历技能目录
-        if let Ok(entries) = std::fs::read_dir(&self.skills_dir) {
+        // 1. 获取所有 unique 的 local_path 父目录
+        let mut scan_dirs: HashSet<PathBuf> = HashSet::new();
+
+        // 从已安装技能的 local_path 提取父目录
+        for skill in &existing_skills {
+            if let Some(local_path) = &skill.local_path {
+                if let Some(parent) = PathBuf::from(local_path).parent() {
+                    scan_dirs.insert(parent.to_path_buf());
+                }
+            }
+        }
+
+        // 2. 添加默认的用户目录（确保始终扫描）
+        scan_dirs.insert(self.skills_dir.clone());
+
+        log::info!("Will scan {} directories for local skills", scan_dirs.len());
+
+        // 3. 扫描所有目录
+        for scan_dir in scan_dirs {
+            if !scan_dir.exists() {
+                log::debug!("Skipping non-existent directory: {:?}", scan_dir);
+                continue;
+            }
+
+            log::info!("Scanning directory: {:?}", scan_dir);
+
+            // 遍历技能目录
+            if let Ok(entries) = std::fs::read_dir(&scan_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
 
@@ -533,6 +583,7 @@ impl SkillManager {
                         log::warn!("Failed to read skill file {:?}: {}", skill_md_path, e);
                     }
                 }
+            }
             }
         }
 

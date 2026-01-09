@@ -113,6 +113,18 @@
       "opened": "已打开文件夹",
       "openFailed": "打开文件夹失败：{{error}}"
     },
+    "pathSelection": {
+      "selectPath": "选择安装路径",
+      "selectInstallPath": "选择安装位置",
+      "selectPathDescription": "请选择 {{skillName}} 的安装位置",
+      "userDirectory": "用户目录（默认）",
+      "recentPaths": "最近使用",
+      "recent": "最近",
+      "customPath": "选择自定义路径...",
+      "selecting": "选择中...",
+      "confirm": "确认安装",
+      "cancel": "取消"
+    },
     "toast": {
       "installed": "[成功] 技能已安装",
       "installFailed": "[错误] 安装失败",
