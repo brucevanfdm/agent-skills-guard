@@ -36,16 +36,36 @@ impl SkillManager {
         // 构建下载 URL
         let (owner, repo) = crate::models::Repository::from_github_url(&skill.repository_url)?;
 
-        // 下载 SKILL.md 文件
-        let download_url = format!(
-            "https://raw.githubusercontent.com/{}/{}/main/{}/SKILL.md",
-            owner, repo, skill.file_path
-        );
+        // 尝试多个分支下载 SKILL.md 文件
+        let branches = ["main", "master"];
+        let mut content = None;
+        let mut last_error = None;
 
-        log::info!("Downloading SKILL.md from: {}", download_url);
+        for branch in branches.iter() {
+            let download_url = format!(
+                "https://raw.githubusercontent.com/{}/{}/{}/{}/SKILL.md",
+                owner, repo, branch, skill.file_path
+            );
 
-        // 下载文件内容
-        let content = self.github.download_file(&download_url).await?;
+            log::info!("尝试从分支 {} 下载 SKILL.md: {}", branch, download_url);
+
+            match self.github.download_file(&download_url).await {
+                Ok(file_content) => {
+                    log::info!("成功从分支 {} 下载 SKILL.md", branch);
+                    content = Some(file_content);
+                    break;
+                }
+                Err(e) => {
+                    log::info!("分支 {} 下载失败: {}", branch, e);
+                    last_error = Some(e);
+                    continue;
+                }
+            }
+        }
+
+        let content = content.ok_or_else(|| {
+            last_error.unwrap_or_else(|| anyhow::anyhow!("所有分支均无法下载 SKILL.md"))
+        })?;
 
         // 解析 frontmatter 更新 skill 元数据
         let (name, description) = self.github.fetch_skill_metadata(&owner, &repo, &skill.file_path).await?;
@@ -71,18 +91,28 @@ impl SkillManager {
     }
 
     /// 安装 skill 到本地
-    pub async fn install_skill(&self, skill_id: &str) -> Result<()> {
+    pub async fn install_skill(&self, skill_id: &str, install_path: Option<String>) -> Result<()> {
         // 从数据库获取 skill
         let mut skill = self.db.get_skills()?
             .into_iter()
             .find(|s| s.id == skill_id)
             .context("未找到该技能，请检查技能是否存在")?;
 
-        // 下载并分析 SKILL.md（用于元数据提取）
-        let (_skill_md_content, _report) = self.download_and_analyze(&mut skill).await?;
+        // 获取对应的仓库记录以获取缓存路径
+        let repositories = self.db.get_repositories()?;
+        let repo = repositories.iter()
+            .find(|r| r.url == skill.repository_url)
+            .context("未找到对应的仓库记录")?;
+
+        // 确定安装基础目录（使用自定义路径或默认路径）
+        let install_base_dir = if let Some(user_path) = install_path {
+            PathBuf::from(user_path)
+        } else {
+            self.skills_dir.clone()
+        };
 
         // 确保目标目录存在
-        std::fs::create_dir_all(&self.skills_dir)
+        std::fs::create_dir_all(&install_base_dir)
             .context("无法创建技能目录，请检查磁盘权限")?;
 
         // 创建 skill 文件夹（使用 skill 的文件夹名）
@@ -99,38 +129,76 @@ impl SkillManager {
                 .to_string()
         };
 
-        let skill_dir = self.skills_dir.join(&skill_folder_name);
+        let skill_dir = install_base_dir.join(&skill_folder_name);
+
+        // 如果目标目录已存在，先清理（避免旧文件冲突）
+        if skill_dir.exists() {
+            log::info!("目标目录已存在，先清理: {:?}", skill_dir);
+            std::fs::remove_dir_all(&skill_dir)
+                .context("无法清理现有技能目录")?;
+        }
+
         std::fs::create_dir_all(&skill_dir)
             .context("无法创建技能子目录，请检查磁盘空间和权限")?;
 
-        // 下载整个 skill 目录的所有文件
-        let (owner, repo) = crate::models::Repository::from_github_url(&skill.repository_url)?;
-        // 如果 file_path 是 "."，转换为空字符串以获取根目录内容
-        let api_path = if skill.file_path == "." { "" } else { &skill.file_path };
-        let skill_files = self.github.get_directory_files(&owner, &repo, api_path).await
-            .context("获取技能目录文件列表失败")?;
+        // 优先从本地缓存复制文件
+        if let Some(cache_path) = &repo.cache_path {
+            let cache_path_buf = PathBuf::from(cache_path);
 
-        log::info!("Found {} files in skill directory", skill_files.len());
+            // 在缓存中找到技能目录
+            // cache_path 指向 extracted 目录，需要进入仓库的第一层目录（GitHub 压缩包格式）
+            let cache_entries = std::fs::read_dir(&cache_path_buf)
+                .context("无法读取缓存目录")?;
 
-        // 下载每个文件
-        for file_info in &skill_files {
-            if file_info.content_type != "file" {
-                continue; // 跳过子目录
+            let mut repo_root = None;
+            for entry in cache_entries {
+                if let Ok(entry) = entry {
+                    if entry.path().is_dir() {
+                        repo_root = Some(entry.path());
+                        break;
+                    }
+                }
             }
 
-            // 获取 download_url
-            let download_url = file_info.download_url.as_ref()
-                .context(format!("文件 {} 缺少下载链接", file_info.name))?;
+            if let Some(repo_root) = repo_root {
+                let cached_skill_dir = if skill.file_path == "." {
+                    repo_root.clone()
+                } else {
+                    repo_root.join(&skill.file_path)
+                };
 
-            let file_content = self.github.download_file(download_url).await
-                .context(format!("下载文件失败: {}", file_info.name))?;
+                if cached_skill_dir.exists() {
+                    log::info!("从本地缓存复制文件: {:?}", cached_skill_dir);
 
-            // 写入文件到本地
-            let local_file_path = skill_dir.join(&file_info.name);
-            std::fs::write(&local_file_path, file_content)
-                .context(format!("无法写入文件: {}", file_info.name))?;
+                    // 复制整个目录
+                    self.copy_directory(&cached_skill_dir, &skill_dir)
+                        .context("从缓存复制文件失败")?;
 
-            log::info!("Saved file: {}", file_info.name);
+                    log::info!("成功从本地缓存安装技能");
+                } else {
+                    log::warn!("缓存中未找到技能目录，降级使用网络下载");
+                    self.install_from_network(&skill, &skill_dir).await?;
+                }
+            } else {
+                log::warn!("缓存目录格式异常，降级使用网络下载");
+                self.install_from_network(&skill, &skill_dir).await?;
+            }
+        } else {
+            log::info!("仓库未缓存，使用网络下载");
+            self.install_from_network(&skill, &skill_dir).await?;
+        }
+
+        // 从缓存读取 SKILL.md 进行元数据提取
+        let skill_md_path = skill_dir.join("SKILL.md");
+        if skill_md_path.exists() {
+            let skill_md_content = std::fs::read_to_string(&skill_md_path)
+                .context("读取 SKILL.md 失败")?;
+
+            // 解析 frontmatter
+            if let Ok((name, description)) = self.github.parse_skill_frontmatter(&skill_md_content) {
+                skill.name = name;
+                skill.description = description;
+            }
         }
 
         // 扫描整个技能目录
@@ -421,6 +489,10 @@ impl SkillManager {
                 .context("无法删除已存在的目标目录")?;
         }
 
+        // 创建目标目录
+        std::fs::create_dir_all(&final_install_dir)
+            .context("无法创建最终安装目录")?;
+
         // 从缓存复制到目标路径
         log::info!("Copying skill from cache {:?} to {:?}", cache_dir, final_install_dir);
         let mut files_copied = 0;
@@ -709,5 +781,97 @@ impl SkillManager {
         }
 
         Ok((name, description))
+    }
+
+    /// 从网络下载并安装技能（降级方案）
+    async fn install_from_network(&self, skill: &crate::models::Skill, skill_dir: &PathBuf) -> Result<()> {
+        let (owner, repo) = crate::models::Repository::from_github_url(&skill.repository_url)?;
+
+        // 如果 file_path 是 "."，转换为空字符串以获取根目录内容
+        let api_path = if skill.file_path == "." { "" } else { &skill.file_path };
+        let skill_files = self.github.get_directory_files(&owner, &repo, api_path).await
+            .context("获取技能目录文件列表失败")?;
+
+        log::info!("Found {} files in skill directory", skill_files.len());
+
+        // 下载每个文件
+        for file_info in &skill_files {
+            if file_info.content_type != "file" {
+                continue; // 跳过子目录
+            }
+
+            // 获取 download_url
+            let download_url = file_info.download_url.as_ref()
+                .context(format!("文件 {} 缺少下载链接", file_info.name))?;
+
+            let file_content = self.github.download_file(download_url).await
+                .context(format!("下载文件失败: {}", file_info.name))?;
+
+            // 写入文件到本地
+            let local_file_path = skill_dir.join(&file_info.name);
+            std::fs::write(&local_file_path, file_content)
+                .context(format!("无法写入文件: {}", file_info.name))?;
+
+            log::info!("Saved file: {}", file_info.name);
+        }
+
+        Ok(())
+    }
+
+    /// 递归复制目录
+    fn copy_directory(&self, src: &PathBuf, dst: &PathBuf) -> Result<()> {
+        use std::fs;
+
+        log::info!("复制目录: {:?} -> {:?}", src, dst);
+
+        // 确保目标目录存在
+        if !dst.exists() {
+            fs::create_dir_all(dst)
+                .context(format!("无法创建目标目录: {:?}", dst))?;
+            log::debug!("创建目标目录: {:?}", dst);
+        }
+
+        // 遍历源目录
+        for entry in fs::read_dir(src)
+            .context(format!("无法读取源目录: {:?}", src))? {
+            let entry = entry
+                .context(format!("读取目录项失败: {:?}", src))?;
+            let file_type = entry.file_type()
+                .context(format!("获取文件类型失败: {:?}", entry.path()))?;
+            let src_path = entry.path();
+            let file_name = entry.file_name();
+            let dst_path = dst.join(&file_name);
+
+            if file_type.is_dir() {
+                // 递归复制子目录
+                log::debug!("复制子目录: {:?}", file_name);
+                self.copy_directory(&src_path, &dst_path)?;
+            } else if file_type.is_file() {
+                // 确保目标文件的父目录存在
+                if let Some(parent) = dst_path.parent() {
+                    if !parent.exists() {
+                        fs::create_dir_all(parent)
+                            .context(format!("无法创建文件父目录: {:?}", parent))?;
+                    }
+                }
+
+                // 复制文件
+                match fs::copy(&src_path, &dst_path) {
+                    Ok(bytes) => {
+                        log::debug!("已复制文件: {:?} ({} bytes)", file_name, bytes);
+                    }
+                    Err(e) => {
+                        // 提供详细的错误信息
+                        return Err(anyhow::anyhow!(
+                            "复制文件失败\n源: {:?}\n目标: {:?}\n错误: {}",
+                            src_path, dst_path, e
+                        ));
+                    }
+                }
+            }
+        }
+
+        log::info!("目录复制完成: {:?}", dst);
+        Ok(())
     }
 }

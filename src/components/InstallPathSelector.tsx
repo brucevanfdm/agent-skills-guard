@@ -14,6 +14,7 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [userPath, setUserPath] = useState<string>('');
   const [recentPaths, setRecentPaths] = useState<string[]>([]);
+  const [customPath, setCustomPath] = useState<string>('');
   const [isSelecting, setIsSelecting] = useState(false);
 
   useEffect(() => {
@@ -42,9 +43,10 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
   const handleCustomPath = async () => {
     setIsSelecting(true);
     try {
-      const customPath = await invoke<string | null>('select_custom_install_path');
-      if (customPath) {
-        handleSelect(customPath);
+      const selectedCustomPath = await invoke<string | null>('select_custom_install_path');
+      if (selectedCustomPath) {
+        setCustomPath(selectedCustomPath);
+        handleSelect(selectedCustomPath);
       }
     } catch (error: any) {
       console.error('Failed to select custom path:', error);
@@ -88,6 +90,22 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
                 onClick={() => handleSelect(path)}
               />
             ))}
+        </div>
+      )}
+
+      {/* 显示已选择的自定义路径 */}
+      {customPath && customPath !== userPath && !recentPaths.includes(customPath) && (
+        <div className="border-t border-border pt-3 mt-3">
+          <label className="text-xs font-mono text-muted-foreground mb-2 block">
+            自定义路径:
+          </label>
+          <PathOption
+            icon={<FolderPlus className="w-4 h-4" />}
+            label="自定义"
+            path={customPath}
+            selected={selectedPath === customPath}
+            onClick={() => handleSelect(customPath)}
+          />
         </div>
       )}
 

@@ -187,9 +187,10 @@ pub async fn get_installed_skills(
 pub async fn install_skill(
     state: State<'_, AppState>,
     skill_id: String,
+    install_path: Option<String>,
 ) -> Result<(), String> {
     let manager = state.skill_manager.lock().await;
-    manager.install_skill(&skill_id).await
+    manager.install_skill(&skill_id, install_path).await
         .map_err(|e| e.to_string())
 }
 

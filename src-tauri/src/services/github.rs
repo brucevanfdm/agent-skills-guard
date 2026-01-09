@@ -269,25 +269,44 @@ impl GitHubService {
 
     /// 下载并解析 SKILL.md 的 frontmatter
     pub async fn fetch_skill_metadata(&self, owner: &str, repo: &str, skill_path: &str) -> Result<(String, Option<String>)> {
-        // 构建 SKILL.md 的下载 URL
-        let download_url = format!(
-            "https://raw.githubusercontent.com/{}/{}/main/{}/SKILL.md",
-            owner, repo, skill_path
-        );
+        // 尝试多个分支获取 SKILL.md
+        let branches = ["main", "master"];
+        let mut last_error = None;
 
-        log::info!("Fetching SKILL.md from: {}", download_url);
+        for branch in branches.iter() {
+            let download_url = format!(
+                "https://raw.githubusercontent.com/{}/{}/{}/{}/SKILL.md",
+                owner, repo, branch, skill_path
+            );
 
-        // 下载文件内容
-        let content = self.download_file(&download_url).await?;
-        let content_str = String::from_utf8(content)
-            .context("Failed to decode SKILL.md as UTF-8")?;
+            log::info!("尝试从分支 {} 获取 SKILL.md: {}", branch, download_url);
 
-        // 解析 frontmatter
-        self.parse_skill_frontmatter(&content_str)
+            match self.download_file(&download_url).await {
+                Ok(content) => {
+                    match String::from_utf8(content) {
+                        Ok(content_str) => {
+                            log::info!("成功从分支 {} 获取 SKILL.md", branch);
+                            return self.parse_skill_frontmatter(&content_str);
+                        }
+                        Err(e) => {
+                            last_error = Some(anyhow::anyhow!("Failed to decode SKILL.md as UTF-8: {}", e));
+                            continue;
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::info!("分支 {} 不存在或获取失败: {}", branch, e);
+                    last_error = Some(e);
+                    continue;
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| anyhow::anyhow!("所有分支均无法获取 SKILL.md")))
     }
 
     /// 解析 SKILL.md 的 frontmatter
-    fn parse_skill_frontmatter(&self, content: &str) -> Result<(String, Option<String>)> {
+    pub fn parse_skill_frontmatter(&self, content: &str) -> Result<(String, Option<String>)> {
         // 查找 frontmatter 的边界（--- ... ---）
         let lines: Vec<&str> = content.lines().collect();
 

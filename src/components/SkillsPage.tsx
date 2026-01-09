@@ -129,7 +129,7 @@ export function SkillsPage() {
               index={index}
               onInstall={() => {
                 setInstallingSkillId(skill.id);
-                installMutation.mutate(skill.id, {
+                installMutation.mutate({ skillId: skill.id }, {
                   onSuccess: () => {
                     setInstallingSkillId(null);
                     showToast(t('skills.toast.installed'));

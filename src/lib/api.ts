@@ -28,8 +28,8 @@ export const api = {
     return invoke("get_installed_skills");
   },
 
-  async installSkill(skillId: string): Promise<void> {
-    return invoke("install_skill", { skillId });
+  async installSkill(skillId: string, installPath?: string): Promise<void> {
+    return invoke("install_skill", { skillId, installPath: installPath || null });
   },
 
   async uninstallSkill(skillId: string): Promise<void> {
