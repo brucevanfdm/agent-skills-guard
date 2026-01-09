@@ -27,9 +27,9 @@ function AppContent() {
 
   // 辅助函数：渲染 Logo 和标题，避免代码重复
   const renderLogoTitle = (isCentered: boolean) => (
-    <div className={`flex items-center gap-4 ${isCentered ? 'absolute left-1/2 -translate-x-1/2' : ''}`}>
-      <div className="text-terminal-cyan font-mono text-2xl leading-none select-none pointer-events-none">
-        <pre className="text-xs leading-tight">
+    <div className={`flex items-center gap-3 ${isCentered ? 'absolute left-1/2 -translate-x-1/2' : ''}`}>
+      <div className="text-terminal-cyan font-mono leading-none select-none pointer-events-none">
+        <pre className="text-[10px] leading-[1.2] tracking-tight" style={{ fontFamily: 'Consolas, Monaco, "Courier New", monospace' }}>
 {`╔═══╗
 ║ ◎ ║
 ╚═══╝`}
@@ -37,7 +37,7 @@ function AppContent() {
       </div>
 
       <div className="pointer-events-none">
-        <h1 className="text-2xl font-bold text-terminal-cyan text-glow tracking-wider">
+        <h1 className={`font-bold text-terminal-cyan tracking-wider ${isCentered ? 'text-lg' : 'text-xl'}`}>
           {t('header.title')}
         </h1>
         {/* <p className="text-xs text-muted-foreground font-mono mt-1 tracking-wide">
