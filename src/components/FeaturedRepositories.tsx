@@ -46,8 +46,8 @@ export function FeaturedRepositories({ onAdd, isAdding }: FeaturedRepositoriesPr
 
   if (isLoading) {
     return (
-      <div className="cyber-card p-6 border-terminal-purple animate-pulse">
-        <div className="h-6 bg-terminal-purple/20 rounded w-1/3 mb-4"></div>
+      <div className="cyber-card p-6 border-terminal-cyan animate-pulse">
+        <div className="h-6 bg-terminal-cyan/20 rounded w-1/3 mb-4"></div>
         <div className="h-4 bg-terminal-cyan/20 rounded w-2/3"></div>
       </div>
     );
@@ -59,10 +59,10 @@ export function FeaturedRepositories({ onAdd, isAdding }: FeaturedRepositoriesPr
   }
 
   return (
-    <div className="cyber-card p-6 border-terminal-purple bg-gradient-to-br from-card via-muted to-card">
+    <div className="cyber-card p-6 border-terminal-cyan bg-gradient-to-br from-card via-muted to-card">
       <div className="flex items-center gap-2 mb-4">
-        <Star className="w-5 h-5 text-terminal-purple" />
-        <h3 className="font-bold text-terminal-purple tracking-wider uppercase">
+        <Star className="w-5 h-5 text-terminal-cyan" />
+        <h3 className="font-bold text-terminal-cyan tracking-wider uppercase">
           {t('repositories.featured.title')}
         </h3>
       </div>
@@ -123,7 +123,7 @@ export function FeaturedRepositories({ onAdd, isAdding }: FeaturedRepositoriesPr
                             {repo.tags.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-2 py-0.5 text-xs font-mono bg-terminal-purple/10 text-terminal-purple rounded border border-terminal-purple/30"
+                                className="px-2 py-0.5 text-xs font-mono bg-terminal-cyan/10 text-terminal-cyan rounded border border-terminal-cyan/30"
                               >
                                 {tag}
                               </span>

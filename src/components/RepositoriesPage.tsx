@@ -186,16 +186,16 @@ export function RepositoriesPage() {
       {/* Cache Statistics */}
       {cacheStats && (
         <div
-          className="cyber-card p-6 border-terminal-purple bg-gradient-to-br from-card via-muted to-card"
+          className="cyber-card p-6 border-terminal-cyan bg-gradient-to-br from-card via-muted to-card"
           style={{
             animation: 'fadeIn 0.3s ease-out',
-            boxShadow: '0 0 20px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(168, 85, 247, 0.1)'
+            boxShadow: '0 0 20px rgba(94, 234, 212, 0.15), inset 0 1px 0 rgba(94, 234, 212, 0.1)'
           }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-terminal-purple" />
-              <h3 className="font-bold text-terminal-purple tracking-wider uppercase">
+              <Database className="w-5 h-5 text-terminal-cyan" />
+              <h3 className="font-bold text-terminal-cyan tracking-wider uppercase">
                 {t('repositories.cache.stats')}
               </h3>
             </div>
@@ -243,12 +243,12 @@ export function RepositoriesPage() {
               </div>
             </div>
 
-            <div className="cyber-card p-4 bg-background/40 border-terminal-purple/30 hover:border-terminal-purple hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all duration-300">
+            <div className="cyber-card p-4 bg-background/40 border-terminal-cyan/30 hover:border-terminal-cyan hover:shadow-[0_0_15px_rgba(94,234,212,0.2)] transition-all duration-300">
               <div className="text-xs font-mono text-terminal-green mb-2 uppercase tracking-wider flex items-center gap-1">
                 <span className="text-terminal-cyan">▸</span>
                 {t('repositories.cache.size')}
               </div>
-              <div className="text-3xl font-bold text-terminal-purple tabular-nums">
+              <div className="text-3xl font-bold text-terminal-cyan tabular-nums">
                 {formatBytes(cacheStats.totalSizeBytes)}
               </div>
             </div>
@@ -342,7 +342,7 @@ export function RepositoriesPage() {
                 setNewRepoUrl("");
                 setNewRepoName("");
               }}
-              className="px-4 py-2 rounded font-mono text-xs border border-muted-foreground text-muted-foreground hover:border-terminal-purple hover:text-terminal-purple transition-all duration-200"
+              className="px-4 py-2 rounded font-mono text-xs border border-muted-foreground text-muted-foreground hover:border-terminal-cyan hover:text-terminal-cyan transition-all duration-200"
               disabled={addMutation.isPending}
             >
               {t('repositories.cancel')}
@@ -417,7 +417,7 @@ export function RepositoriesPage() {
                   <div className="flex items-center gap-6 pl-8 text-xs font-mono">
                     {repo.last_scanned && (
                       <div className="text-muted-foreground">
-                        <span className="text-terminal-purple">{t('repositories.lastScan')}</span>{" "}
+                        <span className="text-terminal-cyan">{t('repositories.lastScan')}</span>{" "}
                         {new Date(repo.last_scanned).toLocaleString('zh-CN', {
                           year: 'numeric',
                           month: '2-digit',
