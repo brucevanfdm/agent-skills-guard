@@ -172,7 +172,12 @@
       "cleared": "CACHE_CLEARED",
       "refreshed": "CACHE_REFRESHED, found {{count}} skills",
       "clearFailed": "CLEAR_FAILED: {{error}}",
-      "refreshFailed": "REFRESH_FAILED: {{error}}"
+      "refreshFailed": "REFRESH_FAILED: {{error}}",
+      "clearAll": "CLEAR_ALL_CACHES",
+      "clearing": "CLEARING...",
+      "confirmClearAll": "Are you sure you want to clear all repository caches? This will delete all cached repository files but preserve repository records.",
+      "clearedAll": "Successfully cleared {{cleared}} caches, {{failed}} failed, freed {{size}}",
+      "clearAllFailed": "CLEAR_ALL_FAILED: {{error}}"
     },
     "date": {
       "today": "TODAY",

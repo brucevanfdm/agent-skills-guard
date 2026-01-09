@@ -213,6 +213,7 @@ pub fn run() {
             commands::delete_skill,
             commands::scan_local_skills,
             commands::clear_repository_cache,
+            commands::clear_all_repository_caches,
             commands::refresh_repository_cache,
             commands::get_cache_stats,
             commands::open_skill_directory,

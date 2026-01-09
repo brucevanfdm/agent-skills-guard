@@ -172,7 +172,12 @@
       "cleared": "缓存已清理",
       "refreshed": "缓存已刷新，发现 {{count}} 个skills",
       "clearFailed": "清理失败: {{error}}",
-      "refreshFailed": "刷新失败: {{error}}"
+      "refreshFailed": "刷新失败: {{error}}",
+      "clearAll": "清除所有缓存",
+      "clearing": "清除中",
+      "confirmClearAll": "确定要清除所有仓库的缓存吗？这将删除所有已缓存的仓库文件，但会保留仓库记录。",
+      "clearedAll": "成功清除 {{cleared}} 个缓存，失败 {{failed}} 个，释放空间 {{size}}",
+      "clearAllFailed": "清除所有缓存失败: {{error}}"
     },
     "date": {
       "today": "今天",

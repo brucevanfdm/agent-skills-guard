@@ -202,7 +202,7 @@ impl SkillManager {
         Ok(())
     }
 
-    /// 准备安装技能：下载并扫描，但不标记为已安装
+    /// 准备安装技能：扫描缓存中的技能，但不复制文件，不标记为已安装
     /// 返回扫描报告供前端判断是否需要用户确认
     pub async fn prepare_skill_installation(&self, skill_id: &str, locale: &str) -> Result<crate::models::security::SecurityReport> {
         use anyhow::Context;
@@ -218,59 +218,42 @@ impl SkillManager {
         // 下载并分析 SKILL.md
         let (_skill_md_content, _report) = self.download_and_analyze(&mut skill).await?;
 
-        // 确保目标目录存在
-        std::fs::create_dir_all(&self.skills_dir)
-            .context("无法创建技能目录")?;
+        // 获取仓库记录
+        let repositories = self.db.get_repositories()?;
+        let repo = repositories.iter()
+            .find(|r| r.url == skill.repository_url)
+            .context("未找到对应的仓库记录")?
+            .clone();
 
-        // 创建 skill 文件夹
-        // 如果 file_path 是 "."（位于仓库根目录），使用技能名称作为文件夹名
-        let skill_folder_name = if skill.file_path == "." {
-            log::info!("技能位于仓库根目录，使用技能名称作为文件夹名: {}", skill.name);
-            skill.name.clone()
+        // 确保仓库缓存存在
+        let cache_path = if let Some(existing_cache_path) = &repo.cache_path {
+            // 验证缓存路径是否存在
+            let cache_path_buf = PathBuf::from(existing_cache_path);
+            if cache_path_buf.exists() {
+                existing_cache_path.clone()
+            } else {
+                // 缓存路径不存在，重新下载
+                log::warn!("缓存路径不存在，重新下载仓库: {:?}", cache_path_buf);
+                self.download_and_cache_repository(&repo.id, &skill.repository_url).await?
+            }
         } else {
-            PathBuf::from(&skill.file_path)
-                .file_name()
-                .context("技能路径格式无效")?
-                .to_str()
-                .context("技能文件夹名称包含无效字符")?
-                .to_string()
+            // 仓库缓存不存在，自动下载
+            log::info!("仓库缓存不存在，自动下载: {}", skill.repository_url);
+            self.download_and_cache_repository(&repo.id, &skill.repository_url).await?
         };
 
-        let skill_dir = self.skills_dir.join(&skill_folder_name);
-        std::fs::create_dir_all(&skill_dir)
-            .context("无法创建技能子目录")?;
+        // 定位缓存中的技能目录
+        log::info!("从仓库缓存定位技能: {:?}", cache_path);
+        let skill_cache_dir = self.locate_skill_in_cache(
+            PathBuf::from(&cache_path).as_path(),
+            &skill.file_path
+        )?;
 
-        // 下载整个 skill 目录的所有文件
-        let (owner, repo) = crate::models::Repository::from_github_url(&skill.repository_url)?;
-        // 如果 file_path 是 "."，转换为空字符串以获取根目录内容
-        let api_path = if skill.file_path == "." { "" } else { &skill.file_path };
-        let skill_files = self.github.get_directory_files(&owner, &repo, api_path).await
-            .context("获取技能目录文件列表失败")?;
+        log::info!("在缓存中找到技能目录: {:?}", skill_cache_dir);
 
-        log::info!("Found {} files in skill directory", skill_files.len());
-
-        // 下载每个文件
-        for file_info in &skill_files {
-            if file_info.content_type != "file" {
-                continue;
-            }
-
-            let download_url = file_info.download_url.as_ref()
-                .context(format!("文件 {} 缺少下载链接", file_info.name))?;
-
-            let file_content = self.github.download_file(download_url).await
-                .context(format!("下载文件失败: {}", file_info.name))?;
-
-            let local_file_path = skill_dir.join(&file_info.name);
-            std::fs::write(&local_file_path, file_content)
-                .context(format!("无法写入文件: {}", file_info.name))?;
-
-            log::info!("Saved file: {}", file_info.name);
-        }
-
-        // 扫描整个技能目录
+        // 直接扫描缓存中的技能目录
         let scan_report = self.scanner.scan_directory(
-            skill_dir.to_str().context("技能目录路径无效")?,
+            skill_cache_dir.to_str().context("技能目录路径无效")?,
             &skill.id,
             locale
         )?;
@@ -292,16 +275,114 @@ impl SkillManager {
                 .collect()
         );
         skill.scanned_at = Some(Utc::now());
-        skill.local_path = Some(skill_dir.to_string_lossy().to_string());
+        // 注意：这里暂时保存缓存路径，确认安装时会更新为实际安装路径
+        skill.local_path = Some(skill_cache_dir.to_string_lossy().to_string());
 
         // 保存安全信息到数据库，但不标记为已安装
         self.db.save_skill(&skill)?;
 
-        log::info!("Skill prepared successfully, awaiting user confirmation");
+        log::info!("Skill prepared successfully, scanned from cache, awaiting user confirmation");
         Ok(scan_report)
     }
 
-    /// 确认安装技能：标记为已安装
+    /// 下载并缓存仓库
+    async fn download_and_cache_repository(&self, repo_id: &str, repo_url: &str) -> Result<String> {
+        use anyhow::Context;
+
+        log::info!("Downloading and caching repository: {}", repo_url);
+
+        // 解析 GitHub URL
+        let (owner, repo_name) = crate::models::Repository::from_github_url(repo_url)?;
+
+        // 获取缓存基础目录
+        let cache_base_dir = dirs::cache_dir()
+            .context("无法获取系统缓存目录")?
+            .join("agent-skills-guard")
+            .join("repositories");
+
+        // 下载仓库压缩包并解压
+        let extract_dir = self.github
+            .download_repository_archive(&owner, &repo_name, &cache_base_dir)
+            .await
+            .context("下载仓库压缩包失败")?;
+
+        let cache_path_str = extract_dir.to_string_lossy().to_string();
+
+        // 更新数据库缓存信息
+        self.db.update_repository_cache(
+            repo_id,
+            &cache_path_str,
+            Utc::now(),
+            None,
+        ).context("更新仓库缓存信息失败")?;
+
+        log::info!("Repository cached successfully: {}", cache_path_str);
+
+        Ok(cache_path_str)
+    }
+
+    /// 在仓库缓存中定位技能目录
+    fn locate_skill_in_cache(&self, cache_path: &std::path::Path, skill_file_path: &str) -> Result<PathBuf> {
+        // 找到仓库根目录（cache_path 指向 extracted/ 目录）
+        let repo_root = self.find_repo_root_in_cache(cache_path)?;
+
+        // 构建技能在缓存中的路径
+        let skill_cache_path = if skill_file_path == "." {
+            repo_root.clone()
+        } else {
+            repo_root.join(skill_file_path)
+        };
+
+        if !skill_cache_path.exists() {
+            anyhow::bail!("缓存中未找到技能目录: {:?}", skill_cache_path);
+        }
+
+        Ok(skill_cache_path)
+    }
+
+    /// 找到GitHub zipball解压后的根目录
+    fn find_repo_root_in_cache(&self, extract_dir: &std::path::Path) -> Result<PathBuf> {
+        use anyhow::Context;
+
+        // GitHub zipball解压后会有一个 {owner}-{repo}-{commit}/ 目录
+        for entry in std::fs::read_dir(extract_dir).context("无法读取解压目录")? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                // 第一个目录就是仓库根目录
+                return Ok(path);
+            }
+        }
+
+        anyhow::bail!("未找到仓库根目录")
+    }
+
+    /// 递归复制目录
+    fn copy_dir_recursive(&self, src: &std::path::Path, dst: &std::path::Path, counter: &mut usize) -> Result<()> {
+        use anyhow::Context;
+
+        for entry in std::fs::read_dir(src).context(format!("无法读取源目录: {:?}", src))? {
+            let entry = entry?;
+            let src_path = entry.path();
+            let file_name = entry.file_name();
+            let dst_path = dst.join(&file_name);
+
+            if src_path.is_dir() {
+                std::fs::create_dir_all(&dst_path)
+                    .context(format!("无法创建目标目录: {:?}", dst_path))?;
+                self.copy_dir_recursive(&src_path, &dst_path, counter)?;
+            } else {
+                std::fs::copy(&src_path, &dst_path)
+                    .context(format!("无法复制文件: {:?} -> {:?}", src_path, dst_path))?;
+                *counter += 1;
+                log::debug!("Copied file: {:?}", file_name);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 确认安装技能：从缓存复制到目标路径，标记为已安装
     pub fn confirm_skill_installation(&self, skill_id: &str, install_path: Option<String>) -> Result<()> {
         use anyhow::Context;
         use std::path::PathBuf;
@@ -313,34 +394,42 @@ impl SkillManager {
             .find(|s| s.id == skill_id)
             .context("未找到该技能")?;
 
-        // 如果指定了新的安装路径，需要移动文件
-        if let Some(new_base_path) = install_path {
-            let current_path = skill.local_path.as_ref()
-                .context("技能尚未下载")?;
+        // 获取缓存中的技能路径（prepare阶段保存的）
+        let cache_path = skill.local_path.as_ref()
+            .context("技能尚未准备，请先调用prepare_skill_installation")?;
+        let cache_dir = PathBuf::from(cache_path);
 
-            let current_dir = PathBuf::from(current_path);
-            let new_base_dir = PathBuf::from(&new_base_path);
+        // 确定最终安装路径
+        let install_base_dir = if let Some(user_path) = install_path {
+            PathBuf::from(user_path)
+        } else {
+            self.skills_dir.clone()
+        };
 
-            // 获取技能目录名（当前路径的最后一个部分）
-            let skill_dir_name = current_dir.file_name()
-                .context("无效的技能目录名")?;
-            let new_dir = new_base_dir.join(skill_dir_name);
+        // 获取技能目录名
+        let skill_dir_name = cache_dir.file_name()
+            .context("无效的技能目录名")?;
+        let final_install_dir = install_base_dir.join(skill_dir_name);
 
-            // 确保目标基础目录存在
-            std::fs::create_dir_all(&new_base_dir)
-                .context("无法创建目标目录")?;
+        // 确保目标基础目录存在
+        std::fs::create_dir_all(&install_base_dir)
+            .context("无法创建目标目录")?;
 
-            // 移动文件
-            if new_dir != current_dir {
-                std::fs::rename(&current_dir, &new_dir)
-                    .context("移动技能文件失败，请检查目标路径权限")?;
-
-                log::info!("Moved skill from {:?} to {:?}", current_dir, new_dir);
-
-                // 更新 local_path
-                skill.local_path = Some(new_dir.to_string_lossy().to_string());
-            }
+        // 如果目标目录已存在，先删除
+        if final_install_dir.exists() {
+            std::fs::remove_dir_all(&final_install_dir)
+                .context("无法删除已存在的目标目录")?;
         }
+
+        // 从缓存复制到目标路径
+        log::info!("Copying skill from cache {:?} to {:?}", cache_dir, final_install_dir);
+        let mut files_copied = 0;
+        self.copy_dir_recursive(&cache_dir, &final_install_dir, &mut files_copied)?;
+
+        log::info!("Copied {} files from cache to install directory", files_copied);
+
+        // 更新 local_path 为实际安装路径
+        skill.local_path = Some(final_install_dir.to_string_lossy().to_string());
 
         // 标记为已安装
         skill.installed = true;
@@ -352,7 +441,7 @@ impl SkillManager {
         Ok(())
     }
 
-    /// 取消安装技能：删除已下载的文件
+    /// 取消安装技能：清除准备阶段的数据（不删除缓存）
     pub fn cancel_skill_installation(&self, skill_id: &str) -> Result<()> {
         use anyhow::Context;
 
@@ -363,15 +452,8 @@ impl SkillManager {
             .find(|s| s.id == skill_id)
             .context("未找到该技能")?;
 
-        // 删除已下载的文件
-        if let Some(local_path) = &skill.local_path {
-            let path = PathBuf::from(local_path);
-            if path.exists() {
-                std::fs::remove_dir_all(&path)
-                    .context("无法删除技能文件")?;
-                log::info!("Deleted skill files: {}", local_path);
-            }
-        }
+        // 注意：不删除缓存中的文件，因为缓存是共享的仓库缓存
+        // 只清除数据库中的准备阶段信息
 
         // 清除数据库中的安全信息和本地路径
         let mut skill = skill;

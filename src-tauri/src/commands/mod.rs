@@ -317,6 +317,88 @@ pub async fn refresh_repository_cache(
     scan_repository(state, repo_id).await
 }
 
+/// 一键清除所有仓库缓存（但保留仓库记录）
+#[tauri::command]
+pub async fn clear_all_repository_caches(
+    state: State<'_, AppState>,
+) -> Result<ClearAllCachesResult, String> {
+    let repos = state.db.get_repositories()
+        .map_err(|e| e.to_string())?;
+
+    let mut cleared_count = 0;
+    let mut failed_count = 0;
+    let mut total_size_freed: u64 = 0;
+
+    // 获取缓存基础目录
+    let cache_base_dir = dirs::cache_dir()
+        .ok_or("无法获取缓存目录".to_string())?
+        .join("agent-skills-guard")
+        .join("repositories");
+
+    if !cache_base_dir.exists() {
+        // 缓存目录不存在，无需清理
+        return Ok(ClearAllCachesResult {
+            total_repositories: repos.len(),
+            cleared_count: 0,
+            failed_count: 0,
+            total_size_freed: 0,
+        });
+    }
+
+    for repo in &repos {
+        if let Some(cache_path) = &repo.cache_path {
+            let cache_path_buf = std::path::PathBuf::from(cache_path);
+
+            if let Some(parent) = cache_path_buf.parent() {
+                // 安全检查：确保路径在预期的缓存目录中
+                if !parent.starts_with(&cache_base_dir) {
+                    log::warn!("跳过无效的缓存路径: {:?}", parent);
+                    failed_count += 1;
+                    continue;
+                }
+
+                // 计算目录大小（在删除前）
+                if parent.exists() {
+                    if let Ok(size) = dir_size(parent) {
+                        total_size_freed += size;
+                    }
+                }
+
+                // 清除数据库中的缓存信息
+                if let Err(e) = state.db.clear_repository_cache_metadata(&repo.id) {
+                    log::warn!("清除仓库 {} 的缓存元数据失败: {}", repo.name, e);
+                    failed_count += 1;
+                    continue;
+                }
+
+                // 删除文件
+                if parent.exists() {
+                    if let Err(e) = std::fs::remove_dir_all(parent) {
+                        log::warn!("删除缓存目录失败: {:?}，错误: {}", parent, e);
+                        failed_count += 1;
+                    } else {
+                        log::info!("已删除缓存目录: {:?}", parent);
+                        cleared_count += 1;
+                    }
+                } else {
+                    // 数据库中有记录但文件不存在，只清理元数据
+                    cleared_count += 1;
+                }
+            }
+        }
+    }
+
+    log::info!("清除所有缓存完成: 成功 {}, 失败 {}, 释放 {} 字节",
+        cleared_count, failed_count, total_size_freed);
+
+    Ok(ClearAllCachesResult {
+        total_repositories: repos.len(),
+        cleared_count,
+        failed_count,
+        total_size_freed,
+    })
+}
+
 /// 获取缓存统计信息
 #[tauri::command]
 pub async fn get_cache_stats(
@@ -372,6 +454,16 @@ pub struct CacheStats {
     pub total_repositories: usize,
     pub cached_repositories: usize,
     pub total_size_bytes: u64,
+}
+
+/// 清除所有缓存的结果
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClearAllCachesResult {
+    pub total_repositories: usize,
+    pub cleared_count: usize,
+    pub failed_count: usize,
+    pub total_size_freed: u64,
 }
 
 /// 打开技能目录

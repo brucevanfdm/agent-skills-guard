@@ -38,7 +38,7 @@ export enum SecurityLevel {
   Critical = "Critical",
 }
 
-export type { CacheStats } from './cache';
+export type { CacheStats, ClearAllCachesResult } from './cache';
 
 export interface InstallPathSelection {
   type: 'user' | 'recent' | 'custom';

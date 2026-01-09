@@ -50,6 +50,10 @@ export const api = {
     return invoke("clear_repository_cache", { repoId });
   },
 
+  async clearAllRepositoryCaches(): Promise<ClearAllCachesResult> {
+    return invoke("clear_all_repository_caches");
+  },
+
   async refreshRepositoryCache(repoId: string): Promise<Skill[]> {
     return invoke("refresh_repository_cache", { repoId });
   },

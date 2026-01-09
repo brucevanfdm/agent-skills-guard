@@ -68,6 +68,23 @@ export function RepositoriesPage() {
     },
   });
 
+  // 清除所有缓存mutation
+  const clearAllCachesMutation = useMutation({
+    mutationFn: api.clearAllRepositoryCaches,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+      queryClient.invalidateQueries({ queryKey: ['cache-stats'] });
+      showToast(t('repositories.cache.clearedAll', {
+        cleared: result.clearedCount,
+        failed: result.failedCount,
+        size: formatBytes(result.totalSizeFreed)
+      }));
+    },
+    onError: (error: any) => {
+      showToast(t('repositories.cache.clearAllFailed', { error: error.message || error }));
+    },
+  });
+
   const showToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 3000);
@@ -174,11 +191,34 @@ export function RepositoriesPage() {
             boxShadow: '0 0 20px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(168, 85, 247, 0.1)'
           }}
         >
-          <div className="flex items-center gap-2 mb-4">
-            <Database className="w-5 h-5 text-terminal-purple" />
-            <h3 className="font-bold text-terminal-purple tracking-wider uppercase">
-              {t('repositories.cache.stats')}
-            </h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-terminal-purple" />
+              <h3 className="font-bold text-terminal-purple tracking-wider uppercase">
+                {t('repositories.cache.stats')}
+              </h3>
+            </div>
+
+            {/* Clear All Caches Button */}
+            {cacheStats.cachedRepositories > 0 && (
+              <button
+                onClick={() => clearAllCachesMutation.mutate()}
+                disabled={clearAllCachesMutation.isPending}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:border-red-500 transition-all disabled:opacity-50"
+              >
+                {clearAllCachesMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    {t('repositories.cache.clearing')}
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {t('repositories.cache.clearAll')}
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-4">
