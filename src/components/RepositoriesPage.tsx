@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useRepositories,
   useAddRepository,
@@ -47,6 +47,8 @@ export function RepositoriesPage() {
   const [scanningRepoId, setScanningRepoId] = useState<string | null>(null);
   const [refreshingRepoId, setRefreshingRepoId] = useState<string | null>(null);
   const [deletingRepoId, setDeletingRepoId] = useState<string | null>(null);
+  const addFormRef = useRef<HTMLDivElement | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
 
   // 缓存统计查询
   const { data: cacheStats } = useQuery({
@@ -152,6 +154,14 @@ export function RepositoriesPage() {
       );
     }
   };
+
+  useEffect(() => {
+    if (!showAddForm) return;
+    requestAnimationFrame(() => {
+      addFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      urlInputRef.current?.focus();
+    });
+  }, [showAddForm]);
 
 
 
@@ -261,7 +271,7 @@ export function RepositoriesPage() {
         onAdd={(url, name) => {
           setNewRepoUrl(url);
           setNewRepoName(name);
-          handleAddRepository();
+          setShowAddForm(true);
         }}
         isAdding={addMutation.isPending}
       />
@@ -269,6 +279,7 @@ export function RepositoriesPage() {
       {/* Add Repository Form */}
       {showAddForm && (
         <div
+          ref={addFormRef}
           className="cyber-card p-6 border-terminal-cyan"
           style={{
             animation: 'fadeIn 0.3s ease-out',
@@ -294,6 +305,7 @@ export function RepositoriesPage() {
                 onChange={(e) => handleUrlChange(e.target.value)}
                 placeholder="https://github.com/owner/repo"
                 className="terminal-input font-mono"
+                ref={urlInputRef}
               />
               <p className="text-xs text-muted-foreground mt-1 font-mono">
                 {t('repositories.urlHint')}

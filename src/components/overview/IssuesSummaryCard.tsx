@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, AlertCircle, CheckCircle, Shield } from "lucide-react";
+import { AlertTriangle, AlertCircle, Shield } from "lucide-react";
 
 interface IssuesSummaryCardProps {
   issuesByLevel: Record<string, number>;
