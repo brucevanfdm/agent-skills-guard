@@ -5,6 +5,8 @@ no_issues: "✅ 未发现明显安全问题"
 
 file_location: "文件: %{file}, 行 %{line}"
 hard_trigger_issue: "%{rule_name} (文件: %{file}, 行 %{line}): %{description}"
+hard_trigger_file_issue: "%{rule_name} (文件: %{file}): %{description}"
+symlink_detected: "检测到符号链接，可能指向技能目录外的敏感路径（存在越权读取/访问风险）"
 
 recommendations:
   destructive: "包含破坏性操作（如删除文件），存在极高风险"

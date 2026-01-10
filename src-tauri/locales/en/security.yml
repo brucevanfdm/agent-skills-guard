@@ -5,6 +5,8 @@ no_issues: "✅ No obvious security issues found"
 
 file_location: "File: %{file}, Line: %{line}"
 hard_trigger_issue: "%{rule_name} (File: %{file}, Line: %{line}): %{description}"
+hard_trigger_file_issue: "%{rule_name} (File: %{file}): %{description}"
+symlink_detected: "Symbolic link detected; it may point outside the skill directory (risk of out-of-scope access)."
 
 recommendations:
   destructive: "Contains destructive operations (e.g., file deletion), extremely high risk"
