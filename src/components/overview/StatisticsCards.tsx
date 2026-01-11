@@ -9,53 +9,53 @@ interface StatisticsCardsProps {
 
 const cards = [
   {
-    key: 'installedSkills',
-    color: 'terminal-cyan',
+    key: "installedSkills",
+    color: "terminal-cyan",
     icon: Package,
-    bgGlow: 'from-terminal-cyan/5 to-transparent',
-    borderColor: 'border-terminal-cyan/30',
-    hoverBorder: 'hover:border-terminal-cyan/60',
-    hoverShadow: 'hover:shadow-[0_0_30px_rgba(94,234,212,0.3)]',
-    accentBar: 'bg-terminal-cyan',
-    textClass: 'text-terminal-cyan',
-    glowColor: 'rgba(94, 234, 212, 0.4)',
+    bgGlow: "from-terminal-cyan/5 to-transparent",
+    borderColor: "border-terminal-cyan/30",
+    hoverBorder: "hover:border-terminal-cyan/60",
+    hoverShadow: "hover:shadow-[0_0_30px_rgba(94,234,212,0.3)]",
+    accentBar: "bg-terminal-cyan",
+    textClass: "text-terminal-cyan",
+    glowColor: "rgba(94, 234, 212, 0.4)",
   },
   {
-    key: 'repositories',
-    color: 'terminal-green',
+    key: "repositories",
+    color: "terminal-green",
     icon: FolderGit,
-    bgGlow: 'from-terminal-green/5 to-transparent',
-    borderColor: 'border-terminal-green/30',
-    hoverBorder: 'hover:border-terminal-green/60',
-    hoverShadow: 'hover:shadow-[0_0_30px_rgba(74,222,128,0.3)]',
-    accentBar: 'bg-terminal-green',
-    textClass: 'text-terminal-green',
-    glowColor: 'rgba(74, 222, 128, 0.4)',
+    bgGlow: "from-terminal-green/5 to-transparent",
+    borderColor: "border-terminal-green/30",
+    hoverBorder: "hover:border-terminal-green/60",
+    hoverShadow: "hover:shadow-[0_0_30px_rgba(74,222,128,0.3)]",
+    accentBar: "bg-terminal-green",
+    textClass: "text-terminal-green",
+    glowColor: "rgba(74, 222, 128, 0.4)",
   },
   {
-    key: 'scannedSkills',
-    color: 'terminal-purple',
+    key: "scannedSkills",
+    color: "terminal-purple",
     icon: Shield,
-    bgGlow: 'from-terminal-purple/5 to-transparent',
-    borderColor: 'border-terminal-purple/30',
-    hoverBorder: 'hover:border-terminal-purple/60',
-    hoverShadow: 'hover:shadow-[0_0_30px_rgba(192,132,252,0.3)]',
-    accentBar: 'bg-terminal-purple',
-    textClass: 'text-terminal-purple',
-    glowColor: 'rgba(192, 132, 252, 0.4)',
+    bgGlow: "from-terminal-purple/5 to-transparent",
+    borderColor: "border-terminal-purple/30",
+    hoverBorder: "hover:border-terminal-purple/60",
+    hoverShadow: "hover:shadow-[0_0_30px_rgba(192,132,252,0.3)]",
+    accentBar: "bg-terminal-purple",
+    textClass: "text-terminal-purple",
+    glowColor: "rgba(192, 132, 252, 0.4)",
   },
 ];
 
 export function StatisticsCards({
   installedCount,
   repositoryCount,
-  scannedCount
+  scannedCount,
 }: StatisticsCardsProps) {
   const { t } = useTranslation();
   const counts = [installedCount, repositoryCount, scannedCount];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
         const count = counts[index];
@@ -73,8 +73,8 @@ export function StatisticsCards({
             `}
             style={{
               animation: `fadeIn 0.5s ease-out ${index * 0.08}s`,
-              animationFillMode: 'backwards',
-              backdropFilter: 'blur(10px)',
+              animationFillMode: "backwards",
+              backdropFilter: "blur(10px)",
             }}
           >
             {/* 赛博朋克网格背景 */}
@@ -85,12 +85,14 @@ export function StatisticsCards({
                   linear-gradient(${card.glowColor} 1px, transparent 1px),
                   linear-gradient(90deg, ${card.glowColor} 1px, transparent 1px)
                 `,
-                backgroundSize: '20px 20px',
+                backgroundSize: "20px 20px",
               }}
             />
 
             {/* 左侧动态发光竖线 */}
-            <div className={`absolute top-0 left-0 w-1.5 h-full ${card.accentBar} transition-all duration-300 group-hover:w-2`}>
+            <div
+              className={`absolute top-0 left-0 w-1.5 h-full ${card.accentBar} transition-all duration-300 group-hover:w-2`}
+            >
               <div
                 className="absolute inset-0 animate-pulse"
                 style={{
@@ -109,10 +111,18 @@ export function StatisticsCards({
             />
 
             {/* 角落装饰 - 四个角落 */}
-            <div className={`absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 ${card.borderColor} rounded-tl-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
-            <div className={`absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 ${card.borderColor} rounded-tr-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
-            <div className={`absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 ${card.borderColor} rounded-bl-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
-            <div className={`absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 ${card.borderColor} rounded-br-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
+            <div
+              className={`absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 ${card.borderColor} rounded-tl-lg opacity-50 group-hover:opacity-100 transition-opacity`}
+            />
+            <div
+              className={`absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 ${card.borderColor} rounded-tr-lg opacity-50 group-hover:opacity-100 transition-opacity`}
+            />
+            <div
+              className={`absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 ${card.borderColor} rounded-bl-lg opacity-50 group-hover:opacity-100 transition-opacity`}
+            />
+            <div
+              className={`absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 ${card.borderColor} rounded-br-lg opacity-50 group-hover:opacity-100 transition-opacity`}
+            />
 
             {/* 背景六边形装饰 - 多层叠加 */}
             <div className={`absolute -bottom-8 -right-8 w-32 h-32 ${card.textClass} opacity-5`}>
@@ -121,23 +131,29 @@ export function StatisticsCards({
               </svg>
             </div>
             <div className={`absolute -bottom-6 -right-6 w-24 h-24 ${card.textClass} opacity-5`}>
-              <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(30deg)' }}>
+              <svg
+                viewBox="0 0 100 100"
+                className="w-full h-full"
+                style={{ transform: "rotate(30deg)" }}
+              >
                 <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="currentColor" />
               </svg>
             </div>
 
             {/* CPU 芯片装饰 */}
-            <div className={`absolute top-3 right-3 ${card.textClass} opacity-10 group-hover:opacity-20 transition-opacity`}>
-              <Cpu className="w-6 h-6" />
+            <div
+              className={`absolute top-3 right-3 ${card.textClass} opacity-10 group-hover:opacity-20 transition-opacity`}
+            >
+              <Cpu className="w-5 h-5" />
             </div>
 
             {/* 内容区 */}
-            <div className="relative p-6 pl-5">
+            <div className="relative p-5 pl-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   {/* 数字显示 - 带发光效果 */}
                   <div
-                    className={`text-5xl font-bold ${card.textClass} font-mono mb-2 group-hover:scale-105 transition-transform duration-300`}
+                    className={`text-4xl lg:text-5xl leading-none font-bold ${card.textClass} font-mono mb-1.5 group-hover:scale-105 transition-transform duration-300`}
                     style={{
                       textShadow: `0 0 20px ${card.glowColor}`,
                     }}
@@ -145,19 +161,19 @@ export function StatisticsCards({
                     {count}
                   </div>
                   {/* 标签 */}
-                  <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-2">
                     <span className={`w-1.5 h-1.5 rounded-full ${card.accentBar} animate-pulse`} />
                     {t(`overview.statistics.${card.key}`)}
                   </div>
                 </div>
                 {/* 图标 */}
                 <div
-                  className={`ml-4 p-3 rounded-lg ${card.bgGlow} ${card.borderColor} ${card.textClass} group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}
+                  className={`ml-4 p-2.5 rounded-lg ${card.bgGlow} ${card.borderColor} ${card.textClass} group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}
                   style={{
                     boxShadow: `0 0 15px ${card.glowColor}20`,
                   }}
                 >
-                  <Icon className="w-8 h-8" />
+                  <Icon className="w-7 h-7 lg:w-8 lg:h-8" />
                 </div>
               </div>
             </div>
@@ -167,8 +183,8 @@ export function StatisticsCards({
               <div
                 className={`h-full w-1/3 ${card.accentBar}`}
                 style={{
-                  animation: 'dataFlow 2s ease-in-out infinite',
-                  marginLeft: '-33%',
+                  animation: "dataFlow 2s ease-in-out infinite",
+                  marginLeft: "-33%",
                 }}
               />
             </div>

@@ -292,6 +292,7 @@
     },
     "issues": {
       "found": "{{count}} ISSUES_FOUND: {{breakdown}}",
+      "clearFilters": "CLEAR_FILTERS",
       "viewDetails": "VIEW_DETAILS",
       "viewFullReport": "VIEW_FULL_REPORT",
       "noIssues": "EXCELLENT! ALL_SKILLS_ARE_SAFE",

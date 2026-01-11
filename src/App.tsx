@@ -18,7 +18,9 @@ const reactQueryClient = new QueryClient();
 
 function AppContent() {
   const { t } = useTranslation();
-  const [currentTab, setCurrentTab] = useState<"overview" | "installed" | "marketplace" | "repositories">("overview");
+  const [currentTab, setCurrentTab] = useState<
+    "overview" | "installed" | "marketplace" | "repositories"
+  >("overview");
   const [platform, setPlatform] = useState<Platform | null>(null);
 
   useEffect(() => {
@@ -27,18 +29,25 @@ function AppContent() {
 
   // 辅助函数：渲染 Logo 和标题，避免代码重复
   const renderLogoTitle = (isCentered: boolean) => (
-    <div className={`flex items-center gap-3 ${isCentered ? 'absolute left-1/2 -translate-x-1/2' : ''}`}>
+    <div
+      className={`flex items-center gap-3 ${isCentered ? "absolute left-1/2 -translate-x-1/2" : ""}`}
+    >
       <div className="text-terminal-cyan font-mono leading-none select-none pointer-events-none">
-        <pre className="text-[10px] leading-[1.2] tracking-tight" style={{ fontFamily: 'Consolas, Monaco, "Courier New", monospace' }}>
-{`╔═══╗
+        <pre
+          className="text-[10px] leading-[1.2] tracking-tight"
+          style={{ fontFamily: 'Consolas, Monaco, "Courier New", monospace' }}
+        >
+          {`╔═══╗
 ║ ◎ ║
 ╚═══╝`}
         </pre>
       </div>
 
       <div className="pointer-events-none">
-        <h1 className={`font-bold text-terminal-cyan tracking-wider ${isCentered ? 'text-lg' : 'text-xl'}`}>
-          {t('header.title')}
+        <h1
+          className={`font-bold text-terminal-cyan tracking-wider ${isCentered ? "text-lg" : "text-xl"}`}
+        >
+          {t("header.title")}
         </h1>
         {/* <p className="text-xs text-muted-foreground font-mono mt-1 tracking-wide">
           <span className="text-terminal-green">&gt;</span> {t('header.subtitle')}
@@ -59,7 +68,7 @@ function AppContent() {
         <div data-tauri-drag-region className="w-full px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Mac 布局：左侧控件 + 中间标题 + 右侧语言切换 */}
-            {platform === 'macos' && (
+            {platform === "macos" && (
               <>
                 {/* 左侧：窗口控件 */}
                 <div className="pointer-events-auto">
@@ -77,7 +86,7 @@ function AppContent() {
             )}
 
             {/* Windows/Linux 布局：左侧标题 + 右侧语言切换和控件 */}
-            {platform !== 'macos' && platform !== null && (
+            {platform !== "macos" && platform !== null && (
               <>
                 {/* 左侧：Logo 和标题 */}
                 {renderLogoTitle(false)}
@@ -105,18 +114,17 @@ function AppContent() {
               onClick={() => setCurrentTab("overview")}
               className={`
                 relative px-6 py-3 font-mono text-sm font-medium transition-all duration-200
-                ${currentTab === "overview"
-                  ? "text-terminal-cyan border-b-2 border-terminal-cyan"
-                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                ${
+                  currentTab === "overview"
+                    ? "text-terminal-cyan border-b-2 border-terminal-cyan"
+                    : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
                 }
               `}
             >
               <div className="flex items-center gap-2">
                 <LayoutDashboard className="w-4 h-4" />
-                <span>{t('nav.overview')}</span>
-                {currentTab === "overview" && (
-                  <span className="text-terminal-green">●</span>
-                )}
+                <span>{t("nav.overview")}</span>
+                {currentTab === "overview" && <span className="text-terminal-green">●</span>}
               </div>
             </button>
 
@@ -124,18 +132,17 @@ function AppContent() {
               onClick={() => setCurrentTab("installed")}
               className={`
                 relative px-6 py-3 font-mono text-sm font-medium transition-all duration-200
-                ${currentTab === "installed"
-                  ? "text-terminal-cyan border-b-2 border-terminal-cyan"
-                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                ${
+                  currentTab === "installed"
+                    ? "text-terminal-cyan border-b-2 border-terminal-cyan"
+                    : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
                 }
               `}
             >
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4" />
-                <span>{t('nav.installed')}</span>
-                {currentTab === "installed" && (
-                  <span className="text-terminal-green">●</span>
-                )}
+                <span>{t("nav.installed")}</span>
+                {currentTab === "installed" && <span className="text-terminal-green">●</span>}
               </div>
             </button>
 
@@ -143,18 +150,17 @@ function AppContent() {
               onClick={() => setCurrentTab("marketplace")}
               className={`
                 relative px-6 py-3 font-mono text-sm font-medium transition-all duration-200
-                ${currentTab === "marketplace"
-                  ? "text-terminal-cyan border-b-2 border-terminal-cyan"
-                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                ${
+                  currentTab === "marketplace"
+                    ? "text-terminal-cyan border-b-2 border-terminal-cyan"
+                    : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
                 }
               `}
             >
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4" />
-                <span>{t('nav.marketplace')}</span>
-                {currentTab === "marketplace" && (
-                  <span className="text-terminal-green">●</span>
-                )}
+                <span>{t("nav.marketplace")}</span>
+                {currentTab === "marketplace" && <span className="text-terminal-green">●</span>}
               </div>
             </button>
 
@@ -162,18 +168,17 @@ function AppContent() {
               onClick={() => setCurrentTab("repositories")}
               className={`
                 relative px-6 py-3 font-mono text-sm font-medium transition-all duration-200
-                ${currentTab === "repositories"
-                  ? "text-terminal-cyan border-b-2 border-terminal-cyan"
-                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                ${
+                  currentTab === "repositories"
+                    ? "text-terminal-cyan border-b-2 border-terminal-cyan"
+                    : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
                 }
               `}
             >
               <div className="flex items-center gap-2">
                 <DatabaseIcon className="w-4 h-4" />
-                <span>{t('nav.repositories')}</span>
-                {currentTab === "repositories" && (
-                  <span className="text-terminal-green">●</span>
-                )}
+                <span>{t("nav.repositories")}</span>
+                {currentTab === "repositories" && <span className="text-terminal-green">●</span>}
               </div>
             </button>
           </div>
@@ -182,10 +187,10 @@ function AppContent() {
 
       {/* Main Content - Scrollable Area */}
       <main className="flex-1 overflow-y-auto hide-scrollbar">
-        <div className="w-full px-6 py-8">
+        <div className="w-full px-6 py-6">
           <div
             style={{
-              animation: 'fadeIn 0.4s ease-out'
+              animation: "fadeIn 0.4s ease-out",
             }}
           >
             {currentTab === "overview" && <OverviewPage />}
@@ -202,10 +207,13 @@ function AppContent() {
           <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
             <span className="text-terminal-green">❯</span>
             <span>Agent-Skills-Guard </span>
-            <span className="text-terminal-cyan">{t('footer.version')}{__APP_VERSION__}</span>
+            <span className="text-terminal-cyan">
+              {t("footer.version")}
+              {__APP_VERSION__}
+            </span>
             <span className="mx-2">•</span>
-            <span className="text-terminal-purple">{t('footer.status')}</span>
-            <span className="text-terminal-green">{t('footer.operational')}</span>
+            <span className="text-terminal-purple">{t("footer.status")}</span>
+            <span className="text-terminal-green">{t("footer.operational")}</span>
           </div>
         </div>
       </footer>

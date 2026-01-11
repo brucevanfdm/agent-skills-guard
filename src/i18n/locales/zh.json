@@ -292,6 +292,7 @@
     },
     "issues": {
       "found": "发现 {{count}} 个问题：{{breakdown}}",
+      "clearFilters": "清除筛选",
       "viewDetails": "查看详情",
       "viewFullReport": "查看完整报告",
       "noIssues": "太棒了！所有技能都很安全",
