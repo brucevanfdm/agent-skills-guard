@@ -193,7 +193,11 @@
     "featured": {
       "title": "精选仓库",
       "add": "添加",
-      "added": "已添加"
+      "added": "已添加",
+      "refresh": "刷新",
+      "refreshing": "刷新中",
+      "refreshed": "精选仓库已更新",
+      "refreshFailed": "刷新失败: {{error}}"
     }
   },
   "language": {

@@ -193,7 +193,11 @@
     "featured": {
       "title": "FEATURED_REPOSITORIES",
       "add": "ADD",
-      "added": "ADDED"
+      "added": "ADDED",
+      "refresh": "REFRESH",
+      "refreshing": "REFRESHING",
+      "refreshed": "FEATURED_REPOSITORIES_UPDATED",
+      "refreshFailed": "REFRESH_FAILED: {{error}}"
     }
   },
   "language": {

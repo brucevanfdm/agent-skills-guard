@@ -2,7 +2,9 @@ pub mod security;
 
 use crate::models::{Repository, Skill, FeaturedRepositoriesConfig};
 use crate::services::{Database, GitHubService, SkillManager};
+use std::path::PathBuf;
 use std::sync::Arc;
+use tauri::Manager;
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -538,25 +540,85 @@ pub async fn select_custom_install_path(app: tauri::AppHandle) -> Result<Option<
     }
 }
 
+const FEATURED_REPOSITORIES_REMOTE_URL: &str =
+    "https://raw.githubusercontent.com/brucevanfdm/agent-skills-guard/main/featured-repositories.yaml";
+const DEFAULT_FEATURED_REPOSITORIES_YAML: &str = include_str!("../../../featured-repositories.yaml");
+
+fn featured_repositories_cache_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    std::fs::create_dir_all(&app_dir)
+        .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+
+    Ok(app_dir.join("featured-repositories.yaml"))
+}
+
 /// 获取精选仓库列表
 #[tauri::command]
-pub async fn get_featured_repositories() -> Result<FeaturedRepositoriesConfig, String> {
-    use std::fs;
-    use std::path::PathBuf;
+pub async fn get_featured_repositories(app: tauri::AppHandle) -> Result<FeaturedRepositoriesConfig, String> {
+    // 1) 优先读取 app_data_dir 下的缓存文件（支持在线刷新后持久化）
+    let cache_path = featured_repositories_cache_path(&app)?;
+    if let Ok(cached_yaml) = std::fs::read_to_string(&cache_path) {
+        match serde_yaml::from_str::<FeaturedRepositoriesConfig>(&cached_yaml) {
+            Ok(config) => return Ok(config),
+            Err(e) => {
+                log::warn!(
+                    "精选仓库缓存文件解析失败，将回退到内置默认配置: {:?}, 错误: {}",
+                    cache_path,
+                    e
+                );
+            }
+        }
+    }
 
-    // 获取项目根目录下的 YAML 文件路径
-    let yaml_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .ok_or("Failed to get parent directory")?
-        .join("featured-repositories.yaml");
+    // 2) 回退到编译期内置的默认 YAML（用于首次启动/离线/打包环境）
+    serde_yaml::from_str::<FeaturedRepositoriesConfig>(DEFAULT_FEATURED_REPOSITORIES_YAML)
+        .map_err(|e| format!("Failed to parse default featured repositories: {}", e))
+}
 
-    // 读取 YAML 文件
-    let yaml_content = fs::read_to_string(&yaml_path)
-        .map_err(|e| format!("Failed to read featured repositories: {}", e))?;
+/// 刷新精选仓库列表（从 GitHub 下载最新 YAML 并写入 app_data_dir 缓存）
+#[tauri::command]
+pub async fn refresh_featured_repositories(
+    app: tauri::AppHandle,
+) -> Result<FeaturedRepositoriesConfig, String> {
+    use std::io::Write;
 
-    // 解析 YAML
+    let yaml_content = reqwest::Client::new()
+        .get(FEATURED_REPOSITORIES_REMOTE_URL)
+        .header(reqwest::header::USER_AGENT, "agent-skills-guard")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download featured repositories: {}", e))?
+        .error_for_status()
+        .map_err(|e| format!("Failed to download featured repositories: {}", e))?
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read featured repositories content: {}", e))?;
+
+    // 先校验解析成功，再落盘
     let config: FeaturedRepositoriesConfig = serde_yaml::from_str(&yaml_content)
-        .map_err(|e| format!("Failed to parse featured repositories: {}", e))?;
+        .map_err(|e| format!("Failed to parse downloaded featured repositories: {}", e))?;
+
+    let cache_path = featured_repositories_cache_path(&app)?;
+    let cache_dir = cache_path
+        .parent()
+        .ok_or_else(|| "Failed to get featured repositories cache directory".to_string())?;
+
+    let mut tmp = tempfile::NamedTempFile::new_in(cache_dir)
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+    tmp.write_all(yaml_content.as_bytes())
+        .map_err(|e| format!("Failed to write temp file: {}", e))?;
+    tmp.flush()
+        .map_err(|e| format!("Failed to flush temp file: {}", e))?;
+
+    if cache_path.exists() {
+        let _ = std::fs::remove_file(&cache_path);
+    }
+    tmp.persist(&cache_path)
+        .map_err(|e| format!("Failed to persist featured repositories cache: {}", e))?;
 
     Ok(config)
 }

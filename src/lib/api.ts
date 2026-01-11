@@ -72,6 +72,10 @@ export const api = {
     return invoke("get_featured_repositories");
   },
 
+  async refreshFeaturedRepositories(): Promise<FeaturedRepositoriesConfig> {
+    return invoke("refresh_featured_repositories");
+  },
+
   async isRepositoryAdded(url: string): Promise<boolean> {
     return invoke("is_repository_added", { url });
   },

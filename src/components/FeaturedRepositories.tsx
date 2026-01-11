@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronUp, Plus, Check, Loader2, Star, GitBranch } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Check, Loader2, Star, GitBranch, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 interface FeaturedRepositoriesProps {
   onAdd: (url: string, name: string) => void;
@@ -11,6 +12,7 @@ interface FeaturedRepositoriesProps {
 
 export function FeaturedRepositories({ onAdd, isAdding }: FeaturedRepositoriesProps) {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["official"]);
 
   // 获取精选仓库
@@ -19,6 +21,21 @@ export function FeaturedRepositories({ onAdd, isAdding }: FeaturedRepositoriesPr
     queryFn: api.getFeaturedRepositories,
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     retry: false, // YAML 文件不存在时不重试
+  });
+
+  const refreshMutation = useMutation({
+    mutationFn: api.refreshFeaturedRepositories,
+    onSuccess: (data) => {
+      queryClient.setQueryData(['featured-repositories'], data);
+      toast.success(t('repositories.featured.refreshed'));
+    },
+    onError: (error: any) => {
+      toast.error(
+        t('repositories.featured.refreshFailed', {
+          error: error?.message || String(error),
+        })
+      );
+    },
   });
 
   // 获取已添加的仓库列表
@@ -60,11 +77,32 @@ export function FeaturedRepositories({ onAdd, isAdding }: FeaturedRepositoriesPr
 
   return (
     <div className="cyber-card p-6 border-terminal-cyan bg-gradient-to-br from-card via-muted to-card">
-      <div className="flex items-center gap-2 mb-4">
-        <Star className="w-5 h-5 text-terminal-cyan" />
-        <h3 className="font-bold text-terminal-cyan tracking-wider uppercase">
-          {t('repositories.featured.title')}
-        </h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Star className="w-5 h-5 text-terminal-cyan" />
+          <h3 className="font-bold text-terminal-cyan tracking-wider uppercase">
+            {t('repositories.featured.title')}
+          </h3>
+        </div>
+
+        <button
+          onClick={() => refreshMutation.mutate()}
+          disabled={refreshMutation.isPending}
+          title={t('repositories.featured.refresh')}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs bg-terminal-cyan/10 hover:bg-terminal-cyan/20 text-terminal-cyan border border-terminal-cyan/30 hover:border-terminal-cyan transition-all disabled:opacity-50"
+        >
+          {refreshMutation.isPending ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              {t('repositories.featured.refreshing')}
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-3.5 h-3.5" />
+              {t('repositories.featured.refresh')}
+            </>
+          )}
+        </button>
       </div>
 
       <div className="space-y-4">
