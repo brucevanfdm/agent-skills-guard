@@ -35,7 +35,10 @@ function AppContent() {
       <div className="text-terminal-cyan font-mono leading-none select-none pointer-events-none">
         <pre
           className="text-[10px] leading-[1.2] tracking-tight"
-          style={{ fontFamily: 'Consolas, Monaco, "Courier New", monospace' }}
+          style={{
+            fontFamily:
+              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+          }}
         >
           {`╔═══╗
 ║ ◎ ║

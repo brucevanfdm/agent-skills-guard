@@ -63,7 +63,7 @@ export function OverviewPage() {
             border: "2px solid rgb(239, 68, 68)",
             backdropFilter: "blur(8px)",
             color: "rgb(252, 165, 165)",
-            fontFamily: "monospace",
+            fontFamily: "inherit",
             fontSize: "14px",
             boxShadow: "0 0 30px rgba(239, 68, 68, 0.3)",
           },
@@ -95,7 +95,7 @@ export function OverviewPage() {
             border: "2px solid rgb(6, 182, 212)",
             backdropFilter: "blur(8px)",
             color: "rgb(94, 234, 212)",
-            fontFamily: "monospace",
+            fontFamily: "inherit",
             fontSize: "14px",
             boxShadow: "0 0 30px rgba(6, 182, 212, 0.3)",
           },
@@ -110,7 +110,7 @@ export function OverviewPage() {
           border: "2px solid rgb(239, 68, 68)",
           backdropFilter: "blur(8px)",
           color: "rgb(252, 165, 165)",
-          fontFamily: "monospace",
+          fontFamily: "inherit",
           fontSize: "14px",
           boxShadow: "0 0 30px rgba(239, 68, 68, 0.3)",
         },
@@ -203,7 +203,7 @@ export function OverviewPage() {
             border: "2px solid rgb(239, 68, 68)",
             backdropFilter: "blur(8px)",
             color: "rgb(252, 165, 165)",
-            fontFamily: "monospace",
+            fontFamily: "inherit",
             fontSize: "14px",
             boxShadow: "0 0 30px rgba(239, 68, 68, 0.3)",
           },
@@ -217,7 +217,7 @@ export function OverviewPage() {
           border: "2px solid rgb(239, 68, 68)",
           backdropFilter: "blur(8px)",
           color: "rgb(252, 165, 165)",
-          fontFamily: "monospace",
+          fontFamily: "inherit",
           fontSize: "14px",
           boxShadow: "0 0 30px rgba(239, 68, 68, 0.3)",
         },
@@ -242,7 +242,6 @@ export function OverviewPage() {
             <div className="w-1 h-8 bg-terminal-cyan rounded-full animate-pulse" />
             <h1
               className="text-2xl font-bold text-terminal-cyan tracking-wider uppercase"
-              style={{ fontFamily: "Orbitron, monospace" }}
             >
               {t("overview.title")}
             </h1>
