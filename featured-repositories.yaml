@@ -37,8 +37,8 @@ categories:
       - url: "https://github.com/obra/superpowers"
         name: "obra"
         description:
-          en: "Community superpowers collection for Claude Code"
-          zh: "社区超能力技能集合"
+          en: "Superpowers is a complete software development workflow for your coding agents, built on top of a set of composable "skills" and some initial instructions that make sure your agent uses them."
+          zh: "Superpowers 是一套专为 Claude Code 等 AI 编程助手设计的全自动开发工作流。它不只是简单的功能扩展，而是将 TDD（测试驱动开发）、苏格拉底式需求头脑风暴和子代理驱动开发（Subagent-driven development）等深度工程实践固化为 AI 的“肌肉记忆”"
         tags: ["community", "popular", "superpowers"]
         featured: true
 
@@ -48,4 +48,44 @@ categories:
           en: "Awesome list of Claude skills and resources"
           zh: "精选 Claude 技能和资源列表"
         tags: ["community", "awesome", "resources"]
+        featured: true
+
+      - url: "https://github.com/GBSOSS/skill-from-masters"
+        name: "GBSOSS"
+        description:
+          en: "Create AI skills built on proven methodologies from domain experts across 15+ fields"
+          zh: "基于各领域专家经验方法论的 AI 技能创建工具，覆盖 15+ 专业领域"
+        tags: ["community", "methodology", "experts", "framework"]
+        featured: true
+
+      - url: "https://github.com/ZhangHanDong/makepad-skills"
+        name: "ZhangHanDong"
+        description:
+          en: "Claude Code skills for building cross-platform UI applications with Makepad framework in Rust"
+          zh: "使用 Rust Makepad 框架构建跨平台 UI 应用的 Claude Code 技能集合"
+        tags: ["community", "rust", "makepad", "ui", "cross-platform"]
+        featured: true
+
+      - url: "https://github.com/huangserva/skill-prompt-generator"
+        name: "huangserva"
+        description:
+          en: "AI portrait prompt generator with 1140+ elements library and 12 specialized domain skills"
+          zh: "AI 人像 Prompt 生成系统，包含 1140+ 元素库和 12 个专业领域技能"
+        tags: ["community", "prompt", "ai-art", "portrait", "generator"]
+        featured: true
+
+      - url: "https://github.com/lxfater/nano-image-generator-skill"
+        name: "lxfater"
+        description:
+          en: "Image generation skill using Gemini API with reference image support and multiple aspect ratios"
+          zh: "基于 Gemini API 的图像生成技能，支持参考图像和多种宽高比"
+        tags: ["community", "image-generation", "gemini", "ai-art"]
+        featured: true
+
+      - url: "https://github.com/yangliu2060/smith--skills"
+        name: "yangliu2060"
+        description:
+          en: "From Visual Workflows to AI-Native Skills: Empower your Claude Code with 14+ elite automation templates ported directly from n8n. Instantly equip your AI agent with expert-level capabilities in Marketing, SEO, and Market Research."
+          zh: "从可视化工作流到 AI 原生技能：一键将 14 款精选 n8n 自动化模板导入 Claude Code，让你的 AI 助手瞬间掌握营销、SEO 和市场调研的专家级实战能力。"
+        tags: ["community", "cli", "developer-tools"]
         featured: true
