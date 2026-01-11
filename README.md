@@ -2,9 +2,6 @@
 
 ## 让你的 Claude Code 技能探索之旅 安全又安心
 
-[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://github.com/yourusername/agent-skills-guard)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
 **一个懂你的 Claude Code 技能管家**
 
 ---
