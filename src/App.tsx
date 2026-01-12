@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { InstalledSkillsPage } from "./components/InstalledSkillsPage";
 import { MarketplacePage } from "./components/MarketplacePage";
 import { RepositoriesPage } from "./components/RepositoriesPage";
@@ -11,6 +11,7 @@ import { WindowControls } from "./components/WindowControls";
 import { UpdateBadge } from "./components/UpdateBadge";
 import { Toaster } from "sonner";
 import { getPlatform, type Platform } from "./lib/platform";
+import { api } from "./lib/api";
 
 // 全局类型声明
 declare const __APP_VERSION__: string;
@@ -19,6 +20,7 @@ const reactQueryClient = new QueryClient();
 
 function AppContent() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<
     "overview" | "installed" | "marketplace" | "repositories"
   >("overview");
@@ -27,6 +29,21 @@ function AppContent() {
   useEffect(() => {
     getPlatform().then(setPlatform);
   }, []);
+
+  // 启动时自动更新精选仓库（静默，无需提示）
+  useEffect(() => {
+    const updateFeaturedRepos = async () => {
+      try {
+        const data = await api.refreshFeaturedRepositories();
+        queryClient.setQueryData(['featured-repositories'], data);
+      } catch (error) {
+        // 静默失败，不显示错误提示
+        console.debug('Failed to auto-update featured repositories:', error);
+      }
+    };
+
+    updateFeaturedRepos();
+  }, [queryClient]);
 
   // 辅助函数：渲染 Logo 和标题，避免代码重复
   const renderLogoTitle = (isCentered: boolean) => (
@@ -233,7 +250,39 @@ function App() {
   return (
     <QueryClientProvider client={reactQueryClient}>
       <AppContent />
-      <Toaster />
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: 'rgba(6, 182, 212, 0.1)',
+            border: '2px solid rgb(6, 182, 212)',
+            backdropFilter: 'blur(8px)',
+            color: 'rgb(94, 234, 212)',
+            fontFamily: 'inherit',
+            fontSize: '14px',
+            boxShadow: '0 0 30px rgba(6, 182, 212, 0.3)',
+          },
+          success: {
+            style: {
+              background: 'rgba(6, 182, 212, 0.1)',
+              border: '2px solid rgb(6, 182, 212)',
+              backdropFilter: 'blur(8px)',
+              color: 'rgb(94, 234, 212)',
+              boxShadow: '0 0 30px rgba(6, 182, 212, 0.3)',
+            },
+          },
+          error: {
+            style: {
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '2px solid rgb(239, 68, 68)',
+              backdropFilter: 'blur(8px)',
+              color: 'rgb(252, 165, 165)',
+              boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)',
+            },
+          },
+        }}
+      />
     </QueryClientProvider>
   );
 }
