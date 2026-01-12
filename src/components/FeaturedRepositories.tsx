@@ -89,16 +89,16 @@ export function FeaturedRepositories({ onAdd, isAdding }: FeaturedRepositoriesPr
           onClick={() => refreshMutation.mutate()}
           disabled={refreshMutation.isPending}
           title={t('repositories.featured.refresh')}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs bg-terminal-cyan/10 hover:bg-terminal-cyan/20 text-terminal-cyan border border-terminal-cyan/30 hover:border-terminal-cyan transition-all disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs bg-terminal-cyan/10 hover:bg-terminal-cyan/20 text-terminal-cyan border border-terminal-cyan/30 hover:border-terminal-cyan transition-colors duration-200 disabled:opacity-50"
         >
           {refreshMutation.isPending ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin will-change-transform transform-gpu" />
               {t('repositories.featured.refreshing')}
             </>
           ) : (
             <>
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-3.5 h-3.5 shrink-0" />
               {t('repositories.featured.refresh')}
             </>
           )}
