@@ -204,7 +204,7 @@
 
   /* Neon button */
   .neon-button {
-    @apply relative px-4 py-2 rounded font-medium transition-all duration-300;
+    @apply relative px-3 py-1 rounded font-medium text-xs transition-all duration-300;
     @apply bg-transparent border border-terminal-cyan text-terminal-cyan;
     @apply hover:bg-terminal-cyan hover:text-background;
     @apply hover:shadow-[0_0_10px_rgba(94,234,212,0.5)];
