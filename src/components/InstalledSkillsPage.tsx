@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { useInstalledSkills, useUninstallSkill } from "../hooks/useSkills";
+import { useInstalledSkills, useUninstallSkill, useUninstallSkillPath } from "../hooks/useSkills";
 import { Skill } from "../types";
 import { Trash2, Loader2, FolderOpen, Package, Search, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
 import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ export function InstalledSkillsPage() {
   const { t, i18n } = useTranslation();
   const { data: installedSkills, isLoading } = useInstalledSkills();
   const uninstallMutation = useUninstallSkill();
+  const uninstallPathMutation = useUninstallSkillPath();
   const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -210,8 +211,18 @@ export function InstalledSkillsPage() {
                   },
                 });
               }}
+              onUninstallPath={(path: string) => {
+                uninstallPathMutation.mutate({ skillId: skill.id, path }, {
+                  onSuccess: () => {
+                    showToast(t('skills.toast.uninstalled'));
+                  },
+                  onError: (error: any) => {
+                    showToast(`${t('skills.toast.uninstallFailed')}: ${error.message || error}`);
+                  },
+                });
+              }}
               isUninstalling={uninstallingSkillId === skill.id}
-              isAnyOperationPending={uninstallMutation.isPending}
+              isAnyOperationPending={uninstallMutation.isPending || uninstallPathMutation.isPending}
               t={t}
             />
           ))}
@@ -258,6 +269,7 @@ interface SkillCardProps {
   skill: Skill;
   index: number;
   onUninstall: () => void;
+  onUninstallPath: (path: string) => void;
   isUninstalling: boolean;
   isAnyOperationPending: boolean;
   t: (key: string, options?: any) => string;
@@ -267,6 +279,7 @@ function SkillCard({
   skill,
   index,
   onUninstall,
+  onUninstallPath,
   isUninstalling,
   isAnyOperationPending,
   t
@@ -276,18 +289,6 @@ function SkillCard({
   const showLocalToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 5000);
-  };
-
-  const handleOpenFolder = async () => {
-    if (!skill.local_path) return;
-
-    try {
-      await invoke('open_skill_directory', { localPath: skill.local_path });
-      showLocalToast(t('skills.folder.opened'));
-    } catch (error: any) {
-      console.error('[ERROR] Failed to open folder:', error);
-      showLocalToast(t('skills.folder.openFailed', { error: error?.message || String(error) }));
-    }
   };
 
   return (
@@ -336,7 +337,7 @@ function SkillCard({
             ) : (
               <>
                 <Trash2 className="w-4 h-4" />
-                {t('skills.uninstall')}
+                {t('skills.uninstallAll')}
               </>
             )}
           </button>
@@ -348,52 +349,62 @@ function SkillCard({
         {skill.description || t('skills.noDescription')}
       </p>
 
-      {/* Skill Info */}
-      <div className="space-y-2">
-        {/* Security Score */}
-        {skill.security_score != null && (
-          <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-terminal-cyan">{t('skills.marketplace.install.securityScore')}:</span>
-            <span className={`font-bold ${
-              skill.security_score >= 90 ? 'text-terminal-green' :
-              skill.security_score >= 70 ? 'text-terminal-yellow' :
-              skill.security_score >= 50 ? 'text-terminal-orange' : 'text-terminal-red'
-            }`}>
-              {skill.security_score}/100
-            </span>
-          </div>
-        )}
-
-        {/* Installed Time */}
-        {skill.installed_at && (
-          <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-terminal-cyan">{t('skills.installedAt')}:</span>
-            <span className="text-muted-foreground">
-              {new Date(skill.installed_at).toLocaleString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </span>
-          </div>
-        )}
-
-        {/* Local Path - Clickable to open folder */}
-        {skill.local_path && (
-          <div className="flex items-start gap-2 text-xs font-mono">
-            <span className="text-terminal-cyan whitespace-nowrap">{t('skills.localPath')}:</span>
-            <button
-              onClick={handleOpenFolder}
-              className="text-muted-foreground break-all hover:text-terminal-cyan transition-colors flex items-center gap-2 group flex-1 text-left"
-            >
-              <FolderOpen className="w-3.5 h-3.5 flex-shrink-0 group-hover:text-terminal-cyan" />
-              <span>{skill.local_path}</span>
-            </button>
-          </div>
-        )}
+      {/* Repository Info */}
+      <div className="flex items-center gap-4 mb-3 text-xs font-mono flex-wrap">
+        <span className="text-muted-foreground">
+          <span className="text-terminal-green">{t('skills.repo')}</span>{" "}
+          <a
+            href={skill.repository_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-terminal-cyan hover:underline break-all"
+          >
+            {skill.repository_url}
+          </a>
+        </span>
       </div>
+
+      {/* Installed Paths */}
+      {skill.local_paths && skill.local_paths.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="text-xs font-mono text-muted-foreground mb-2">
+            <span className="text-terminal-green">{t('skills.installedPaths')}</span> ({skill.local_paths.length})
+          </div>
+          <div className="space-y-2">
+            {skill.local_paths.map((path, idx) => (
+              <div key={idx} className="flex items-center justify-between gap-2 p-2 bg-card/50 rounded border border-border/50">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await openPath(path);
+                        showLocalToast(t('skills.folder.opened'));
+                      } catch (error: any) {
+                        showLocalToast(t('skills.folder.openFailed', { error: error?.message || String(error) }));
+                      }
+                    }}
+                    className="text-terminal-cyan hover:text-terminal-cyan/80 transition-colors"
+                    title={t('skills.openFolder')}
+                  >
+                    <FolderOpen className="w-3 h-3 flex-shrink-0" />
+                  </button>
+                  <span className="text-xs text-muted-foreground truncate" title={path}>
+                    {path}
+                  </span>
+                </div>
+                <button
+                  onClick={() => onUninstallPath(path)}
+                  disabled={isAnyOperationPending}
+                  className="text-terminal-red hover:text-terminal-red/80 transition-colors disabled:opacity-50"
+                  title={t('skills.uninstallPath')}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Local Toast for Folder Open Feedback */}
       {toast && (

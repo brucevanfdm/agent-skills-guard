@@ -510,8 +510,18 @@ impl SkillManager {
 
         log::info!("Copied {} files from cache to install directory", files_copied);
 
-        // 更新 local_path 为实际安装路径
-        skill.local_path = Some(final_install_dir.to_string_lossy().to_string());
+        // 更新安装路径
+        let install_path_str = final_install_dir.to_string_lossy().to_string();
+
+        // 更新 local_path（向后兼容）
+        skill.local_path = Some(install_path_str.clone());
+
+        // 更新 local_paths 数组（支持多路径安装）
+        let mut paths = skill.local_paths.clone().unwrap_or_default();
+        if !paths.contains(&install_path_str) {
+            paths.push(install_path_str);
+        }
+        skill.local_paths = Some(paths);
 
         // 标记为已安装
         skill.installed = true;

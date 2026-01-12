@@ -131,36 +131,6 @@ export function MarketplacePage() {
     return filtered;
   }, [repositorySkills, searchQuery, selectedRepository, hideInstalled]);
 
-  const getSecurityBadge = (score?: number) => {
-    if (!score) return null;
-
-    if (score >= 90) {
-      return (
-        <span className="status-indicator text-terminal-green border-terminal-green/30 bg-terminal-green/10">
-          {t('skills.secure')}_{score}
-        </span>
-      );
-    } else if (score >= 70) {
-      return (
-        <span className="status-indicator text-terminal-yellow border-terminal-yellow/30 bg-terminal-yellow/10">
-          {t('skills.lowRisk')}_{score}
-        </span>
-      );
-    } else if (score >= 50) {
-      return (
-        <span className="status-indicator text-terminal-orange border-terminal-orange/30 bg-terminal-orange/10">
-          {t('skills.medRisk')}_{score}
-        </span>
-      );
-    } else {
-      return (
-        <span className="status-indicator text-terminal-red border-terminal-red/30 bg-terminal-red/10">
-          {t('skills.highRisk')}_{score}
-        </span>
-      );
-    }
-  };
-
   return (
     <div className="space-y-6" style={{ animation: 'slideInLeft 0.5s ease-out' }}>
       {/* Header Section */}
@@ -289,7 +259,6 @@ export function MarketplacePage() {
               isDeleting={deletingSkillId === skill.id}
               isPreparing={preparingSkillId === skill.id}
               isAnyOperationPending={installMutation.isPending || uninstallMutation.isPending || preparingSkillId !== null || deletingSkillId !== null}
-              getSecurityBadge={getSecurityBadge}
               t={t}
             />
           ))}
@@ -362,13 +331,13 @@ export function MarketplacePage() {
 
               console.log('[INFO] 用户确认安装');
 
-                  // 刷新技能列表
-                  await queryClient.invalidateQueries({ queryKey: ["skills"] });
-                  await queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
-                  await queryClient.invalidateQueries({ queryKey: ["scanResults"] });
+              // 刷新技能列表（等待数据重新获取完成）
+              await queryClient.refetchQueries({ queryKey: ["skills"] });
+              await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
+              await queryClient.refetchQueries({ queryKey: ["scanResults"] });
 
-                  // 数据刷新完成后显示 toast
-                  showToast(t('skills.toast.installed'));
+              // 数据刷新完成后显示 toast
+              showToast(t('skills.toast.installed'));
             } catch (error: any) {
               console.error('[ERROR] 确认安装失败:', error);
               showToast(`${t('skills.toast.installFailed')}: ${error.message || error}`);
@@ -407,10 +376,10 @@ export function MarketplacePage() {
               // 保存到最近路径
               addRecentInstallPath(selectedPath);
 
-              // 刷新技能列表
-              await queryClient.invalidateQueries({ queryKey: ["skills"] });
-              await queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
-              await queryClient.invalidateQueries({ queryKey: ["scanResults"] });
+              // 刷新技能列表（等待数据重新获取完成）
+              await queryClient.refetchQueries({ queryKey: ["skills"] });
+              await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
+              await queryClient.refetchQueries({ queryKey: ["scanResults"] });
 
               // 数据刷新完成后显示 toast
               showToast(t('skills.toast.installed'));
@@ -438,7 +407,6 @@ interface SkillCardProps {
   isDeleting: boolean;
   isPreparing: boolean;
   isAnyOperationPending: boolean;
-  getSecurityBadge: (score?: number) => React.ReactNode;
   t: (key: string, options?: any) => string;
 }
 
@@ -454,7 +422,6 @@ function SkillCard({
   isDeleting,
   isPreparing,
   isAnyOperationPending,
-  getSecurityBadge,
   t
 }: SkillCardProps) {
   const [toast, setToast] = useState<string | null>(null);
@@ -499,13 +466,6 @@ function SkillCard({
               <span className="status-installing">{t('skills.installing')}</span>
             ) : null}
           </div>
-
-          {/* Security Badge - 只在未安装的技能上显示 */}
-          {!skill.installed && (
-            <div className="flex items-center gap-3 flex-wrap">
-              {getSecurityBadge(skill.security_score)}
-            </div>
-          )}
         </div>
 
         {/* Action Buttons */}
