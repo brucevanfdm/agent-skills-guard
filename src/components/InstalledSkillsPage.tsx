@@ -43,12 +43,48 @@ export function InstalledSkillsPage() {
     },
   });
 
-  // 提取所有仓库及其技能数量
-  const repositories = useMemo(() => {
+  // 对技能进行去重合并，同一个技能的多个安装记录合并为一个
+  const mergedSkills = useMemo(() => {
     if (!installedSkills) return [];
-    const ownerMap = new Map<string, number>();
+
+    const skillMap = new Map<string, Skill>();
 
     installedSkills.forEach((skill) => {
+      // 使用技能名称作为唯一标识
+      const key = skill.name;
+
+      if (skillMap.has(key)) {
+        // 如果已存在，合并 local_paths
+        const existing = skillMap.get(key)!;
+        const existingPaths = existing.local_paths || [];
+        const newPaths = skill.local_paths || [];
+
+        // 合并路径数组，去重
+        const allPaths = Array.from(new Set([...existingPaths, ...newPaths]));
+
+        // 更新现有技能
+        skillMap.set(key, {
+          ...existing,
+          local_paths: allPaths,
+          // 优先使用非 local 的 repository_url
+          repository_url: existing.repository_url === "local" ? skill.repository_url : existing.repository_url,
+          repository_owner: existing.repository_owner === "local" ? skill.repository_owner : existing.repository_owner,
+        });
+      } else {
+        // 新技能，直接添加
+        skillMap.set(key, { ...skill });
+      }
+    });
+
+    return Array.from(skillMap.values());
+  }, [installedSkills]);
+
+  // 提取所有仓库及其技能数量
+  const repositories = useMemo(() => {
+    if (!mergedSkills) return [];
+    const ownerMap = new Map<string, number>();
+
+    mergedSkills.forEach((skill) => {
       const owner = skill.repository_owner || "unknown";
       ownerMap.set(owner, (ownerMap.get(owner) || 0) + 1);
     });
@@ -62,10 +98,10 @@ export function InstalledSkillsPage() {
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     return [
-      { owner: "all", count: installedSkills.length, displayName: t('skills.marketplace.allRepos') },
+      { owner: "all", count: mergedSkills.length, displayName: t('skills.marketplace.allRepos') },
       ...repos
     ];
-  }, [installedSkills, i18n.language, t]);
+  }, [mergedSkills, i18n.language, t]);
 
   // 转换为 CyberSelect 选项格式
   const repositoryOptions: CyberSelectOption[] = useMemo(() => {
@@ -77,9 +113,9 @@ export function InstalledSkillsPage() {
 
   // 搜索过滤和排序
   const filteredSkills = useMemo(() => {
-    if (!installedSkills) return [];
+    if (!mergedSkills) return [];
 
-    let skills = installedSkills;
+    let skills = mergedSkills;
 
     // 仓库过滤
     if (selectedRepository !== "all") {
