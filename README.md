@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.9.4-blue.svg)
+![Version](https://img.shields.io/badge/version-0.9.5-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)
 
@@ -150,7 +150,27 @@ pnpm build
 
 ## 📝 更新日志
 
-### v0.9.4 (最新版本)
+### v0.9.5 (最新版本)
+
+#### ✨ 新增功能
+
+- **设置页面**：新增独立的设置页面，集中管理应用配置
+- **统一安装确认**：优化技能安装流程，统一确认弹窗体验
+
+#### 🎨 界面优化
+
+- **Toast 通知统一**：统一消息提示调用方式和样式，提升视觉一致性
+- **UI 细节打磨**：优化多处界面细节，提升整体使用体验
+
+#### 🐛 问题修复
+
+- 修复已知问题，提升应用稳定性
+
+#### 🔧 开发优化
+
+- 增强发布工作流，优化自动更新能力
+
+### v0.9.4
 
 #### ✨ 核心功能
 
