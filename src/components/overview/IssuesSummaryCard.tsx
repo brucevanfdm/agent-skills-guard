@@ -59,7 +59,7 @@ export function IssuesSummaryCard({
             key={level}
             onClick={() => onFilterChange(isSelected ? null : level)}
             className={`
-              relative overflow-hidden rounded-lg h-full
+              relative overflow-hidden rounded-lg h-[150px]
               bg-gradient-to-br ${config.bgGlow} bg-card
               border ${isSelected ? config.hoverBorder.replace("hover:", "") : config.borderColor}
               ${config.hoverBorder} ${config.hoverShadow}
@@ -84,23 +84,6 @@ export function IssuesSummaryCard({
               }}
             />
 
-            {/* 左侧动态发光竖线 */}
-            <div
-              className={`absolute top-0 left-0 ${isSelected ? "w-2.5" : "w-1.5"} h-full ${config.accentBar} transition-all duration-300 group-hover:w-2`}
-              style={{
-                boxShadow: isSelected
-                  ? `0 0 20px ${config.glowColor}, 0 0 40px ${config.glowColor}`
-                  : "none",
-              }}
-            >
-              <div
-                className={`absolute inset-0 ${isSelected ? "animate-pulse" : ""}`}
-                style={{
-                  boxShadow: `0 0 15px ${config.glowColor}`,
-                }}
-              />
-            </div>
-
             {/* 角落装饰 - 四个角落 */}
             <div
               className={`absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 ${config.borderColor} rounded-tl-lg opacity-50 group-hover:opacity-100 transition-opacity`}
@@ -123,7 +106,7 @@ export function IssuesSummaryCard({
             </div>
 
             {/* 内容区 */}
-            <div className="relative p-3 pl-3">
+            <div className="relative p-3">
               {/* 图标和选择指示器 */}
               <div className="flex items-start justify-between mb-2">
                 <div

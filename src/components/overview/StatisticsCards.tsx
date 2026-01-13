@@ -64,7 +64,7 @@ export function StatisticsCards({
           <div
             key={card.key}
             className={`
-              relative overflow-hidden rounded-lg
+              relative overflow-hidden rounded-lg h-[150px]
               bg-gradient-to-br ${card.bgGlow} bg-card
               border ${card.borderColor}
               ${card.hoverBorder} ${card.hoverShadow}
@@ -88,18 +88,6 @@ export function StatisticsCards({
                 backgroundSize: "20px 20px",
               }}
             />
-
-            {/* 左侧动态发光竖线 */}
-            <div
-              className={`absolute top-0 left-0 w-1.5 h-full ${card.accentBar} transition-all duration-300 group-hover:w-2`}
-            >
-              <div
-                className="absolute inset-0 animate-pulse"
-                style={{
-                  boxShadow: `0 0 15px ${card.glowColor}, 0 0 30px ${card.glowColor}`,
-                }}
-              />
-            </div>
 
             {/* 角落装饰 - 四个角落 */}
             <div
@@ -139,7 +127,7 @@ export function StatisticsCards({
             </div>
 
             {/* 内容区 */}
-            <div className="relative p-5 pl-4">
+            <div className="relative p-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   {/* 数字显示 - 带发光效果 */}

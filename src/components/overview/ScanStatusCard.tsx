@@ -51,7 +51,7 @@ export function ScanStatusCard({
   return (
     <div
       className={`
-        relative overflow-hidden rounded-lg h-full
+        relative overflow-hidden rounded-lg h-[150px]
         bg-gradient-to-br ${gradientFrom} to-transparent bg-card
         border ${borderColor}
         ${hoverBorderColor} ${hoverShadow}
@@ -74,18 +74,6 @@ export function ScanStatusCard({
         }}
       />
 
-      {/* 左侧动态发光竖线 */}
-      <div
-        className={`absolute top-0 left-0 w-1.5 h-full ${barColor} transition-all duration-300 group-hover:w-2`}
-      >
-        <div
-          className="absolute inset-0 animate-pulse"
-          style={{
-            boxShadow: `0 0 15px ${glowColor}, 0 0 30px ${glowColor}`,
-          }}
-        />
-      </div>
-
       {/* 角落装饰 */}
       <div
         className={`absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 ${borderColor} rounded-tl-lg opacity-50 group-hover:opacity-100 transition-opacity`}
@@ -100,7 +88,7 @@ export function ScanStatusCard({
         className={`absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 ${borderColor} rounded-br-lg opacity-50 group-hover:opacity-100 transition-opacity`}
       />
 
-      <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center relative p-5 pl-4">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center relative p-5">
         {/* 左侧：扫描信息 */}
         <div className="flex-shrink-0 min-w-[200px] space-y-2.5">
           <div className="flex items-center gap-2">
