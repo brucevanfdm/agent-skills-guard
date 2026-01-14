@@ -4,7 +4,7 @@
 
 ### 让 Claude Code 技能管理像应用商店一样简单安全
 
-[![Version](https://img.shields.io/badge/version-0.9.5-blue.svg)](https://github.com/brucevanfdm/agent-skills-guard/releases)
+[![Version](https://img.shields.io/badge/version-0.9.6-blue.svg)](https://github.com/brucevanfdm/agent-skills-guard/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/brucevanfdm/agent-skills-guard/releases)
 
@@ -258,13 +258,6 @@ A: 默认安装到 `~/.claude/skills/`，你也可以在安装时选择自定义
 ---
 
 ## 📝 更新日志
-
-### v0.9.5 (最新版本)
-
-- ✨ 新增独立的设置页面
-- 🎨 优化 Toast 通知，统一消息提示样式
-- 🐛 修复已知问题，提升稳定性
-- 🔧 增强发布工作流，优化自动更新能力
 
 [查看完整更新日志](https://github.com/brucevanfdm/agent-skills-guard/releases)
 
