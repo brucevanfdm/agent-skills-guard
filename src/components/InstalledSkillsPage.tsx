@@ -50,6 +50,7 @@ export function InstalledSkillsPage() {
   });
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [preparingUpdateSkillId, setPreparingUpdateSkillId] = useState<string | null>(null);
+  const [confirmingUpdateSkillId, setConfirmingUpdateSkillId] = useState<string | null>(null);
   const [pendingUpdate, setPendingUpdate] = useState<{
     skill: Skill;
     report: SecurityReport;
@@ -383,7 +384,8 @@ export function InstalledSkillsPage() {
               hasUpdate={availableUpdates.has(skill.id)}
               isUninstalling={uninstallingSkillId === skill.id}
               isPreparingUpdate={preparingUpdateSkillId === skill.id}
-              isAnyOperationPending={uninstallMutation.isPending || uninstallPathMutation.isPending || preparingUpdateSkillId !== null}
+              isApplyingUpdate={confirmingUpdateSkillId === skill.id}
+              isAnyOperationPending={uninstallMutation.isPending || uninstallPathMutation.isPending || preparingUpdateSkillId !== null || confirmingUpdateSkillId !== null}
               t={t}
             />
           ))}
@@ -411,6 +413,7 @@ export function InstalledSkillsPage() {
       <UpdateConfirmDialog
         open={pendingUpdate !== null}
         onClose={async () => {
+          if (confirmingUpdateSkillId) return;
           // 用户取消更新，清理临时文件
           if (pendingUpdate) {
             try {
@@ -426,6 +429,7 @@ export function InstalledSkillsPage() {
           // 用户确认更新
           if (pendingUpdate) {
             try {
+              setConfirmingUpdateSkillId(pendingUpdate.skill.id);
               await api.confirmSkillUpdate(pendingUpdate.skill.id, forceOverwrite);
               console.log('[INFO] 用户确认更新');
 
@@ -445,10 +449,13 @@ export function InstalledSkillsPage() {
             } catch (error: any) {
               console.error('[ERROR] 确认更新失败:', error);
               appToast.error(`${t('skills.toast.updateFailed')}: ${error.message || error}`);
+            } finally {
+              setConfirmingUpdateSkillId(null);
             }
           }
           setPendingUpdate(null);
         }}
+        isConfirming={pendingUpdate ? confirmingUpdateSkillId === pendingUpdate.skill.id : false}
         report={pendingUpdate?.report || null}
         conflicts={pendingUpdate?.conflicts || []}
         skillName={pendingUpdate?.skill.name || ""}
@@ -466,6 +473,7 @@ interface SkillCardProps {
   hasUpdate: boolean;
   isUninstalling: boolean;
   isPreparingUpdate: boolean;
+  isApplyingUpdate: boolean;
   isAnyOperationPending: boolean;
   t: (key: string, options?: any) => string;
 }
@@ -479,6 +487,7 @@ function SkillCard({
   hasUpdate,
   isUninstalling,
   isPreparingUpdate,
+  isApplyingUpdate,
   isAnyOperationPending,
   t
 }: SkillCardProps) {
@@ -524,10 +533,12 @@ function SkillCard({
               disabled={isAnyOperationPending}
               className="neon-button disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
-              {isPreparingUpdate ? (
+              {isPreparingUpdate || isApplyingUpdate ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {t('skills.installedPage.preparingUpdate')}
+                  {isApplyingUpdate
+                    ? t('skills.installedPage.applyingUpdate')
+                    : t('skills.installedPage.securityChecking')}
                 </>
               ) : (
                 <>
@@ -635,6 +646,7 @@ interface UpdateConfirmDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (forceOverwrite: boolean) => void;
+  isConfirming: boolean;
   report: SecurityReport | null;
   conflicts: string[];
   skillName: string;
@@ -644,6 +656,7 @@ function UpdateConfirmDialog({
   open,
   onClose,
   onConfirm,
+  isConfirming,
   report,
   conflicts,
   skillName
@@ -806,16 +819,23 @@ function UpdateConfirmDialog({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>
+          <AlertDialogCancel onClick={onClose} disabled={isConfirming}>
             {t('skills.marketplace.install.cancel')}
           </AlertDialogCancel>
 
           <button
             onClick={() => onConfirm(forceOverwrite)}
-            disabled={report.blocked || (hasConflicts && !forceOverwrite)}
+            disabled={isConfirming || report.blocked || (hasConflicts && !forceOverwrite)}
             className="neon-button disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t('skills.marketplace.install.continue')}
+            {isConfirming ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t('skills.installedPage.applyingUpdate')}
+              </span>
+            ) : (
+              t('skills.marketplace.install.continue')
+            )}
           </button>
         </AlertDialogFooter>
       </AlertDialogContent>

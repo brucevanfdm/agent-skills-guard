@@ -124,6 +124,8 @@
       "checkUpdatesFailed": "CHECK_UPDATES_FAILED: {{error}}",
       "updateAvailable": "UPDATE_AVAILABLE",
       "preparingUpdate": "Preparing Update",
+      "securityChecking": "Security Check...",
+      "applyingUpdate": "Applying Update...",
       "updateScanResult": "Update Security Scan Result",
       "updateTip": "Before updating: Close Claude CLI and any editors (like VSCode) that may have skill files open to avoid file access issues",
       "conflictDetected": "File Conflicts Detected",

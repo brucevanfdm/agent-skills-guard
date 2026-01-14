@@ -124,6 +124,8 @@
       "checkUpdatesFailed": "检查更新失败：{{error}}",
       "updateAvailable": "有更新",
       "preparingUpdate": "准备更新",
+      "securityChecking": "安全检查中",
+      "applyingUpdate": "正在更新",
       "updateScanResult": "更新安全扫描结果",
       "updateTip": "建议在更新前：关闭 Claude CLI、关闭可能打开技能文件的编辑器（如 VSCode），以避免文件占用问题",
       "conflictDetected": "检测到文件冲突",
