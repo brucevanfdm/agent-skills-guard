@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useInstalledSkills, useUninstallSkill, useUninstallSkillPath } from "../hooks/useSkills";
 import { Skill } from "../types";
 import { SecurityReport } from "../types/security";
@@ -21,6 +21,8 @@ import {
   AlertDialogCancel,
 } from "./ui/alert-dialog";
 
+const AVAILABLE_UPDATES_KEY = "available_updates";
+
 export function InstalledSkillsPage() {
   const { t, i18n } = useTranslation();
   const { data: installedSkills, isLoading } = useInstalledSkills();
@@ -33,8 +35,19 @@ export function InstalledSkillsPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [uninstallingSkillId, setUninstallingSkillId] = useState<string | null>(null);
 
-  // 更新相关状态
-  const [availableUpdates, setAvailableUpdates] = useState<Map<string, string>>(new Map());
+  // 更新相关状态 - 从 localStorage 恢复
+  const [availableUpdates, setAvailableUpdates] = useState<Map<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(AVAILABLE_UPDATES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return new Map(Object.entries(parsed));
+      }
+    } catch (error) {
+      console.error('[ERROR] 恢复更新状态失败:', error);
+    }
+    return new Map();
+  });
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [preparingUpdateSkillId, setPreparingUpdateSkillId] = useState<string | null>(null);
   const [pendingUpdate, setPendingUpdate] = useState<{
@@ -42,6 +55,42 @@ export function InstalledSkillsPage() {
     report: SecurityReport;
     conflicts: string[];
   } | null>(null);
+
+  // 持久化更新状态到 localStorage
+  useEffect(() => {
+    try {
+      if (availableUpdates.size > 0) {
+        const obj = Object.fromEntries(availableUpdates);
+        localStorage.setItem(AVAILABLE_UPDATES_KEY, JSON.stringify(obj));
+      } else {
+        localStorage.removeItem(AVAILABLE_UPDATES_KEY);
+      }
+    } catch (error) {
+      console.error('[ERROR] 保存更新状态失败:', error);
+    }
+  }, [availableUpdates]);
+
+  // 清理已卸载技能的更新标记
+  useEffect(() => {
+    if (!installedSkills || availableUpdates.size === 0) return;
+
+    const installedSkillIds = new Set(installedSkills.map(skill => skill.id));
+    const needsCleanup = Array.from(availableUpdates.keys()).some(
+      skillId => !installedSkillIds.has(skillId)
+    );
+
+    if (needsCleanup) {
+      setAvailableUpdates(prev => {
+        const newMap = new Map(prev);
+        for (const skillId of newMap.keys()) {
+          if (!installedSkillIds.has(skillId)) {
+            newMap.delete(skillId);
+          }
+        }
+        return newMap;
+      });
+    }
+  }, [installedSkills, availableUpdates]);
 
   // 添加扫描本地技能的 mutation
   const scanMutation = useMutation({
@@ -462,13 +511,7 @@ function SkillCard({
               {formatRepositoryTag(skill)}
             </span>
 
-            {/* Update Available Badge */}
-            {hasUpdate && !skill.repository_owner?.includes("local") && (
-              <span className="px-2 py-1 rounded text-xs font-mono bg-terminal-cyan/10 border border-terminal-cyan/30 text-terminal-cyan flex items-center gap-1">
-                <Download className="w-3 h-3" />
-                {t('skills.installedPage.updateAvailable')}
-              </span>
-            )}
+
           </div>
         </div>
 
@@ -649,6 +692,13 @@ function UpdateConfirmDialog({
                 }`}>
                   {report.score}
                 </span>
+              </div>
+
+              {/* 更新前提示 */}
+              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <div className="text-sm text-blue-400">
+                  💡 {t('skills.installedPage.updateTip')}
+                </div>
               </div>
 
               {/* 冲突文件警告 */}

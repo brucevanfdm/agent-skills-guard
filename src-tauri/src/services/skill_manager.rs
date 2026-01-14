@@ -1111,9 +1111,10 @@ impl SkillManager {
         Ok((scan_report, modified_files))
     }
 
-    /// 确认技能更新：从 staging 原子替换到安装目录
-    pub fn confirm_skill_update(&self, skill_id: &str, _force_overwrite: bool) -> Result<()> {
+    /// 确认技能更新：从 staging 写入到安装目录，并在缓存目录保留备份
+    pub fn confirm_skill_update(&self, skill_id: &str, force_overwrite: bool) -> Result<()> {
         use anyhow::Context;
+        use std::{io, thread, time::Duration};
 
         log::info!("Confirming update for skill: {}", skill_id);
 
@@ -1148,57 +1149,231 @@ impl SkillManager {
         // 使用第一个路径作为目标（通常只有一个）
         let target_install_dir = PathBuf::from(&install_paths[0]);
 
-        // 创建备份（如果目录存在）
+        #[derive(Debug)]
+        enum BackupDir {
+            Renamed(PathBuf),
+            Copied(PathBuf),
+        }
+
+        fn is_retryable_rename_error(err: &io::Error) -> bool {
+            if err.kind() == io::ErrorKind::PermissionDenied {
+                return true;
+            }
+
+            matches!(err.raw_os_error(), Some(5 | 32 | 33))
+        }
+
+        fn rename_with_retry(from: &PathBuf, to: &PathBuf) -> io::Result<()> {
+            let mut last_err: Option<io::Error> = None;
+            let attempts = 6usize;
+            let delay = Duration::from_millis(250);
+
+            for attempt in 0..attempts {
+                match std::fs::rename(from, to) {
+                    Ok(()) => return Ok(()),
+                    Err(err) => {
+                        let retryable = is_retryable_rename_error(&err);
+                        let is_last = attempt + 1 >= attempts;
+                        last_err = Some(err);
+                        if retryable && !is_last {
+                            thread::sleep(delay);
+                            continue;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            Err(last_err.unwrap_or_else(|| {
+                io::Error::new(io::ErrorKind::Other, "rename_with_retry failed")
+            }))
+        }
+
+        // 创建备份（如果目录存在）：优先移动到缓存目录；若移动失败则复制到缓存目录
         let backup_dir = if target_install_dir.exists() {
             let dir_name = target_install_dir.file_name()
                 .context("无效的目录名")?
                 .to_string_lossy();
-            let backup_path = target_install_dir.parent()
-                .context("无效的安装路径")?
-                .join(format!("{}.bak", dir_name));
+            let backup_root = dirs::cache_dir()
+                .context("无法获取系统缓存目录")?
+                .join("agent-skills-guard")
+                .join("skill-backups");
+
+            std::fs::create_dir_all(&backup_root)
+                .context(format!("无法创建备份缓存目录: {:?}", backup_root))?;
+
+            let mut backup_path = backup_root.join(format!("{}.bak", dir_name));
 
             if backup_path.exists() {
-                std::fs::remove_dir_all(&backup_path)?;
+                match std::fs::remove_dir_all(&backup_path) {
+                    Ok(()) => {}
+                    Err(remove_err) => {
+                        if !force_overwrite {
+                            return Err(anyhow::anyhow!(format!(
+                                "无法删除旧备份目录（缓存目录）: {:?}\n错误: {}\n\n请检查该目录是否被其他程序占用",
+                                backup_path, remove_err
+                            )));
+                        }
+
+                        // 强制覆盖时，为了不中断流程，改用一个唯一的备份目录名
+                        let epoch_ms = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis();
+                        backup_path = backup_root.join(format!("{}.bak-{}", dir_name, epoch_ms));
+                        let _ = std::fs::remove_dir_all(&backup_path);
+                    }
+                }
             }
-            std::fs::rename(&target_install_dir, &backup_path)?;
-            log::info!("创建备份: {:?}", backup_path);
-            Some(backup_path)
+
+            // 尝试移动：移动成功意味着我们可以“干净地”写入新版本（更接近原子替换）
+            match rename_with_retry(&target_install_dir, &backup_path) {
+                Ok(()) => {
+                    log::info!("创建备份(移动到缓存): {:?}", backup_path);
+                    Some(BackupDir::Renamed(backup_path))
+                }
+                Err(move_err) => {
+                    log::warn!(
+                        "无法移动技能目录到缓存备份（将改用复制备份 + 原地覆盖）: {}",
+                        move_err
+                    );
+
+                    match self.copy_directory(&target_install_dir, &backup_path) {
+                        Ok(()) => {
+                            log::info!("创建备份(复制到缓存): {:?}", backup_path);
+                            Some(BackupDir::Copied(backup_path))
+                        }
+                        Err(copy_err) => {
+                            if !force_overwrite {
+                                return Err(anyhow::anyhow!(format!(
+                                    "无法为更新创建备份（缓存目录）\n目标: {:?}\n备份: {:?}\n\n复制备份错误: {}\n\n提示：你可以关闭正在使用该技能的程序后重试；或勾选“强制覆盖本地修改”继续（将无法保证可回滚）。",
+                                    target_install_dir, backup_path, copy_err
+                                )));
+                            }
+
+                            log::warn!("创建备份(复制到缓存)失败，将在无备份情况下继续: {}", copy_err);
+                            None
+                        }
+                    }
+                }
+            }
         } else {
             None
         };
 
-        // 复制 staging 到目标路径
+        // 确保目标父目录存在
         std::fs::create_dir_all(&target_install_dir.parent().context("无效的安装路径")?)?;
+
+        // 如果前面“移动备份”成功，目标目录已不存在；先创建一个干净目录
+        if !target_install_dir.exists() {
+            std::fs::create_dir_all(&target_install_dir)
+                .context(format!("无法创建目标目录: {:?}", target_install_dir))?;
+        } else if force_overwrite {
+            // 强制覆盖时，尽量清空旧目录以避免遗留文件
+            if let Err(clear_err) = std::fs::remove_dir_all(&target_install_dir) {
+                log::warn!(
+                    "无法清空旧技能目录，将尝试直接覆盖写入（可能保留部分旧文件）: {}",
+                    clear_err
+                );
+            } else {
+                std::fs::create_dir_all(&target_install_dir)
+                    .context(format!("无法重建目标目录: {:?}", target_install_dir))?;
+            }
+        }
 
         match self.copy_directory(&staging_dir, &target_install_dir) {
             Ok(_) => {
                 log::info!("成功更新技能到: {:?}", target_install_dir);
 
-                // 删除备份
-                if let Some(backup) = backup_dir {
-                    let _ = std::fs::remove_dir_all(&backup);
-                }
+                // 备份保留在缓存目录，便于必要时人工回滚；下一次更新会覆盖旧备份
 
                 // 更新数据库：恢复 local_path，更新 installed_commit_sha
                 skill.local_path = Some(target_install_dir.to_string_lossy().to_string());
 
-                // 获取新的 commit SHA（从仓库记录）
-                let repositories = self.db.get_repositories()?;
-                if let Some(_repo) = repositories.iter().find(|r| r.url == skill.repository_url) {
-                    // 我们需要从 staging 目录提取最新的 commit SHA
-                    // staging_path_str 的父目录的父目录应该是 extracted 目录
-                    if let Some(parent) = staging_dir.parent() {
-                        if let Some(extract_dir) = parent.parent() {
-                            match self.github.extract_commit_sha_from_cache(extract_dir) {
-                                Ok(new_sha) => {
-                                    skill.installed_commit_sha = Some(new_sha);
-                                    log::info!("更新 installed_commit_sha");
-                                }
-                                Err(e) => {
-                                    log::warn!("无法提取新的 commit SHA: {}", e);
+                // 从 staging 路径推导出 extracted 目录并提取 commit SHA
+                // - staging_dir 指向 skill 目录（可能是仓库根目录或其子目录）
+                // - extracted_dir 是 {cache}/.../extracted/，其下第一层目录名为 {owner}-{repo}-{sha}
+                let extract_dir = {
+                    let mut repo_root = staging_dir.clone();
+                    if skill.file_path != "." {
+                        let components_count = std::path::Path::new(&skill.file_path)
+                            .components()
+                            .filter(|c| matches!(c, std::path::Component::Normal(_)))
+                            .count();
+
+                        for _ in 0..components_count {
+                            repo_root = repo_root
+                                .parent()
+                                .context("无效的 staging 路径：无法定位仓库根目录")?
+                                .to_path_buf();
+                        }
+                    }
+
+                    repo_root
+                        .parent()
+                        .context("无效的 staging 路径：无法定位 extracted 目录")?
+                        .to_path_buf()
+                };
+
+                match self.github.extract_commit_sha_from_cache(&extract_dir) {
+                    Ok(new_sha) => {
+                        skill.installed_commit_sha = Some(new_sha.clone());
+                        log::info!("更新 installed_commit_sha");
+
+                        // 将 staging 下载的版本提升为“仓库缓存基线”，避免后续把已更新内容误判为“本地修改”
+                        if let Ok((owner, repo_name)) = crate::models::Repository::from_github_url(&skill.repository_url) {
+                            if let Some(cache_base_dir) = dirs::cache_dir() {
+                                let repositories_base_dir = cache_base_dir
+                                    .join("agent-skills-guard")
+                                    .join("repositories");
+                                let repo_cache_dir = repositories_base_dir.join(format!("{}_{}", owner, repo_name));
+                                let extracted_dest = repo_cache_dir.join("extracted");
+
+                                if let Err(e) = std::fs::create_dir_all(&repo_cache_dir) {
+                                    log::warn!("无法创建仓库缓存目录，将跳过缓存同步: {}", e);
+                                } else {
+                                    if extracted_dest.exists() {
+                                        let _ = std::fs::remove_dir_all(&extracted_dest);
+                                    }
+
+                                    match rename_with_retry(&extract_dir, &extracted_dest) {
+                                        Ok(()) => {
+                                            log::info!("已同步仓库缓存(移动): {:?}", extracted_dest);
+                                        }
+                                        Err(rename_err) => {
+                                            log::warn!(
+                                                "无法移动 staging 缓存到仓库缓存，将尝试复制: {}",
+                                                rename_err
+                                            );
+                                            if let Err(copy_err) = self.copy_directory(&extract_dir, &extracted_dest) {
+                                                log::warn!("同步仓库缓存(复制)失败: {}", copy_err);
+                                            } else {
+                                                log::info!("已同步仓库缓存(复制): {:?}", extracted_dest);
+                                            }
+                                        }
+                                    }
+
+                                    if extracted_dest.exists() {
+                                        if let Ok(repositories) = self.db.get_repositories() {
+                                            if let Some(repo) = repositories.iter().find(|r| r.url == skill.repository_url) {
+                                                let cache_path_str = extracted_dest.to_string_lossy().to_string();
+                                                if let Err(e) = self.db.update_repository_cache(
+                                                    &repo.id,
+                                                    &cache_path_str,
+                                                    Utc::now(),
+                                                    Some(&new_sha),
+                                                ) {
+                                                    log::warn!("更新仓库缓存信息失败: {}", e);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
+                    }
+                    Err(e) => {
+                        log::warn!("无法提取新的 commit SHA: {}", e);
                     }
                 }
 
@@ -1214,8 +1389,17 @@ impl SkillManager {
                     if target_install_dir.exists() {
                         let _ = std::fs::remove_dir_all(&target_install_dir);
                     }
-                    let _ = std::fs::rename(&backup, &target_install_dir);
-                    log::warn!("更新失败，已恢复备份");
+
+                    match backup {
+                        BackupDir::Renamed(p) => {
+                            let _ = std::fs::rename(&p, &target_install_dir);
+                            log::warn!("更新失败，已恢复备份(重命名): {:?}", p);
+                        }
+                        BackupDir::Copied(p) => {
+                            let _ = self.copy_directory(&p, &target_install_dir);
+                            log::warn!("更新失败，已恢复备份(复制): {:?}", p);
+                        }
+                    }
                 }
                 Err(e)
             }
@@ -1316,10 +1500,15 @@ impl SkillManager {
                     }
                     Err(e) => {
                         // 提供详细的错误信息
-                        return Err(anyhow::anyhow!(
-                            "复制文件失败\n源: {:?}\n目标: {:?}\n错误: {}",
-                            src_path, dst_path, e
-                        ));
+                        let error_msg = if e.raw_os_error() == Some(5) {
+                            format!(
+                                "复制文件失败（拒绝访问）\n文件: {:?}\n\n可能原因：\n1. 目标文件正在被其他程序使用\n2. 文件被设置为只读\n3. 权限不足\n4. 杀毒软件拦截\n\n建议：\n1. 关闭可能打开该文件的程序\n2. 检查文件是否为只读\n3. 以管理员权限运行\n\n原始错误: {}",
+                                file_name, e
+                            )
+                        } else {
+                            format!("复制文件失败\n源: {:?}\n目标: {:?}\n错误: {}", src_path, dst_path, e)
+                        };
+                        return Err(anyhow::anyhow!(error_msg));
                     }
                 }
             }
