@@ -4,437 +4,147 @@
 
 @layer base {
   :root {
-    /* Terminal-inspired Dark Theme */
-    --background: 220 13% 8%;
-    --foreground: 160 84% 88%;
+    /* macOS 浅色主题 */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 13%;
 
-    --card: 220 15% 11%;
-    --card-foreground: 160 84% 88%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
 
-    --primary: 173 80% 60%;
-    --primary-foreground: 220 13% 8%;
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 280 70% 55%;
-    --secondary-foreground: 160 84% 88%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 13%;
 
-    --muted: 220 15% 18%;
-    --muted-foreground: 160 20% 55%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 173 80% 60%;
-    --accent-foreground: 220 13% 8%;
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 160 84% 88%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 173 30% 25%;
-    --input: 220 15% 18%;
-    --ring: 173 80% 60%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
 
-    --radius: 0.25rem;
+    --border: 0 0% 90%;
+    --input: 0 0% 100%;
+    --ring: 211 100% 50%;
 
-    /* Custom Terminal Colors */
-    --terminal-green: 142 71% 45%;
-    --terminal-cyan: 173 80% 60%;
-    --terminal-purple: 280 70% 55%;
-    --terminal-orange: 25 95% 53%;
-    --terminal-red: 0 72% 55%;
-    --terminal-yellow: 48 96% 53%;
+    --sidebar-bg: 0 0% 95%;
 
-    /* Glow effects */
-    --glow-cyan: 0 0 20px rgba(94, 234, 212, 0.3);
-    --glow-purple: 0 0 20px rgba(192, 132, 252, 0.3);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 12px;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 14px;
-    line-height: 1.6;
-    overflow-x: hidden;
+    line-height: 1.5;
   }
 
-  /* Scanline effect */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.15),
-      rgba(0, 0, 0, 0.15) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.05;
-  }
-
-  /* Terminal cursor blink */
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-  }
-
-  .terminal-cursor::after {
-    content: '▊';
-    animation: blink 1s infinite;
-    color: hsl(var(--terminal-cyan));
-  }
-
-  /* Glitch effect */
-  @keyframes glitch {
-    0% { transform: translate(0); }
-    20% { transform: translate(-2px, 2px); }
-    40% { transform: translate(-2px, -2px); }
-    60% { transform: translate(2px, 2px); }
-    80% { transform: translate(2px, -2px); }
-    100% { transform: translate(0); }
-  }
-
-  /* Fade in animation */
+  /* 保留基础动画 */
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Slide in from left */
   @keyframes slideInLeft {
-    from {
-      opacity: 0;
-      transform: translateX(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  /* Pulse glow */
-  @keyframes pulseGlow {
-    0%, 100% {
-      box-shadow: 0 0 5px rgba(94, 234, 212, 0.3),
-                  0 0 10px rgba(94, 234, 212, 0.2);
-    }
-    50% {
-      box-shadow: 0 0 10px rgba(94, 234, 212, 0.5),
-                  0 0 20px rgba(94, 234, 212, 0.3),
-                  0 0 30px rgba(94, 234, 212, 0.2);
-    }
-  }
-
-  /* Typing effect */
-  @keyframes typing {
-    from { width: 0; }
-    to { width: 100%; }
-  }
-
-  /* Scan line effect */
-  @keyframes scan-line {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(100%);
-    }
-  }
-
-  /* Data flow animation */
-  @keyframes dataFlow {
-    0% {
-      margin-left: -33%;
-    }
-    100% {
-      margin-left: 100%;
-    }
-  }
-
-  .animate-scan-line {
-    animation: scan-line 2s ease-in-out infinite;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
-    letter-spacing: 0.05em;
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
   }
 }
 
 @layer components {
-  /* Terminal prompt */
-  .terminal-prompt {
-    @apply inline-flex items-center gap-2 text-terminal-cyan;
+  /* macOS 风格卡片 */
+  .macos-card {
+    @apply bg-card rounded-[10px] border border-border;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
 
-  .terminal-prompt::before {
-    content: '>';
-    @apply text-terminal-green font-bold;
+  .macos-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
 
-  /* ASCII border */
-  .ascii-border {
-    position: relative;
-    border: 1px solid hsl(var(--border));
+  /* macOS 风格按钮 */
+  .macos-button {
+    @apply h-8 px-4 rounded-md text-sm font-medium transition-all duration-150;
   }
 
-  .ascii-border::before {
-    content: '┌─────────────────┐';
-    position: absolute;
-    top: -12px;
-    left: 10px;
-    background: hsl(var(--card));
-    padding: 0 8px;
-    font-size: 10px;
-    color: hsl(var(--terminal-cyan));
-    line-height: 1;
+  .macos-button-primary {
+    @apply macos-button bg-primary text-primary-foreground;
+    @apply hover:bg-primary/90;
   }
 
-  /* Neon button */
-  .neon-button {
-    @apply relative px-3 py-1 rounded font-medium text-xs transition-all duration-300;
-    @apply bg-transparent border border-terminal-cyan text-terminal-cyan;
-    @apply hover:bg-terminal-cyan hover:text-background;
-    @apply hover:shadow-[0_0_10px_rgba(94,234,212,0.5)];
+  .macos-button-secondary {
+    @apply macos-button bg-secondary text-secondary-foreground;
+    @apply hover:bg-secondary/80;
   }
 
-  /* Cyber card */
-  .cyber-card {
-    @apply relative bg-card border border-border rounded overflow-hidden;
-    @apply transition-all duration-300;
-    background: linear-gradient(
-      135deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--muted)) 100%
-    );
+  .macos-button-destructive {
+    @apply macos-button bg-destructive text-destructive-foreground;
+    @apply hover:bg-destructive/90;
   }
 
-  .cyber-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      hsl(var(--terminal-cyan)),
-      transparent
-    );
-    transition: left 0.5s;
+  .macos-button-ghost {
+    @apply macos-button bg-transparent text-foreground;
+    @apply hover:bg-secondary;
   }
 
-  .cyber-card:hover::before {
-    left: 100%;
-  }
-
-  .cyber-card:hover {
-    border-color: hsl(var(--terminal-cyan));
-    box-shadow: 0 0 20px rgba(94, 234, 212, 0.15);
-  }
-
-  /* Status indicator */
-  .status-indicator {
-    @apply inline-flex items-center gap-2 px-2 py-1 rounded text-xs font-medium;
-  }
-
-  .status-indicator::before {
-    content: '●';
-    @apply text-lg leading-none;
-  }
-
-  /* Repository tag - 仓库标签（不带圆点） */
-  .repository-tag {
-    @apply inline-flex items-center gap-2 px-2 py-1 rounded text-xs font-medium border;
-  }
-
-  .status-installed {
-    @apply bg-terminal-green/10 text-terminal-green border border-terminal-green/30;
-  }
-
-  .status-installing {
-    @apply bg-terminal-cyan/10 text-terminal-cyan border border-terminal-cyan/30;
-    animation: pulseGlow 2s infinite;
-  }
-
-  .status-error {
-    @apply bg-terminal-red/10 text-terminal-red border border-terminal-red/30;
-  }
-
-  /* Terminal input */
-  .terminal-input {
-    @apply w-full px-3 py-2 bg-input border border-border rounded;
-    @apply text-foreground font-mono text-sm;
-    @apply focus:outline-none focus:border-terminal-cyan focus:ring-1 focus:ring-terminal-cyan;
-    @apply transition-all duration-200;
-  }
-
-  .terminal-input::placeholder {
-    @apply text-muted-foreground/50;
-  }
-
-  /* Cyber Select */
-  .cyber-select-trigger {
-    @apply w-full flex items-center justify-between gap-2 px-4 py-2;
-    @apply bg-card border border-border rounded font-mono text-sm text-foreground;
-    @apply hover:border-terminal-cyan hover:shadow-[0_0_10px_rgba(94,234,212,0.2)];
-    @apply focus:outline-none focus:border-terminal-cyan focus:ring-1 focus:ring-terminal-cyan;
-    @apply transition-all duration-200;
-    @apply relative;
-  }
-
-  .cyber-select-trigger::before {
-    content: '';
-    @apply absolute left-0 top-0 bottom-0 w-1 bg-terminal-cyan;
-    @apply opacity-0 transition-opacity duration-200;
-  }
-
-  .cyber-select-trigger:hover::before {
-    @apply opacity-100;
-  }
-
-  .cyber-select-dropdown {
-    @apply absolute top-full left-0 right-0 mt-2 z-50;
-    @apply bg-card border border-terminal-cyan rounded overflow-hidden;
-    @apply shadow-[0_0_20px_rgba(94,234,212,0.3)];
-    max-height: 300px;
-    overflow-y: auto;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-  }
-
-  .cyber-select-dropdown::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none; /* Chrome, Safari, Opera */
-  }
-
-  .cyber-select-option {
-    @apply w-full flex items-center justify-between gap-2 pl-8 pr-4 py-3;
-    @apply text-foreground hover:bg-terminal-cyan/10;
-    @apply border-b border-border last:border-b-0;
+  /* macOS 风格输入框 */
+  .macos-input {
+    @apply h-8 px-3 rounded-md text-sm bg-input border border-border;
+    @apply focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20;
     @apply transition-all duration-150;
-    @apply relative;
   }
 
-  .cyber-select-option::before {
-    content: '▸';
-    @apply absolute left-3 text-terminal-cyan opacity-0;
-    @apply transition-opacity duration-150;
+  /* macOS 风格分组标题 */
+  .macos-section-title {
+    @apply text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1;
   }
 
-  .cyber-select-option:hover::before {
-    @apply opacity-100;
+  /* 状态标签 */
+  .status-safe {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    @apply bg-green-100 text-green-800;
   }
 
-  .cyber-select-option-active {
-    @apply bg-terminal-cyan/20 text-terminal-cyan;
-    @apply border-l-2 border-l-terminal-cyan;
+  .status-medium {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    @apply bg-orange-100 text-orange-800;
   }
 
-  .cyber-select-option-active::before {
-    @apply opacity-100;
+  .status-critical {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    @apply bg-red-100 text-red-800;
   }
 
-  /* Glitch text */
-  .glitch-text {
-    position: relative;
-    display: inline-block;
+  /* 侧边栏导航项 */
+  .sidebar-item {
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium;
+    @apply text-muted-foreground transition-all duration-150;
+    @apply hover:bg-secondary hover:text-foreground;
   }
 
-  .glitch-text:hover {
-    animation: glitch 0.3s infinite;
-  }
-
-  /* Matrix rain effect */
-  .matrix-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.03;
-    pointer-events: none;
-    background-image:
-      repeating-linear-gradient(
-        0deg,
-        hsl(var(--terminal-cyan)) 0px,
-        transparent 1px,
-        transparent 40px
-      );
-    animation: matrix-scroll 20s linear infinite;
-  }
-
-  @keyframes matrix-scroll {
-    0% { background-position: 0 0; }
-    100% { background-position: 0 100vh; }
+  .sidebar-item-active {
+    @apply bg-primary/10 text-primary;
   }
 }
 
 @layer utilities {
-  .animation-delay-100 {
-    animation-delay: 100ms;
-  }
-
-  .animation-delay-200 {
-    animation-delay: 200ms;
-  }
-
-  .animation-delay-300 {
-    animation-delay: 300ms;
-  }
-
-  .animation-delay-400 {
-    animation-delay: 400ms;
-  }
-
-  .text-glow {
-    text-shadow: 0 0 10px currentColor;
-  }
-
-  .border-glow {
-    box-shadow: 0 0 10px currentColor;
-  }
-
-  /* Hide scrollbar but keep scroll functionality */
   .hide-scrollbar {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
-
   .hide-scrollbar::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-  }
-
-  /* Custom checkbox styling */
-  input[type="checkbox"] {
-    @apply appearance-none w-4 h-4 border border-border rounded bg-card cursor-pointer;
-    @apply transition-all duration-200;
-  }
-
-  input[type="checkbox"]:checked {
-    @apply bg-terminal-cyan border-terminal-cyan;
-    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
-  }
-
-  input[type="checkbox"]:hover {
-    @apply border-terminal-cyan;
-  }
-
-  input[type="checkbox"]:focus {
-    @apply outline-none ring-1 ring-terminal-cyan;
+    display: none;
   }
 }
