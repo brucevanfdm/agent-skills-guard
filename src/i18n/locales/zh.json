@@ -85,6 +85,9 @@
       "clearFilters": "清除筛选",
       "noResults": "没有找到包含\"{{query}}\"的技能",
       "noSkillsInFilter": "当前筛选条件下没有技能",
+      "noSkillsYet": "技能市场暂无内容",
+      "scanningRepositories": "正在后台扫描仓库，请稍候...",
+      "goToRepositories": "前往仓库页面",
       "localRepo": "📁 本地",
       "allRepos": "全部",
       "install": {

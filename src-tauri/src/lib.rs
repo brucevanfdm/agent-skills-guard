@@ -228,6 +228,7 @@ pub fn run() {
             commands::prepare_skill_update,
             commands::confirm_skill_update,
             commands::cancel_skill_update,
+            commands::auto_scan_unscanned_repositories,
             scan_all_installed_skills,
             get_scan_results,
             scan_skill_archive,

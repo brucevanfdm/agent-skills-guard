@@ -23,7 +23,11 @@ import {
   AlertDialogCancel,
 } from "./ui/alert-dialog";
 
-export function MarketplacePage() {
+interface MarketplacePageProps {
+  onNavigateToRepositories?: () => void;
+}
+
+export function MarketplacePage({ onNavigateToRepositories }: MarketplacePageProps = {}) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { data: allSkills, isLoading } = useSkills();
@@ -253,21 +257,61 @@ export function MarketplacePage() {
       ) : (
         <div className="flex flex-col items-center justify-center py-16 border border-dashed border-border rounded-lg">
           <div className="text-terminal-cyan font-mono text-2xl mb-4">🔍</div>
-          <p className="text-sm text-muted-foreground font-mono mb-2">
-            {searchQuery
-              ? t('skills.marketplace.noResults', { query: searchQuery })
-              : t('skills.marketplace.noSkillsInFilter')}
-          </p>
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setSelectedRepository("all");
-              setHideInstalled(false);
-            }}
-            className="mt-4 px-4 py-2 rounded bg-terminal-cyan/10 border border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/20 transition-colors font-mono text-sm"
-          >
-            {t('skills.marketplace.clearFilters')}
-          </button>
+          {searchQuery ? (
+            <>
+              <p className="text-sm text-muted-foreground font-mono mb-2">
+                {t('skills.marketplace.noResults', { query: searchQuery })}
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedRepository("all");
+                  setHideInstalled(false);
+                }}
+                className="mt-4 px-4 py-2 rounded bg-terminal-cyan/10 border border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/20 transition-colors font-mono text-sm"
+              >
+                {t('skills.marketplace.clearFilters')}
+              </button>
+            </>
+          ) : repositorySkills.length === 0 ? (
+            // 完全没有技能数据，引导用户去仓库页面
+            <div className="text-center max-w-md">
+              <p className="text-sm text-muted-foreground font-mono mb-4">
+                {t('skills.marketplace.noSkillsYet')}
+              </p>
+              <p className="text-xs text-muted-foreground font-mono mb-6">
+                {t('skills.marketplace.scanningRepositories')}
+              </p>
+              <button
+                onClick={() => {
+                  if (onNavigateToRepositories) {
+                    onNavigateToRepositories();
+                  }
+                }}
+                disabled={!onNavigateToRepositories}
+                className="px-6 py-3 rounded bg-terminal-cyan/10 border border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/20 transition-colors font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t('skills.marketplace.goToRepositories')}
+              </button>
+            </div>
+          ) : (
+            // 有技能数据但被过滤掉了
+            <>
+              <p className="text-sm text-muted-foreground font-mono mb-2">
+                {t('skills.marketplace.noSkillsInFilter')}
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedRepository("all");
+                  setHideInstalled(false);
+                }}
+                className="mt-4 px-4 py-2 rounded bg-terminal-cyan/10 border border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/20 transition-colors font-mono text-sm"
+              >
+                {t('skills.marketplace.clearFilters')}
+              </button>
+            </>
+          )}
         </div>
       )}
 

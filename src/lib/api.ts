@@ -101,4 +101,9 @@ export const api = {
   async cancelSkillUpdate(skillId: string): Promise<void> {
     return invoke("cancel_skill_update", { skillId });
   },
+
+  // 自动扫描未扫描的仓库（首次启动）
+  async autoScanUnscannedRepositories(): Promise<string[]> {
+    return invoke("auto_scan_unscanned_repositories");
+  },
 };

@@ -43,6 +43,32 @@ function AppContent() {
     updateFeaturedRepos();
   }, [queryClient]);
 
+  // 首次启动时自动扫描未扫描的仓库（静默，后台执行）
+  useEffect(() => {
+    const autoScanRepositories = async () => {
+      try {
+        console.log('[INFO] 检查是否有未扫描的仓库...');
+        const scannedRepos = await api.autoScanUnscannedRepositories();
+
+        if (scannedRepos.length > 0) {
+          console.log(`[INFO] 自动扫描完成，已扫描 ${scannedRepos.length} 个仓库`);
+          // 刷新技能列表，让技能市场显示最新数据
+          queryClient.invalidateQueries({ queryKey: ['skills'] });
+          queryClient.invalidateQueries({ queryKey: ['repositories'] });
+        } else {
+          console.log('[INFO] 没有需要扫描的仓库');
+        }
+      } catch (error) {
+        // 静默失败，不影响应用启动
+        console.debug('自动扫描仓库失败:', error);
+      }
+    };
+
+    // 延迟 1 秒执行，让应用先完成初始化
+    const timer = setTimeout(autoScanRepositories, 1000);
+    return () => clearTimeout(timer);
+  }, [queryClient]);
+
   // 辅助函数：渲染 Logo 和标题，避免代码重复
   const renderLogoTitle = (isCentered: boolean) => (
     <div
@@ -231,7 +257,11 @@ function AppContent() {
           >
             {currentTab === "overview" && <OverviewPage />}
             {currentTab === "installed" && <InstalledSkillsPage />}
-            {currentTab === "marketplace" && <MarketplacePage />}
+            {currentTab === "marketplace" && (
+              <MarketplacePage
+                onNavigateToRepositories={() => setCurrentTab("repositories")}
+              />
+            )}
             {currentTab === "repositories" && <RepositoriesPage />}
             {currentTab === "settings" && <SettingsPage />}
           </div>

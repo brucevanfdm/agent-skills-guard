@@ -85,6 +85,9 @@
       "clearFilters": "CLEAR_FILTERS",
       "noResults": "No skills found containing \"{{query}}\"",
       "noSkillsInFilter": "No skills match current filters",
+      "noSkillsYet": "MARKETPLACE_IS_EMPTY",
+      "scanningRepositories": "Scanning repositories in background, please wait...",
+      "goToRepositories": "GO_TO_REPOSITORIES",
       "localRepo": "📁 LOCAL",
       "allRepos": "ALL",
       "install": {

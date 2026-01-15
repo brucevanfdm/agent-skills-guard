@@ -735,3 +735,41 @@ pub async fn cancel_skill_update(
     manager.cancel_skill_update(&skill_id)
         .map_err(|e| e.to_string())
 }
+
+/// 检查并自动扫描未扫描的仓库（用于首次启动）
+#[tauri::command]
+pub async fn auto_scan_unscanned_repositories(
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
+    // 获取所有未扫描的仓库
+    let unscanned_repos = state.db.get_unscanned_repositories()
+        .map_err(|e| e.to_string())?;
+
+    if unscanned_repos.is_empty() {
+        log::info!("没有需要自动扫描的仓库");
+        return Ok(vec![]);
+    }
+
+    log::info!("发现 {} 个未扫描的仓库，开始自动扫描...", unscanned_repos.len());
+
+    let mut scanned_repos = Vec::new();
+
+    // 逐个扫描仓库
+    for repo_id in unscanned_repos {
+        log::info!("自动扫描仓库: {}", repo_id);
+
+        match scan_repository(state.clone(), repo_id.clone()).await {
+            Ok(skills) => {
+                log::info!("仓库 {} 扫描成功，发现 {} 个技能", repo_id, skills.len());
+                scanned_repos.push(repo_id);
+            }
+            Err(e) => {
+                log::warn!("仓库 {} 扫描失败: {}", repo_id, e);
+                // 继续扫描下一个仓库，不中断整个流程
+            }
+        }
+    }
+
+    log::info!("自动扫描完成，成功扫描 {} 个仓库", scanned_repos.len());
+    Ok(scanned_repos)
+}
