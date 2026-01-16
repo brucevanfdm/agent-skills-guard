@@ -266,7 +266,7 @@ export function InstalledSkillsPage() {
           <p className="text-sm text-muted-foreground">{t('skills.loading')}</p>
         </div>
       ) : filteredSkills && filteredSkills.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
           {filteredSkills.map((skill, index) => (
             <SkillCard
               key={skill.id}
@@ -401,7 +401,7 @@ function SkillCard({
   t
 }: SkillCardProps) {
   return (
-    <div className="apple-card p-6 group">
+    <div className="apple-card p-6 group flex flex-col h-full">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2.5 mb-1 flex-wrap">
@@ -444,10 +444,12 @@ function SkillCard({
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{skill.description || t('skills.noDescription')}</p>
+      {/* Description - 自动填充剩余空间 */}
+      <p className="text-sm text-muted-foreground mb-4 leading-relaxed flex-1">{skill.description || t('skills.noDescription')}</p>
 
+      {/* Repository - 固定在底部 */}
       <div className="text-sm text-muted-foreground mb-4">
-        <span>{t('skills.repo')} </span>
+        <span className="text-blue-500 font-medium">{t('skills.repo')}</span>{" "}
         {skill.repository_url === "local" ? (
           <span>{skill.repository_url}</span>
         ) : (
@@ -457,9 +459,10 @@ function SkillCard({
         )}
       </div>
 
+      {/* Installed Paths */}
       {skill.local_paths && skill.local_paths.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-border/60">
-          <div className="text-xs font-medium text-foreground mb-3">
+        <div className="pt-4 border-t border-border/60">
+          <div className="text-xs font-medium text-blue-500 mb-3">
             {t('skills.installedPaths')} ({skill.local_paths.length})
           </div>
           <div className="space-y-2">

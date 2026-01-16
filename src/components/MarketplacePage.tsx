@@ -165,7 +165,7 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
           <p className="text-sm text-muted-foreground">{t('skills.loading')}</p>
         </div>
       ) : filteredSkills && filteredSkills.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
           {filteredSkills.map((skill) => (
             <SkillCard
               key={skill.id}
@@ -339,7 +339,7 @@ function SkillCard({
   t
 }: SkillCardProps) {
   return (
-    <div className="apple-card p-5">
+    <div className="apple-card p-5 flex flex-col h-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex-1 min-w-0">
@@ -433,12 +433,12 @@ function SkillCard({
         </div>
       </div>
 
-      {/* Description */}
-      <p className="text-sm text-muted-foreground mb-3">
+      {/* Description - 自动填充剩余空间 */}
+      <p className="text-sm text-muted-foreground mb-3 flex-1">
         {skill.description || t('skills.noDescription')}
       </p>
 
-      {/* Repository */}
+      {/* Repository - 固定在底部 */}
       <div className="text-xs text-muted-foreground mb-3">
         <span className="text-blue-500 font-medium">{t('skills.repo')}</span>{" "}
         {skill.repository_url === "local" ? (
