@@ -123,9 +123,6 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-headline text-foreground">{t('nav.marketplace')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t('skills.marketplace.found', { count: filteredSkills.length })}
-            </p>
           </div>
         </div>
 
@@ -393,7 +390,7 @@ function SkillCard({
             )}
           </button>
 
-          {skill.installed ? (
+          {skill.installed && (
             <button
               onClick={onUninstall}
               disabled={isAnyOperationPending}
@@ -411,7 +408,9 @@ function SkillCard({
                 </>
               )}
             </button>
-          ) : (
+          )}
+          {/* 删除按钮暂时隐藏，功能未开放 */}
+          {/* {!skill.installed && (
             <button
               onClick={onDelete}
               disabled={isAnyOperationPending}
@@ -430,12 +429,12 @@ function SkillCard({
                 </>
               )}
             </button>
-          )}
+          )} */}
         </div>
       </div>
 
       {/* Description */}
-      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+      <p className="text-sm text-muted-foreground mb-3">
         {skill.description || t('skills.noDescription')}
       </p>
 

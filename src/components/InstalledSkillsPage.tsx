@@ -212,9 +212,6 @@ export function InstalledSkillsPage() {
             <h1 className="text-headline text-foreground">
               {t('nav.installed')}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t('skills.installedPage.count', { count: filteredSkills.length })}
-            </p>
           </div>
         </div>
 
