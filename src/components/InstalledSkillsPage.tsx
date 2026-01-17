@@ -1,8 +1,19 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useInstalledSkills, useUninstallSkill, useUninstallSkillPath } from "../hooks/useSkills";
 import { Skill } from "../types";
 import { SecurityReport } from "../types/security";
-import { Trash2, Loader2, FolderOpen, Package, Search, RefreshCw, Download, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import {
+  Trash2,
+  Loader2,
+  FolderOpen,
+  Package,
+  Search,
+  RefreshCw,
+  Download,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
@@ -43,7 +54,7 @@ export function InstalledSkillsPage() {
         return new Map(Object.entries(parsed));
       }
     } catch (error) {
-      console.error('[ERROR] 恢复更新状态失败:', error);
+      console.error("[ERROR] 恢复更新状态失败:", error);
     }
     return new Map();
   });
@@ -65,18 +76,18 @@ export function InstalledSkillsPage() {
         localStorage.removeItem(AVAILABLE_UPDATES_KEY);
       }
     } catch (error) {
-      console.error('[ERROR] 保存更新状态失败:', error);
+      console.error("[ERROR] 保存更新状态失败:", error);
     }
   }, [availableUpdates]);
 
   useEffect(() => {
     if (!installedSkills || availableUpdates.size === 0) return;
-    const installedSkillIds = new Set(installedSkills.map(skill => skill.id));
+    const installedSkillIds = new Set(installedSkills.map((skill) => skill.id));
     const needsCleanup = Array.from(availableUpdates.keys()).some(
-      skillId => !installedSkillIds.has(skillId)
+      (skillId) => !installedSkillIds.has(skillId)
     );
     if (needsCleanup) {
-      setAvailableUpdates(prev => {
+      setAvailableUpdates((prev) => {
         const newMap = new Map(prev);
         for (const skillId of newMap.keys()) {
           if (!installedSkillIds.has(skillId)) {
@@ -98,10 +109,10 @@ export function InstalledSkillsPage() {
       queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
-      appToast.success(t('skills.installedPage.scanCompleted', { count: localSkills.length }));
+      appToast.success(t("skills.installedPage.scanCompleted", { count: localSkills.length }));
     },
     onError: (error: any) => {
-      appToast.error(t('skills.installedPage.scanFailed', { error: error.message }));
+      appToast.error(t("skills.installedPage.scanFailed", { error: error.message }));
     },
     onSettled: () => {
       setIsScanning(false);
@@ -115,12 +126,12 @@ export function InstalledSkillsPage() {
       const updateMap = new Map(updates.map(([skillId, latestSha]) => [skillId, latestSha]));
       setAvailableUpdates(updateMap);
       if (updates.length > 0) {
-        appToast.success(t('skills.installedPage.updatesFound', { count: updates.length }));
+        appToast.success(t("skills.installedPage.updatesFound", { count: updates.length }));
       } else {
-        appToast.success(t('skills.installedPage.noUpdates'));
+        appToast.success(t("skills.installedPage.noUpdates"));
       }
     } catch (error: any) {
-      appToast.error(t('skills.installedPage.checkUpdatesFailed', { error: error.message }));
+      appToast.error(t("skills.installedPage.checkUpdatesFailed", { error: error.message }));
     } finally {
       setIsCheckingUpdates(false);
     }
@@ -139,8 +150,12 @@ export function InstalledSkillsPage() {
         skillMap.set(key, {
           ...existing,
           local_paths: allPaths,
-          repository_url: existing.repository_url === "local" ? skill.repository_url : existing.repository_url,
-          repository_owner: existing.repository_owner === "local" ? skill.repository_owner : existing.repository_owner,
+          repository_url:
+            existing.repository_url === "local" ? skill.repository_url : existing.repository_url,
+          repository_owner:
+            existing.repository_owner === "local"
+              ? skill.repository_owner
+              : existing.repository_owner,
         });
       } else {
         skillMap.set(key, { ...skill });
@@ -160,12 +175,12 @@ export function InstalledSkillsPage() {
       .map(([owner, count]) => ({
         owner,
         count,
-        displayName: owner === "local" ? t('skills.marketplace.localRepo') : `@${owner}`
+        displayName: owner === "local" ? t("skills.marketplace.localRepo") : `@${owner}`,
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
     return [
-      { owner: "all", count: mergedSkills.length, displayName: t('skills.marketplace.allRepos') },
-      ...repos
+      { owner: "all", count: mergedSkills.length, displayName: t("skills.marketplace.allRepos") },
+      ...repos,
     ];
   }, [mergedSkills, i18n.language, t]);
 
@@ -209,9 +224,7 @@ export function InstalledSkillsPage() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-headline text-foreground">
-              {t('nav.installed')}
-            </h1>
+            <h1 className="text-headline text-foreground">{t("nav.installed")}</h1>
           </div>
         </div>
 
@@ -220,7 +233,7 @@ export function InstalledSkillsPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder={t('skills.installedPage.search')}
+              placeholder={t("skills.installedPage.search")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="apple-input w-full h-10 pl-11 pr-4"
@@ -240,9 +253,15 @@ export function InstalledSkillsPage() {
             className="apple-button-secondary h-10 px-5 flex items-center gap-2"
           >
             {isScanning ? (
-              <><Loader2 className="w-4 h-4 animate-spin" />{t('skills.installedPage.scanning')}</>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t("skills.installedPage.scanning")}
+              </>
             ) : (
-              <><RefreshCw className="w-4 h-4" />{t('skills.installedPage.scanLocal')}</>
+              <>
+                <RefreshCw className="w-4 h-4" />
+                {t("skills.installedPage.scanLocal")}
+              </>
             )}
           </button>
 
@@ -252,9 +271,15 @@ export function InstalledSkillsPage() {
             className="apple-button-primary h-10 px-5 flex items-center gap-2"
           >
             {isCheckingUpdates ? (
-              <><Loader2 className="w-4 h-4 animate-spin" />{t('skills.installedPage.checkingUpdates')}</>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t("skills.installedPage.checkingUpdates")}
+              </>
             ) : (
-              <><Download className="w-4 h-4" />{t('skills.installedPage.checkUpdates')}</>
+              <>
+                <Download className="w-4 h-4" />
+                {t("skills.installedPage.checkUpdates")}
+              </>
             )}
           </button>
         </div>
@@ -263,7 +288,7 @@ export function InstalledSkillsPage() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-          <p className="text-sm text-muted-foreground">{t('skills.loading')}</p>
+          <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
         </div>
       ) : filteredSkills && filteredSkills.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
@@ -277,19 +302,27 @@ export function InstalledSkillsPage() {
                 uninstallMutation.mutate(skill.id, {
                   onSuccess: () => {
                     setUninstallingSkillId(null);
-                    appToast.success(t('skills.toast.uninstalled'));
+                    appToast.success(t("skills.toast.uninstalled"));
                   },
                   onError: (error: any) => {
                     setUninstallingSkillId(null);
-                    appToast.error(`${t('skills.toast.uninstallFailed')}: ${error.message || error}`);
+                    appToast.error(
+                      `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                    );
                   },
                 });
               }}
               onUninstallPath={(path: string) => {
-                uninstallPathMutation.mutate({ skillId: skill.id, path }, {
-                  onSuccess: () => appToast.success(t('skills.toast.uninstalled')),
-                  onError: (error: any) => appToast.error(`${t('skills.toast.uninstallFailed')}: ${error.message || error}`),
-                });
+                uninstallPathMutation.mutate(
+                  { skillId: skill.id, path },
+                  {
+                    onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
+                    onError: (error: any) =>
+                      appToast.error(
+                        `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                      ),
+                  }
+                );
               }}
               onUpdate={async () => {
                 try {
@@ -299,14 +332,19 @@ export function InstalledSkillsPage() {
                   setPendingUpdate({ skill, report, conflicts });
                 } catch (error: any) {
                   setPreparingUpdateSkillId(null);
-                  appToast.error(`${t('skills.toast.updateFailed')}: ${error.message || error}`);
+                  appToast.error(`${t("skills.toast.updateFailed")}: ${error.message || error}`);
                 }
               }}
               hasUpdate={availableUpdates.has(skill.id)}
               isUninstalling={uninstallingSkillId === skill.id}
               isPreparingUpdate={preparingUpdateSkillId === skill.id}
               isApplyingUpdate={confirmingUpdateSkillId === skill.id}
-              isAnyOperationPending={uninstallMutation.isPending || uninstallPathMutation.isPending || preparingUpdateSkillId !== null || confirmingUpdateSkillId !== null}
+              isAnyOperationPending={
+                uninstallMutation.isPending ||
+                uninstallPathMutation.isPending ||
+                preparingUpdateSkillId !== null ||
+                confirmingUpdateSkillId !== null
+              }
               t={t}
             />
           ))}
@@ -317,14 +355,13 @@ export function InstalledSkillsPage() {
             <Package className="w-10 h-10 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">
-            {searchQuery ? t('skills.installedPage.noResults', { query: searchQuery }) : t('skills.installedPage.empty')}
+            {searchQuery
+              ? t("skills.installedPage.noResults", { query: searchQuery })
+              : t("skills.installedPage.empty")}
           </p>
           {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="mt-5 apple-button-secondary"
-            >
-              {t('skills.installedPage.clearSearch')}
+            <button onClick={() => setSearchQuery("")} className="mt-5 apple-button-secondary">
+              {t("skills.installedPage.clearSearch")}
             </button>
           )}
         </div>
@@ -338,7 +375,7 @@ export function InstalledSkillsPage() {
             try {
               await api.cancelSkillUpdate(pendingUpdate.skill.id);
             } catch (error: any) {
-              console.error('[ERROR] 取消更新失败:', error);
+              console.error("[ERROR] 取消更新失败:", error);
             }
           }
           setPendingUpdate(null);
@@ -351,14 +388,14 @@ export function InstalledSkillsPage() {
               await queryClient.refetchQueries({ queryKey: ["skills"] });
               await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
               await queryClient.refetchQueries({ queryKey: ["scanResults"] });
-              setAvailableUpdates(prev => {
+              setAvailableUpdates((prev) => {
                 const newMap = new Map(prev);
                 newMap.delete(pendingUpdate.skill.id);
                 return newMap;
               });
-              appToast.success(t('skills.toast.updateSuccess'));
+              appToast.success(t("skills.toast.updateSuccess"));
             } catch (error: any) {
-              appToast.error(`${t('skills.toast.updateFailed')}: ${error.message || error}`);
+              appToast.error(`${t("skills.toast.updateFailed")}: ${error.message || error}`);
             } finally {
               setConfirmingUpdateSkillId(null);
             }
@@ -398,19 +435,40 @@ function SkillCard({
   isPreparingUpdate,
   isApplyingUpdate,
   isAnyOperationPending,
-  t
+  t,
 }: SkillCardProps) {
+  const descriptionRef = useRef<HTMLParagraphElement | null>(null);
+  const [isDescriptionTruncated, setIsDescriptionTruncated] = useState(false);
+
+  useLayoutEffect(() => {
+    const element = descriptionRef.current;
+    if (!element) return;
+
+    const update = () => {
+      setIsDescriptionTruncated(
+        element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth
+      );
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [skill.description]);
+
   return (
     <div className="apple-card p-6 group flex flex-col h-full">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2.5 mb-1 flex-wrap">
             <h3 className="font-semibold text-foreground">{skill.name}</h3>
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-              skill.repository_owner === "local"
-                ? "text-muted-foreground bg-secondary"
-                : "text-blue-600 bg-blue-500/10"
-            }`}>
+            <span
+              className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                skill.repository_owner === "local"
+                  ? "text-muted-foreground bg-secondary"
+                  : "text-blue-600 bg-blue-500/10"
+              }`}
+            >
               {formatRepositoryTag(skill)}
             </span>
           </div>
@@ -424,9 +482,17 @@ function SkillCard({
               className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5"
             >
               {isPreparingUpdate || isApplyingUpdate ? (
-                <><Loader2 className="w-3.5 h-3.5 animate-spin" />{isApplyingUpdate ? t('skills.installedPage.applyingUpdate') : t('skills.installedPage.securityChecking')}</>
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {isApplyingUpdate
+                    ? t("skills.installedPage.applyingUpdate")
+                    : t("skills.installedPage.securityChecking")}
+                </>
               ) : (
-                <><Download className="w-3.5 h-3.5" />{t('skills.update')}</>
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  {t("skills.update")}
+                </>
               )}
             </button>
           )}
@@ -436,24 +502,41 @@ function SkillCard({
             className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5"
           >
             {isUninstalling ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin" />{t('skills.uninstalling')}</>
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {t("skills.uninstalling")}
+              </>
             ) : (
-              <><Trash2 className="w-3.5 h-3.5" />{t('skills.uninstallAll')}</>
+              <>
+                <Trash2 className="w-3.5 h-3.5" />
+                {t("skills.uninstallAll")}
+              </>
             )}
           </button>
         </div>
       </div>
 
       {/* Description - 自动填充剩余空间 */}
-      <p className="text-sm text-muted-foreground mb-4 leading-relaxed flex-1">{skill.description || t('skills.noDescription')}</p>
+      <p
+        ref={descriptionRef}
+        title={isDescriptionTruncated && skill.description ? skill.description : undefined}
+        className="text-sm text-muted-foreground mb-4 leading-5 h-[6.25rem] overflow-hidden [display:-webkit-box] [-webkit-line-clamp:5] [-webkit-box-orient:vertical]"
+      >
+        {skill.description || t("skills.noDescription")}
+      </p>
 
       {/* Repository - 固定在底部 */}
       <div className="text-sm text-muted-foreground mb-4">
-        <span className="text-blue-500 font-medium">{t('skills.repo')}</span>{" "}
+        <span className="text-blue-500 font-medium">{t("skills.repo")}</span>{" "}
         {skill.repository_url === "local" ? (
           <span>{skill.repository_url}</span>
         ) : (
-          <a href={skill.repository_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 transition-colors break-all">
+          <a
+            href={skill.repository_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 transition-colors break-all"
+          >
             {skill.repository_url}
           </a>
         )}
@@ -463,26 +546,34 @@ function SkillCard({
       {skill.local_paths && skill.local_paths.length > 0 && (
         <div className="pt-4 border-t border-border/60">
           <div className="text-xs font-medium text-blue-500 mb-3">
-            {t('skills.installedPaths')} ({skill.local_paths.length})
+            {t("skills.installedPaths")} ({skill.local_paths.length})
           </div>
           <div className="space-y-2">
             {skill.local_paths.map((path, idx) => (
-              <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-secondary/50 rounded-xl">
+              <div
+                key={idx}
+                className="flex items-center justify-between gap-3 p-3 bg-secondary/50 rounded-xl"
+              >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <button
                     onClick={async () => {
                       try {
                         await openPath(path);
-                        appToast.success(t('skills.folder.opened'), { duration: 5000 });
+                        appToast.success(t("skills.folder.opened"), { duration: 5000 });
                       } catch (error: any) {
-                        appToast.error(t('skills.folder.openFailed', { error: error?.message || String(error) }), { duration: 5000 });
+                        appToast.error(
+                          t("skills.folder.openFailed", { error: error?.message || String(error) }),
+                          { duration: 5000 }
+                        );
                       }
                     }}
                     className="text-blue-500 hover:text-blue-600 transition-colors"
                   >
                     <FolderOpen className="w-4 h-4" />
                   </button>
-                  <span className="text-sm text-muted-foreground truncate" title={path}>{path}</span>
+                  <span className="text-sm text-muted-foreground truncate" title={path}>
+                    {path}
+                  </span>
                 </div>
                 <button
                   onClick={() => onUninstallPath(path)}
@@ -510,7 +601,15 @@ interface UpdateConfirmDialogProps {
   skillName: string;
 }
 
-function UpdateConfirmDialog({ open, onClose, onConfirm, isConfirming, report, conflicts, skillName }: UpdateConfirmDialogProps) {
+function UpdateConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  isConfirming,
+  report,
+  conflicts,
+  skillName,
+}: UpdateConfirmDialogProps) {
   const { t } = useTranslation();
   const [forceOverwrite, setForceOverwrite] = useState(false);
 
@@ -519,7 +618,7 @@ function UpdateConfirmDialog({ open, onClose, onConfirm, isConfirming, report, c
   const hasConflicts = conflicts.length > 0;
 
   const issueCounts = useMemo(
-    () => report ? countIssuesBySeverity(report.issues) : { critical: 0, error: 0, warning: 0 },
+    () => (report ? countIssuesBySeverity(report.issues) : { critical: 0, error: 0, warning: 0 }),
     [report]
   );
 
@@ -537,25 +636,34 @@ function UpdateConfirmDialog({ open, onClose, onConfirm, isConfirming, report, c
             ) : (
               <CheckCircle className="w-5 h-5 text-success" />
             )}
-            {t('skills.installedPage.updateScanResult')}
+            {t("skills.installedPage.updateScanResult")}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-4 pb-4">
-              <div>{t('skills.installedPage.preparingUpdate')}: <span className="font-medium">{skillName}</span></div>
+              <div>
+                {t("skills.installedPage.preparingUpdate")}:{" "}
+                <span className="font-medium">{skillName}</span>
+              </div>
 
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <span className="text-sm">{t('skills.marketplace.install.securityScore')}:</span>
-                <span className={`text-2xl font-semibold ${
-                  report.score >= 90 ? 'text-success' :
-                  report.score >= 70 ? 'text-success' :
-                  report.score >= 50 ? 'text-warning' : 'text-destructive'
-                }`}>
+                <span className="text-sm">{t("skills.marketplace.install.securityScore")}:</span>
+                <span
+                  className={`text-2xl font-semibold ${
+                    report.score >= 90
+                      ? "text-success"
+                      : report.score >= 70
+                        ? "text-success"
+                        : report.score >= 50
+                          ? "text-warning"
+                          : "text-destructive"
+                  }`}
+                >
                   {report.score}
                 </span>
               </div>
 
               <div className="p-3 bg-primary/10 rounded-lg">
-                <div className="text-sm text-primary">💡 {t('skills.installedPage.updateTip')}</div>
+                <div className="text-sm text-primary">💡 {t("skills.installedPage.updateTip")}</div>
               </div>
 
               {hasConflicts && (
@@ -563,21 +671,35 @@ function UpdateConfirmDialog({ open, onClose, onConfirm, isConfirming, report, c
                   <div className="flex items-start gap-2 mb-2">
                     <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <div className="font-medium text-warning mb-1">{t('skills.installedPage.conflictDetected')}</div>
-                      <div className="text-sm text-muted-foreground mb-2">{t('skills.installedPage.conflictDescription')}</div>
+                      <div className="font-medium text-warning mb-1">
+                        {t("skills.installedPage.conflictDetected")}
+                      </div>
+                      <div className="text-sm text-muted-foreground mb-2">
+                        {t("skills.installedPage.conflictDescription")}
+                      </div>
                       <ul className="space-y-1 text-xs max-h-32 overflow-y-auto">
                         {conflicts.slice(0, 10).map((conflict, idx) => (
-                          <li key={idx} className="text-warning">• {conflict}</li>
+                          <li key={idx} className="text-warning">
+                            • {conflict}
+                          </li>
                         ))}
                         {conflicts.length > 10 && (
-                          <li className="text-muted-foreground">... {t('skills.installedPage.andMore', { count: conflicts.length - 10 })}</li>
+                          <li className="text-muted-foreground">
+                            ...{" "}
+                            {t("skills.installedPage.andMore", { count: conflicts.length - 10 })}
+                          </li>
                         )}
                       </ul>
                     </div>
                   </div>
                   <label className="flex items-center gap-2 mt-3 p-2 bg-card rounded-lg cursor-pointer">
-                    <input type="checkbox" checked={forceOverwrite} onChange={(e) => setForceOverwrite(e.target.checked)} className="w-4 h-4 rounded" />
-                    <span className="text-sm">{t('skills.installedPage.forceOverwrite')}</span>
+                    <input
+                      type="checkbox"
+                      checked={forceOverwrite}
+                      onChange={(e) => setForceOverwrite(e.target.checked)}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-sm">{t("skills.installedPage.forceOverwrite")}</span>
                   </label>
                 </div>
               )}
@@ -585,24 +707,49 @@ function UpdateConfirmDialog({ open, onClose, onConfirm, isConfirming, report, c
               {report.issues.length > 0 && (
                 <>
                   <div className="space-y-2">
-                    <div className="text-sm font-medium">{t('skills.marketplace.install.issuesDetected')}:</div>
+                    <div className="text-sm font-medium">
+                      {t("skills.marketplace.install.issuesDetected")}:
+                    </div>
                     <div className="flex gap-4 text-sm">
-                      {issueCounts.critical > 0 && <span className="text-destructive">{t('skills.marketplace.install.critical')}: {issueCounts.critical}</span>}
-                      {issueCounts.error > 0 && <span className="text-warning">{t('skills.marketplace.install.highRisk')}: {issueCounts.error}</span>}
-                      {issueCounts.warning > 0 && <span className="text-warning">{t('skills.marketplace.install.mediumRisk')}: {issueCounts.warning}</span>}
+                      {issueCounts.critical > 0 && (
+                        <span className="text-destructive">
+                          {t("skills.marketplace.install.critical")}: {issueCounts.critical}
+                        </span>
+                      )}
+                      {issueCounts.error > 0 && (
+                        <span className="text-warning">
+                          {t("skills.marketplace.install.highRisk")}: {issueCounts.error}
+                        </span>
+                      )}
+                      {issueCounts.warning > 0 && (
+                        <span className="text-warning">
+                          {t("skills.marketplace.install.mediumRisk")}: {issueCounts.warning}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className={`p-3 rounded-lg ${isHighRisk ? 'bg-destructive/10' : isMediumRisk ? 'bg-warning/10' : 'bg-success/10'}`}>
+                  <div
+                    className={`p-3 rounded-lg ${isHighRisk ? "bg-destructive/10" : isMediumRisk ? "bg-warning/10" : "bg-success/10"}`}
+                  >
                     <ul className="space-y-1 text-sm max-h-48 overflow-y-auto">
                       {report.issues.slice(0, 5).map((issue, idx) => (
                         <li key={idx} className="text-xs">
-                          {issue.file_path && <span className="text-primary mr-1">[{issue.file_path}]</span>}
+                          {issue.file_path && (
+                            <span className="text-primary mr-1">[{issue.file_path}]</span>
+                          )}
                           {issue.description}
-                          {issue.line_number && <span className="text-muted-foreground ml-2">(行 {issue.line_number})</span>}
+                          {issue.line_number && (
+                            <span className="text-muted-foreground ml-2">
+                              (行 {issue.line_number})
+                            </span>
+                          )}
                         </li>
                       ))}
                       {report.issues.length > 5 && (
-                        <li className="text-xs text-muted-foreground">... {t('skills.installedPage.andMore', { count: report.issues.length - 5 })}</li>
+                        <li className="text-xs text-muted-foreground">
+                          ...{" "}
+                          {t("skills.installedPage.andMore", { count: report.issues.length - 5 })}
+                        </li>
                       )}
                     </ul>
                   </div>
@@ -612,7 +759,9 @@ function UpdateConfirmDialog({ open, onClose, onConfirm, isConfirming, report, c
               {isHighRisk && (
                 <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
                   <p className="text-sm text-destructive font-medium">
-                    {report.blocked ? t('skills.marketplace.install.blockedWarning') : t('skills.marketplace.install.highRiskWarning')}
+                    {report.blocked
+                      ? t("skills.marketplace.install.blockedWarning")
+                      : t("skills.marketplace.install.highRiskWarning")}
                   </p>
                 </div>
               )}
@@ -621,16 +770,21 @@ function UpdateConfirmDialog({ open, onClose, onConfirm, isConfirming, report, c
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose} disabled={isConfirming}>{t('skills.marketplace.install.cancel')}</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose} disabled={isConfirming}>
+            {t("skills.marketplace.install.cancel")}
+          </AlertDialogCancel>
           <button
             onClick={() => onConfirm(forceOverwrite)}
             disabled={isConfirming || report.blocked || (hasConflicts && !forceOverwrite)}
             className="macos-button-primary disabled:opacity-50"
           >
             {isConfirming ? (
-              <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{t('skills.installedPage.applyingUpdate')}</span>
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t("skills.installedPage.applyingUpdate")}
+              </span>
             ) : (
-              t('skills.marketplace.install.continue')
+              t("skills.marketplace.install.continue")
             )}
           </button>
         </AlertDialogFooter>
