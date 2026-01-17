@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Loader2,
   Search,
+  SearchX,
   FolderOpen,
   XCircle,
   CheckCircle,
@@ -284,7 +285,9 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
             </div>
           ) : (
             <div className="apple-card p-12 text-center">
-              <div className="text-4xl mb-4">🔍</div>
+              <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-5 mx-auto">
+                <SearchX className="w-10 h-10 text-muted-foreground" />
+              </div>
               {searchQuery ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">

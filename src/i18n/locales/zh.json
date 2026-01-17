@@ -88,7 +88,7 @@
       "noSkillsYet": "技能市场暂无内容",
       "scanningRepositories": "正在后台扫描仓库，请稍候...",
       "goToRepositories": "前往仓库页面",
-      "localRepo": "📁 本地",
+      "localRepo": "本地",
       "allRepos": "全部",
       "install": {
         "scanResult": "安全扫描结果",

@@ -16,13 +16,13 @@ export function parseRepositoryOwner(repositoryUrl: string): string {
  */
 export function formatRepositoryTag(skill: Skill): string {
   const owner = skill.repository_owner || parseRepositoryOwner(skill.repository_url);
-  return owner === "local" ? "📁 本地" : `@${owner}`;
+  return owner === "local" ? "本地" : `@${owner}`;
 }
 
 /**
  * 获取仓库所有者的显示名称（用于筛选器）
  */
 export function getRepositoryDisplayName(owner: string): string {
-  if (owner === "local") return "📁 本地";
+  if (owner === "local") return "本地";
   return `@${owner}`;
 }

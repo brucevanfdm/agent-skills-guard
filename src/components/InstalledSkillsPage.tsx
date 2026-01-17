@@ -8,11 +8,13 @@ import {
   FolderOpen,
   Package,
   Search,
+  SearchX,
   RefreshCw,
   Download,
   AlertTriangle,
   CheckCircle,
   XCircle,
+  Lightbulb,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
@@ -381,7 +383,11 @@ export function InstalledSkillsPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-20 apple-card">
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-5">
-                <Package className="w-10 h-10 text-muted-foreground" />
+                {searchQuery ? (
+                  <SearchX className="w-10 h-10 text-muted-foreground" />
+                ) : (
+                  <Package className="w-10 h-10 text-muted-foreground" />
+                )}
               </div>
               <p className="text-sm text-muted-foreground">
                 {searchQuery
@@ -694,7 +700,10 @@ function UpdateConfirmDialog({
               </div>
 
               <div className="p-3 bg-primary/10 rounded-lg">
-                <div className="text-sm text-primary">💡 {t("skills.installedPage.updateTip")}</div>
+                <div className="text-sm text-primary flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4" />
+                  {t("skills.installedPage.updateTip")}
+                </div>
               </div>
 
               {hasConflicts && (

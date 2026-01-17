@@ -88,7 +88,7 @@
       "noSkillsYet": "MARKETPLACE_IS_EMPTY",
       "scanningRepositories": "Scanning repositories in background, please wait...",
       "goToRepositories": "GO_TO_REPOSITORIES",
-      "localRepo": "📁 LOCAL",
+      "localRepo": "LOCAL",
       "allRepos": "ALL",
       "install": {
         "scanResult": "Security Scan Result",
