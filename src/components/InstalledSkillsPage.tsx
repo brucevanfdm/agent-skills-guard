@@ -40,6 +40,8 @@ export function InstalledSkillsPage() {
   const uninstallMutation = useUninstallSkill();
   const uninstallPathMutation = useUninstallSkillPath();
   const queryClient = useQueryClient();
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRepository, setSelectedRepository] = useState("all");
@@ -220,152 +222,181 @@ export function InstalledSkillsPage() {
   }, [installedSkills, searchQuery, selectedRepository]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-headline text-foreground">{t("nav.installed")}</h1>
+    <div className="flex flex-col h-full">
+      <div
+        className="flex-shrink-0 border-b border-border/50"
+        onWheel={(e) => {
+          if (!listContainerRef.current) return;
+          listContainerRef.current.scrollBy({ top: e.deltaY });
+          e.preventDefault();
+        }}
+      >
+        <div className="px-8 pt-8 pb-4" style={{ animation: "fadeIn 0.4s ease-out" }}>
+          <div className="max-w-6xl mx-auto">
+            <div
+              className={`overflow-hidden transition-all duration-200 ${
+                isHeaderCollapsed ? "max-h-0 opacity-0" : "max-h-24 opacity-100"
+              }`}
+            >
+              <h1 className="text-headline text-foreground mb-4">{t("nav.installed")}</h1>
+            </div>
+
+            <div className="flex gap-3 items-center flex-wrap">
+              <div className="relative flex-1 min-w-[300px]">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder={t("skills.installedPage.search")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="apple-input w-full h-10 pl-11 pr-4"
+                />
+              </div>
+
+              <CyberSelect
+                value={selectedRepository}
+                onChange={setSelectedRepository}
+                options={repositoryOptions}
+                className="min-w-[200px]"
+              />
+
+              <button
+                onClick={() => scanMutation.mutate()}
+                disabled={isScanning}
+                className="apple-button-secondary h-10 px-5 flex items-center gap-2"
+              >
+                {isScanning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t("skills.installedPage.scanning")}
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    {t("skills.installedPage.scanLocal")}
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={checkUpdates}
+                disabled={isCheckingUpdates}
+                className="apple-button-primary h-10 px-5 flex items-center gap-2"
+              >
+                {isCheckingUpdates ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t("skills.installedPage.checkingUpdates")}
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    {t("skills.installedPage.checkUpdates")}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex gap-3 items-center flex-wrap">
-          <div className="relative flex-1 min-w-[300px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={t("skills.installedPage.search")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="apple-input w-full h-10 pl-11 pr-4"
-            />
-          </div>
-
-          <CyberSelect
-            value={selectedRepository}
-            onChange={setSelectedRepository}
-            options={repositoryOptions}
-            className="min-w-[200px]"
-          />
-
-          <button
-            onClick={() => scanMutation.mutate()}
-            disabled={isScanning}
-            className="apple-button-secondary h-10 px-5 flex items-center gap-2"
-          >
-            {isScanning ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t("skills.installedPage.scanning")}
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-4 h-4" />
-                {t("skills.installedPage.scanLocal")}
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={checkUpdates}
-            disabled={isCheckingUpdates}
-            className="apple-button-primary h-10 px-5 flex items-center gap-2"
-          >
-            {isCheckingUpdates ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t("skills.installedPage.checkingUpdates")}
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                {t("skills.installedPage.checkUpdates")}
-              </>
-            )}
-          </button>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-          <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
-        </div>
-      ) : filteredSkills && filteredSkills.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
-          {filteredSkills.map((skill, index) => (
-            <SkillCard
-              key={skill.id}
-              skill={skill}
-              index={index}
-              onUninstall={() => {
-                setUninstallingSkillId(skill.id);
-                uninstallMutation.mutate(skill.id, {
-                  onSuccess: () => {
-                    setUninstallingSkillId(null);
-                    appToast.success(t("skills.toast.uninstalled"));
-                  },
-                  onError: (error: any) => {
-                    setUninstallingSkillId(null);
-                    appToast.error(
-                      `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+      <div
+        ref={listContainerRef}
+        className="flex-1 overflow-y-auto overscroll-contain px-8 pb-8"
+        onScroll={(e) => {
+          const top = (e.currentTarget as HTMLDivElement).scrollTop;
+          setIsHeaderCollapsed(top > 8);
+        }}
+      >
+        <div className={`max-w-6xl mx-auto ${isHeaderCollapsed ? "pt-4" : "pt-6"}`}>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+              <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
+            </div>
+          ) : filteredSkills && filteredSkills.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
+              {filteredSkills.map((skill, index) => (
+                <SkillCard
+                  key={skill.id}
+                  skill={skill}
+                  index={index}
+                  onUninstall={() => {
+                    setUninstallingSkillId(skill.id);
+                    uninstallMutation.mutate(skill.id, {
+                      onSuccess: () => {
+                        setUninstallingSkillId(null);
+                        appToast.success(t("skills.toast.uninstalled"));
+                      },
+                      onError: (error: any) => {
+                        setUninstallingSkillId(null);
+                        appToast.error(
+                          `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                        );
+                      },
+                    });
+                  }}
+                  onUninstallPath={(path: string) => {
+                    uninstallPathMutation.mutate(
+                      { skillId: skill.id, path },
+                      {
+                        onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
+                        onError: (error: any) =>
+                          appToast.error(
+                            `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                          ),
+                      }
                     );
-                  },
-                });
-              }}
-              onUninstallPath={(path: string) => {
-                uninstallPathMutation.mutate(
-                  { skillId: skill.id, path },
-                  {
-                    onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
-                    onError: (error: any) =>
+                  }}
+                  onUpdate={async () => {
+                    try {
+                      setPreparingUpdateSkillId(skill.id);
+                      const [report, conflicts] = await api.prepareSkillUpdate(
+                        skill.id,
+                        i18n.language
+                      );
+                      setPreparingUpdateSkillId(null);
+                      setPendingUpdate({ skill, report, conflicts });
+                    } catch (error: any) {
+                      setPreparingUpdateSkillId(null);
                       appToast.error(
-                        `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
-                      ),
+                        `${t("skills.toast.updateFailed")}: ${error.message || error}`
+                      );
+                    }
+                  }}
+                  hasUpdate={availableUpdates.has(skill.id)}
+                  isUninstalling={uninstallingSkillId === skill.id}
+                  isPreparingUpdate={preparingUpdateSkillId === skill.id}
+                  isApplyingUpdate={confirmingUpdateSkillId === skill.id}
+                  isAnyOperationPending={
+                    uninstallMutation.isPending ||
+                    uninstallPathMutation.isPending ||
+                    preparingUpdateSkillId !== null ||
+                    confirmingUpdateSkillId !== null
                   }
-                );
-              }}
-              onUpdate={async () => {
-                try {
-                  setPreparingUpdateSkillId(skill.id);
-                  const [report, conflicts] = await api.prepareSkillUpdate(skill.id, i18n.language);
-                  setPreparingUpdateSkillId(null);
-                  setPendingUpdate({ skill, report, conflicts });
-                } catch (error: any) {
-                  setPreparingUpdateSkillId(null);
-                  appToast.error(`${t("skills.toast.updateFailed")}: ${error.message || error}`);
-                }
-              }}
-              hasUpdate={availableUpdates.has(skill.id)}
-              isUninstalling={uninstallingSkillId === skill.id}
-              isPreparingUpdate={preparingUpdateSkillId === skill.id}
-              isApplyingUpdate={confirmingUpdateSkillId === skill.id}
-              isAnyOperationPending={
-                uninstallMutation.isPending ||
-                uninstallPathMutation.isPending ||
-                preparingUpdateSkillId !== null ||
-                confirmingUpdateSkillId !== null
-              }
-              t={t}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 apple-card">
-          <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-5">
-            <Package className="w-10 h-10 text-muted-foreground" />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {searchQuery
-              ? t("skills.installedPage.noResults", { query: searchQuery })
-              : t("skills.installedPage.empty")}
-          </p>
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="mt-5 apple-button-secondary">
-              {t("skills.installedPage.clearSearch")}
-            </button>
+                  t={t}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 apple-card">
+              <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-5">
+                <Package className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {searchQuery
+                  ? t("skills.installedPage.noResults", { query: searchQuery })
+                  : t("skills.installedPage.empty")}
+              </p>
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="mt-5 apple-button-secondary">
+                  {t("skills.installedPage.clearSearch")}
+                </button>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       <UpdateConfirmDialog
         open={pendingUpdate !== null}

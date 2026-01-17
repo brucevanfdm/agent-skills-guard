@@ -60,6 +60,8 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
   } | null>(null);
   const [preparingSkillId, setPreparingSkillId] = useState<string | null>(null);
   const [deletingSkillId, setDeletingSkillId] = useState<string | null>(null);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
 
   const repositorySkills = useMemo(() => {
     if (!allSkills) return [];
@@ -137,179 +139,205 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
   }, [repositorySkills, searchQuery, selectedRepository, hideInstalled]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-headline text-foreground">{t("nav.marketplace")}</h1>
+    <div className="flex flex-col h-full">
+      <div
+        className="flex-shrink-0 border-b border-border/50"
+        onWheel={(e) => {
+          if (!listContainerRef.current) return;
+          listContainerRef.current.scrollBy({ top: e.deltaY });
+          e.preventDefault();
+        }}
+      >
+        <div className="px-8 pt-8 pb-4" style={{ animation: "fadeIn 0.4s ease-out" }}>
+          <div className="max-w-6xl mx-auto">
+            <div
+              className={`overflow-hidden transition-all duration-200 ${
+                isHeaderCollapsed ? "max-h-0 opacity-0" : "max-h-24 opacity-100"
+              }`}
+            >
+              <h1 className="text-headline text-foreground mb-4">{t("nav.marketplace")}</h1>
+            </div>
+
+            <div className="flex gap-3 items-center flex-wrap">
+              <div className="relative flex-1 min-w-[300px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder={t("skills.marketplace.search")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="apple-input w-full h-10 pl-10 pr-4"
+                />
+              </div>
+
+              <CyberSelect
+                value={selectedRepository}
+                onChange={setSelectedRepository}
+                options={repositoryOptions}
+                className="min-w-[200px]"
+              />
+
+              <label className="flex items-center gap-2 h-10 px-4 apple-card text-sm cursor-pointer hover:bg-secondary/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={hideInstalled}
+                  onChange={(e) => setHideInstalled(e.target.checked)}
+                  className="rounded border-border accent-blue-500"
+                />
+                <span>{t("skills.marketplace.hideInstalled")}</span>
+              </label>
+            </div>
           </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-3 items-center flex-wrap">
-          <div className="relative flex-1 min-w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={t("skills.marketplace.search")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="apple-input w-full h-10 pl-10 pr-4"
-            />
-          </div>
-
-          <CyberSelect
-            value={selectedRepository}
-            onChange={setSelectedRepository}
-            options={repositoryOptions}
-            className="min-w-[200px]"
-          />
-
-          <label className="flex items-center gap-2 h-10 px-4 apple-card text-sm cursor-pointer hover:bg-secondary/50 transition-colors">
-            <input
-              type="checkbox"
-              checked={hideInstalled}
-              onChange={(e) => setHideInstalled(e.target.checked)}
-              className="rounded border-border accent-blue-500"
-            />
-            <span>{t("skills.marketplace.hideInstalled")}</span>
-          </label>
         </div>
       </div>
 
-      {/* Skills Grid */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
-          <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
-        </div>
-      ) : filteredSkills && filteredSkills.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-          {filteredSkills.map((skill) => (
-            <SkillCard
-              key={skill.id}
-              skill={skill}
-              onInstall={async () => {
-                try {
-                  setPreparingSkillId(skill.id);
-                  const report = await invoke<SecurityReport>("prepare_skill_installation", {
-                    skillId: skill.id,
-                    locale: i18n.language,
-                  });
-                  setPreparingSkillId(null);
-                  setPendingInstall({ skill, report });
-                } catch (error: any) {
-                  setPreparingSkillId(null);
-                  appToast.error(`${t("skills.toast.installFailed")}: ${error.message || error}`);
-                }
-              }}
-              onUninstall={() => {
-                uninstallMutation.mutate(skill.id, {
-                  onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
-                  onError: (error: any) =>
-                    appToast.error(
-                      `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
-                    ),
-                });
-              }}
-              onUninstallPath={(path: string) => {
-                uninstallPathMutation.mutate(
-                  { skillId: skill.id, path },
-                  {
-                    onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
-                    onError: (error: any) =>
+      <div
+        ref={listContainerRef}
+        className="flex-1 overflow-y-auto overscroll-contain px-8 pb-8"
+        onScroll={(e) => {
+          const top = (e.currentTarget as HTMLDivElement).scrollTop;
+          setIsHeaderCollapsed(top > 8);
+        }}
+      >
+        <div className={`max-w-6xl mx-auto ${isHeaderCollapsed ? "pt-4" : "pt-6"}`}>
+          {/* Skills Grid */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+              <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
+            </div>
+          ) : filteredSkills && filteredSkills.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              {filteredSkills.map((skill) => (
+                <SkillCard
+                  key={skill.id}
+                  skill={skill}
+                  onInstall={async () => {
+                    try {
+                      setPreparingSkillId(skill.id);
+                      const report = await invoke<SecurityReport>("prepare_skill_installation", {
+                        skillId: skill.id,
+                        locale: i18n.language,
+                      });
+                      setPreparingSkillId(null);
+                      setPendingInstall({ skill, report });
+                    } catch (error: any) {
+                      setPreparingSkillId(null);
                       appToast.error(
-                        `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
-                      ),
+                        `${t("skills.toast.installFailed")}: ${error.message || error}`
+                      );
+                    }
+                  }}
+                  onUninstall={() => {
+                    uninstallMutation.mutate(skill.id, {
+                      onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
+                      onError: (error: any) =>
+                        appToast.error(
+                          `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                        ),
+                    });
+                  }}
+                  onUninstallPath={(path: string) => {
+                    uninstallPathMutation.mutate(
+                      { skillId: skill.id, path },
+                      {
+                        onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
+                        onError: (error: any) =>
+                          appToast.error(
+                            `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                          ),
+                      }
+                    );
+                  }}
+                  onDelete={() => {
+                    setDeletingSkillId(skill.id);
+                    deleteMutation.mutate(skill.id, {
+                      onSuccess: () => {
+                        setDeletingSkillId(null);
+                        appToast.success(t("skills.toast.deleted"));
+                      },
+                      onError: (error: any) => {
+                        setDeletingSkillId(null);
+                        appToast.error(
+                          `${t("skills.toast.deleteFailed")}: ${error.message || error}`
+                        );
+                      },
+                    });
+                  }}
+                  isInstalling={
+                    installMutation.isPending && installMutation.variables?.skillId === skill.id
                   }
-                );
-              }}
-              onDelete={() => {
-                setDeletingSkillId(skill.id);
-                deleteMutation.mutate(skill.id, {
-                  onSuccess: () => {
-                    setDeletingSkillId(null);
-                    appToast.success(t("skills.toast.deleted"));
-                  },
-                  onError: (error: any) => {
-                    setDeletingSkillId(null);
-                    appToast.error(`${t("skills.toast.deleteFailed")}: ${error.message || error}`);
-                  },
-                });
-              }}
-              isInstalling={
-                installMutation.isPending && installMutation.variables?.skillId === skill.id
-              }
-              isUninstalling={
-                uninstallMutation.isPending && uninstallMutation.variables === skill.id
-              }
-              isDeleting={deletingSkillId === skill.id}
-              isPreparing={preparingSkillId === skill.id}
-              isAnyOperationPending={
-                installMutation.isPending ||
-                uninstallMutation.isPending ||
-                preparingSkillId !== null ||
-                deletingSkillId !== null
-              }
-              t={t}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="apple-card p-12 text-center">
-          <div className="text-4xl mb-4">🔍</div>
-          {searchQuery ? (
-            <>
-              <p className="text-sm text-muted-foreground mb-4">
-                {t("skills.marketplace.noResults", { query: searchQuery })}
-              </p>
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedRepository("all");
-                  setHideInstalled(false);
-                }}
-                className="apple-button-secondary"
-              >
-                {t("skills.marketplace.clearFilters")}
-              </button>
-            </>
-          ) : repositorySkills.length === 0 ? (
-            <div className="max-w-md mx-auto">
-              <p className="text-sm text-muted-foreground mb-2">
-                {t("skills.marketplace.noSkillsYet")}
-              </p>
-              <p className="text-xs text-muted-foreground mb-6">
-                {t("skills.marketplace.scanningRepositories")}
-              </p>
-              <button
-                onClick={() => onNavigateToRepositories?.()}
-                disabled={!onNavigateToRepositories}
-                className="apple-button-primary disabled:opacity-50"
-              >
-                {t("skills.marketplace.goToRepositories")}
-              </button>
+                  isUninstalling={
+                    uninstallMutation.isPending && uninstallMutation.variables === skill.id
+                  }
+                  isDeleting={deletingSkillId === skill.id}
+                  isPreparing={preparingSkillId === skill.id}
+                  isAnyOperationPending={
+                    installMutation.isPending ||
+                    uninstallMutation.isPending ||
+                    preparingSkillId !== null ||
+                    deletingSkillId !== null
+                  }
+                  t={t}
+                />
+              ))}
             </div>
           ) : (
-            <>
-              <p className="text-sm text-muted-foreground mb-4">
-                {t("skills.marketplace.noSkillsInFilter")}
-              </p>
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedRepository("all");
-                  setHideInstalled(false);
-                }}
-                className="apple-button-secondary"
-              >
-                {t("skills.marketplace.clearFilters")}
-              </button>
-            </>
+            <div className="apple-card p-12 text-center">
+              <div className="text-4xl mb-4">🔍</div>
+              {searchQuery ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {t("skills.marketplace.noResults", { query: searchQuery })}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedRepository("all");
+                      setHideInstalled(false);
+                    }}
+                    className="apple-button-secondary"
+                  >
+                    {t("skills.marketplace.clearFilters")}
+                  </button>
+                </>
+              ) : repositorySkills.length === 0 ? (
+                <div className="max-w-md mx-auto">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {t("skills.marketplace.noSkillsYet")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-6">
+                    {t("skills.marketplace.scanningRepositories")}
+                  </p>
+                  <button
+                    onClick={() => onNavigateToRepositories?.()}
+                    disabled={!onNavigateToRepositories}
+                    className="apple-button-primary disabled:opacity-50"
+                  >
+                    {t("skills.marketplace.goToRepositories")}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {t("skills.marketplace.noSkillsInFilter")}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedRepository("all");
+                      setHideInstalled(false);
+                    }}
+                    className="apple-button-secondary"
+                  >
+                    {t("skills.marketplace.clearFilters")}
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* Install Confirmation Dialog */}
       <InstallConfirmDialog

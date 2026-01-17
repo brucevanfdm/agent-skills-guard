@@ -30,9 +30,9 @@ function AppContent() {
     const updateFeaturedRepos = async () => {
       try {
         const data = await api.refreshFeaturedRepositories();
-        queryClient.setQueryData(['featured-repositories'], data);
+        queryClient.setQueryData(["featured-repositories"], data);
       } catch (error) {
-        console.debug('Failed to auto-update featured repositories:', error);
+        console.debug("Failed to auto-update featured repositories:", error);
       }
     };
     updateFeaturedRepos();
@@ -44,11 +44,11 @@ function AppContent() {
       try {
         const scannedRepos = await api.autoScanUnscannedRepositories();
         if (scannedRepos.length > 0) {
-          queryClient.invalidateQueries({ queryKey: ['skills'] });
-          queryClient.invalidateQueries({ queryKey: ['repositories'] });
+          queryClient.invalidateQueries({ queryKey: ["skills"] });
+          queryClient.invalidateQueries({ queryKey: ["repositories"] });
         }
       } catch (error) {
-        console.debug('自动扫描仓库失败:', error);
+        console.debug("自动扫描仓库失败:", error);
       }
     };
     const timer = setTimeout(autoScanRepositories, 1000);
@@ -86,16 +86,44 @@ function AppContent() {
         <Sidebar currentTab={currentTab} onTabChange={setCurrentTab} />
 
         {/* Content Area - 更大的内边距，更宽敞的感觉 */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-8 max-w-6xl" style={{ animation: "fadeIn 0.4s ease-out" }}>
-            {currentTab === "overview" && <OverviewPage />}
-            {currentTab === "installed" && <InstalledSkillsPage />}
-            {currentTab === "marketplace" && (
+        <main className="flex-1 overflow-hidden">
+          {currentTab === "overview" && (
+            <div className="h-full overflow-y-auto">
+              <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
+                <div className="max-w-6xl mx-auto">
+                  <OverviewPage />
+                </div>
+              </div>
+            </div>
+          )}
+          {currentTab === "installed" && (
+            <div className="h-full overflow-hidden">
+              <InstalledSkillsPage />
+            </div>
+          )}
+          {currentTab === "marketplace" && (
+            <div className="h-full overflow-hidden">
               <MarketplacePage onNavigateToRepositories={() => setCurrentTab("repositories")} />
-            )}
-            {currentTab === "repositories" && <RepositoriesPage />}
-            {currentTab === "settings" && <SettingsPage />}
-          </div>
+            </div>
+          )}
+          {currentTab === "repositories" && (
+            <div className="h-full overflow-y-auto">
+              <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
+                <div className="max-w-6xl mx-auto">
+                  <RepositoriesPage />
+                </div>
+              </div>
+            </div>
+          )}
+          {currentTab === "settings" && (
+            <div className="h-full overflow-y-auto">
+              <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
+                <div className="max-w-6xl mx-auto">
+                  <SettingsPage />
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
@@ -110,7 +138,7 @@ function App() {
         position="bottom-right"
         toastOptions={{
           duration: 3000,
-          style: { fontFamily: 'inherit', fontSize: '14px' },
+          style: { fontFamily: "inherit", fontSize: "14px" },
           classNames: {
             toast: "!rounded-lg !border !shadow-lg",
             default: "!bg-card !border-border !text-foreground",
