@@ -1,25 +1,30 @@
 // 初始化 i18n，设置 fallback 语言为中文
 rust_i18n::i18n!("locales", fallback = "zh");
 
+pub mod commands;
+mod i18n;
 pub mod models;
 pub mod security;
 pub mod services;
-pub mod commands;
-mod i18n;
 
+use commands::security::{get_scan_results, scan_all_installed_skills, scan_skill_archive};
 use commands::AppState;
-use commands::security::{scan_all_installed_skills, get_scan_results, scan_skill_archive};
 use services::{Database, SkillManager};
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::image::Image;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
-use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder};
+use tauri::Manager;
 use tokio::sync::Mutex;
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const MENU_SHOW: &str = "show";
 const MENU_HIDE: &str = "hide";
 const MENU_QUIT: &str = "quit";
+
+#[cfg(target_os = "macos")]
+const MACOS_TRAY_TEMPLATE_ICON: Image<'static> =
+    tauri::include_image!("icons/tray-icon-template.png");
 
 #[cfg(target_os = "macos")]
 fn maybe_suppress_macos_os_activity_logs() {
@@ -146,17 +151,17 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // 获取应用数据目录
-            let app_dir = app.path().app_data_dir()
+            let app_dir = app
+                .path()
+                .app_data_dir()
                 .expect("Failed to get app data directory");
 
-            std::fs::create_dir_all(&app_dir)
-                .expect("Failed to create app data directory");
+            std::fs::create_dir_all(&app_dir).expect("Failed to create app data directory");
 
             let db_path = app_dir.join("agent-skills.db");
 
             // 初始化数据库
-            let db = Database::new(db_path)
-                .expect("Failed to initialize database");
+            let db = Database::new(db_path).expect("Failed to initialize database");
 
             let db = Arc::new(db);
 
@@ -175,15 +180,20 @@ pub fn run() {
             });
 
             // 初始化系统托盘
-            let icon = app.default_window_icon()
-                .ok_or("无法获取默认窗口图标")?
-                .clone();
+            let icon = if cfg!(target_os = "macos") {
+                MACOS_TRAY_TEMPLATE_ICON.clone()
+            } else {
+                app.default_window_icon()
+                    .ok_or("无法获取默认窗口图标")?
+                    .clone()
+            };
 
             let app_handle = app.handle();
             let menu = create_tray_menu(&app_handle)?;
 
             let tray = TrayIconBuilder::new()
                 .icon(icon)
+                .icon_as_template(cfg!(target_os = "macos"))
                 .tooltip("Agent Skills Guard")
                 .menu(&menu)
                 .on_tray_icon_event(handle_tray_event)

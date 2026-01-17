@@ -1,0 +1,35 @@
+<svg
+  width="1024"
+  height="1024"
+  viewBox="0 0 1024 1024"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <g
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="64"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="
+        M256 192
+        L768 192
+        L768 520
+        C768 700 512 824 512 824
+        C512 824 256 700 256 520
+        Z"
+    />
+
+    <polygon
+      points="
+        512 360
+        624 424
+        624 552
+        512 616
+        400 552
+        400 424
+      "
+    />
+  </g>
+</svg>

@@ -10,6 +10,8 @@ dist-ssr/
 # Tauri
 src-tauri/target/
 src-tauri/Cargo.lock
+src-tauri/icons/android/
+src-tauri/icons/ios/
 
 # IDEs
 .vscode/
