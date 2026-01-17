@@ -17,6 +17,7 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
 import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
@@ -595,7 +596,11 @@ function SkillCard({
                   <button
                     onClick={async () => {
                       try {
-                        await openPath(path);
+                        try {
+                          await invoke("open_skill_directory", { localPath: path });
+                        } catch {
+                          await openPath(path);
+                        }
                         appToast.success(t("skills.folder.opened"), { duration: 5000 });
                       } catch (error: any) {
                         appToast.error(

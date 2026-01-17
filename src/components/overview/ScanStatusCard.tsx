@@ -20,8 +20,8 @@ export function ScanStatusCard({
 }: ScanStatusCardProps) {
   const { t, i18n } = useTranslation();
 
-  const progress = totalCount > 0 ? (scannedCount / totalCount) * 100 : 0;
-  const isComplete = scannedCount === totalCount && totalCount > 0;
+  const progress = totalCount > 0 ? Math.min(100, (scannedCount / totalCount) * 100) : 0;
+  const isComplete = totalCount > 0 && scannedCount >= totalCount;
 
   const formatRelativeTime = (date: Date) => {
     const locale = i18n.language === "zh" ? zhCN : enUS;
@@ -30,15 +30,17 @@ export function ScanStatusCard({
 
   const getStatusInfo = () => {
     if (isScanning) return { color: "text-blue-500", bg: "bg-blue-500", label: "scanning" };
-    if (isComplete && issueCount === 0) return { color: "text-green-600", bg: "bg-green-500", label: "safe" };
-    if (isComplete && issueCount > 0) return { color: "text-orange-500", bg: "bg-orange-500", label: "warning" };
+    if (isComplete && issueCount === 0)
+      return { color: "text-green-600", bg: "bg-green-500", label: "safe" };
+    if (isComplete && issueCount > 0)
+      return { color: "text-orange-500", bg: "bg-orange-500", label: "warning" };
     return { color: "text-blue-500", bg: "bg-blue-500", label: "default" };
   };
 
   const status = getStatusInfo();
 
   return (
-    <div className="apple-card p-6">
+    <div className="apple-card p-6 h-full">
       <div className="space-y-5">
         {/* 顶部信息区 */}
         <div className="flex items-center justify-between">
@@ -56,12 +58,11 @@ export function ScanStatusCard({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-semibold text-foreground">
-              {scannedCount}<span className="text-muted-foreground text-lg">/{totalCount}</span>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">
+              {scannedCount}
+              <span className="text-muted-foreground"> / {totalCount}</span>
             </div>
-            <div className="text-xs text-muted-foreground">
-              {t("overview.scanStatus.skills")}
-            </div>
+            <div className="text-xs text-muted-foreground">{t("overview.scanStatus.skills")}</div>
           </div>
         </div>
 
@@ -85,8 +86,12 @@ export function ScanStatusCard({
               </>
             ) : isComplete ? (
               <>
-                <CheckCircle className={`w-4 h-4 ${issueCount === 0 ? "text-green-600" : "text-orange-500"}`} />
-                <span className={`text-sm font-medium ${issueCount === 0 ? "text-green-600" : "text-orange-500"}`}>
+                <CheckCircle
+                  className={`w-4 h-4 ${issueCount === 0 ? "text-green-600" : "text-orange-500"}`}
+                />
+                <span
+                  className={`text-sm font-medium ${issueCount === 0 ? "text-green-600" : "text-orange-500"}`}
+                >
                   {issueCount === 0
                     ? t("overview.scanStatus.noIssues")
                     : t("overview.scanStatus.completed", { count: issueCount })}

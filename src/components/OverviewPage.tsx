@@ -36,6 +36,22 @@ export function OverviewPage() {
     },
   });
 
+  const uniqueInstalledSkills = useMemo(() => {
+    const byId = new Map<string, Skill>();
+    installedSkills.forEach((skill) => {
+      byId.set(skill.id, skill);
+    });
+    return Array.from(byId.values());
+  }, [installedSkills]);
+
+  const uniqueScanResults = useMemo(() => {
+    const byId = new Map<string, SkillScanResult>();
+    scanResults.forEach((result) => {
+      byId.set(result.skill_id, result);
+    });
+    return Array.from(byId.values());
+  }, [scanResults]);
+
   const scanMutation = useMutation({
     mutationFn: async () => {
       setIsScanning(true);
@@ -81,34 +97,34 @@ export function OverviewPage() {
 
   const statistics = useMemo(
     () => ({
-      installedCount: installedSkills.length,
+      installedCount: uniqueInstalledSkills.filter((s) => s.installed).length,
       repositoryCount: repositories.length,
-      scannedCount: scanResults.length,
+      scannedCount: uniqueScanResults.length,
     }),
-    [installedSkills, repositories, scanResults]
+    [repositories.length, uniqueInstalledSkills, uniqueScanResults]
   );
 
   const issuesByLevel = useMemo(() => {
     const result: Record<string, number> = { Severe: 0, MidHigh: 0, Safe: 0 };
-    scanResults.forEach((r) => {
+    uniqueScanResults.forEach((r) => {
       if (r.level === "Critical") result.Severe++;
       else if (r.level === "High" || r.level === "Medium") result.MidHigh++;
       else if (r.level === "Safe" || r.level === "Low") result.Safe++;
     });
     return result;
-  }, [scanResults]);
+  }, [uniqueScanResults]);
 
   const lastScanTime = useMemo(() => {
-    if (!scanResults.length) return null;
-    return new Date(Math.max(...scanResults.map((r) => new Date(r.scanned_at).getTime())));
-  }, [scanResults]);
+    if (!uniqueScanResults.length) return null;
+    return new Date(Math.max(...uniqueScanResults.map((r) => new Date(r.scanned_at).getTime())));
+  }, [uniqueScanResults]);
 
   const issueCount = useMemo(() => {
-    return scanResults.filter((r) => r.level !== "Safe" && r.level !== "Low").length;
-  }, [scanResults]);
+    return uniqueScanResults.filter((r) => r.level !== "Safe" && r.level !== "Low").length;
+  }, [uniqueScanResults]);
 
   const filteredIssues = useMemo(() => {
-    return scanResults
+    return uniqueScanResults
       .filter((result) => {
         if (!filterLevel) return result.level !== "Safe" && result.level !== "Low";
         if (filterLevel === "Severe") return result.level === "Critical";
@@ -123,11 +139,11 @@ export function OverviewPage() {
           (levelOrder[b.level as keyof typeof levelOrder] || 999)
         );
       });
-  }, [scanResults, filterLevel]);
+  }, [uniqueScanResults, filterLevel]);
 
   const handleOpenDirectory = async (skillId: string) => {
     try {
-      const skill = installedSkills.find((s) => s.id === skillId);
+      const skill = uniqueInstalledSkills.find((s) => s.id === skillId);
       if (skill?.local_path) {
         await invoke("open_skill_directory", { localPath: skill.local_path });
       } else {
@@ -176,7 +192,7 @@ export function OverviewPage() {
 
       {/* 扫描状态 + 问题概览 */}
       <div className="grid gap-5 lg:grid-cols-12">
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 h-full">
           <ScanStatusCard
             lastScanTime={lastScanTime}
             scannedCount={statistics.scannedCount}
@@ -185,7 +201,7 @@ export function OverviewPage() {
             isScanning={isScanning}
           />
         </div>
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 h-full">
           <IssuesSummaryCard
             issuesByLevel={issuesByLevel}
             filterLevel={filterLevel}
@@ -195,14 +211,19 @@ export function OverviewPage() {
       </div>
 
       {/* 问题详情列表 */}
-      <GroupCard title={t("overview.section.issueDetails")}>
+      <GroupCard>
         <GroupCardItem noBorder className="p-0">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
-            <span className="text-sm text-muted-foreground font-medium">
-              {filteredIssues.length > 0
-                ? t("overview.issues.showing", { count: filteredIssues.length })
-                : t("overview.issues.noIssues")}
-            </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-sm font-semibold text-foreground">
+                {t("overview.section.issueDetails")}
+              </span>
+              <span className="text-sm text-muted-foreground font-medium truncate">
+                {filteredIssues.length > 0
+                  ? t("overview.issues.showing", { count: filteredIssues.length })
+                  : t("overview.issues.noIssues")}
+              </span>
+            </div>
             {filterLevel && (
               <button
                 onClick={() => setFilterLevel(null)}

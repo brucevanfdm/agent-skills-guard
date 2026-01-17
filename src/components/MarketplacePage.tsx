@@ -566,7 +566,11 @@ function SkillCard({
                   <button
                     onClick={async () => {
                       try {
-                        await openPath(path);
+                        try {
+                          await invoke("open_skill_directory", { localPath: path });
+                        } catch {
+                          await openPath(path);
+                        }
                         appToast.success(t("skills.folder.opened"), { duration: 5000 });
                       } catch (error: any) {
                         appToast.error(
