@@ -57,44 +57,12 @@ categories:
         tags: ["community", "methodology", "experts", "framework"]
         featured: true
 
-      - url: "https://github.com/ZhangHanDong/makepad-skills"
-        name: "ZhangHanDong"
-        description:
-          en: "Claude Code skills for building cross-platform UI applications with Makepad framework in Rust"
-          zh: "使用 Rust Makepad 框架构建跨平台 UI 应用的 Claude Code 技能集合"
-        tags: ["community", "rust", "makepad", "ui", "cross-platform"]
-        featured: true
-
       - url: "https://github.com/huangserva/skill-prompt-generator"
         name: "huangserva"
         description:
           en: "AI portrait prompt generator with 1140+ elements library and 12 specialized domain skills"
           zh: "AI 人像 Prompt 生成系统，包含 1140+ 元素库和 12 个专业领域技能"
         tags: ["community", "prompt", "ai-art", "portrait", "generator"]
-        featured: true
-
-      - url: "https://github.com/lxfater/nano-image-generator-skill"
-        name: "lxfater"
-        description:
-          en: "Image generation skill using Gemini API with reference image support and multiple aspect ratios"
-          zh: "基于 Gemini API 的图像生成技能，支持参考图像和多种宽高比"
-        tags: ["community", "image-generation", "gemini", "ai-art"]
-        featured: true
-
-      - url: "https://github.com/yangliu2060/smith--skills"
-        name: "yangliu2060"
-        description:
-          en: "From Visual Workflows to AI-Native Skills: Empower your Claude Code with 14+ elite automation templates ported directly from n8n. Instantly equip your AI agent with expert-level capabilities in Marketing, SEO, and Market Research."
-          zh: "从可视化工作流到 AI 原生技能：一键将 14 款精选 n8n 自动化模板导入 Claude Code，让你的 AI 助手瞬间掌握营销、SEO 和市场调研的专家级实战能力。"
-        tags: ["community", "cli", "developer-tools"]
-        featured: true
-
-      - url: "https://github.com/kepano/obsidian-skills"
-        name: "kepano"
-        description:
-          en: "Three skills for working with Obsidian: JSON Canvas (create/edit .canvas files), Obsidian Bases (create/edit .base files with views, filters, formulas), and Obsidian Flavored Markdown (create/edit with Obsidian-specific syntax)"
-          zh: "三款 Obsidian 相关技能：JSON Canvas（创建/编辑 .canvas 文件）、Obsidian Bases（创建/编辑包含视图、筛选器、公式的 .base 文件）、Obsidian Flavored Markdown（创建/编辑支持 Obsidian 特定语法的 Markdown）"
-        tags: ["community", "obsidian", "markdown", "productivity", "note-taking"]
         featured: true
 
       - url: "https://github.com/JimLiu/baoyu-skills"
@@ -137,10 +105,42 @@ categories:
         tags: ["community", "publishing", "markdown", "x"]
         featured: true
 
-      - url: "https://github.com/teng-lin/notebooklm-py"
-        name: "teng-lin"
+      - url: "https://github.com/axtonliu/axton-obsidian-visual-skills"
+        name: "axtonliu"
         description:
-          en: "The missing API for Google NotebookLM. Automate research workflows, generate podcasts from your documents, and integrate NotebookLM into AI agents—all from Python or the command line."
-          zh: "Google NotebookLM 的缺失 API：自动化研究流程、从文档生成播客，并可通过 Python 或命令行集成到 AI 代理。"
-        tags: ["community", "notebooklm", "python", "research"]
+          en: "Visual Skills Pack for Obsidian: generate Canvas, Excalidraw, and Mermaid diagrams from text with Claude Code. Includes three skills for creating hand-drawn diagrams, professional visualizations, and interactive mind maps."
+          zh: "Obsidian 可视化技能包：使用 Claude Code 从文本生成 Canvas、Excalidraw 和 Mermaid 图表。包含三个技能，用于创建手绘风格图表、专业可视化和交互式思维导图。"
+        tags: ["community", "obsidian", "visualization", "diagram", "excalidraw", "mermaid", "canvas"]
+        featured: true
+
+      - url: "https://github.com/kepano/obsidian-skills"
+        name: "kepano"
+        description:
+          en: "Three skills for working with Obsidian: JSON Canvas (create/edit .canvas files), Obsidian Bases (create/edit .base files with views, filters, formulas), and Obsidian Flavored Markdown (create/edit with Obsidian-specific syntax)"
+          zh: "三款 Obsidian 相关技能：JSON Canvas（创建/编辑 .canvas 文件）、Obsidian Bases（创建/编辑包含视图、筛选器、公式的 .base 文件）、Obsidian Flavored Markdown（创建/编辑支持 Obsidian 特定语法的 Markdown）"
+        tags: ["community", "obsidian", "markdown", "productivity", "note-taking"]
+        featured: true
+
+      - url: "https://github.com/yangliu2060/smith--skills"
+        name: "yangliu2060"
+        description:
+          en: "From Visual Workflows to AI-Native Skills: Empower your Claude Code with 14+ elite automation templates ported directly from n8n. Instantly equip your AI agent with expert-level capabilities in Marketing, SEO, and Market Research."
+          zh: "从可视化工作流到 AI 原生技能：一键将 14 款精选 n8n 自动化模板导入 Claude Code，让你的 AI 助手瞬间掌握营销、SEO 和市场调研的专家级实战能力。"
+        tags: ["community", "cli", "developer-tools"]
+        featured: true
+
+      - url: "https://github.com/ZhangHanDong/makepad-skills"
+        name: "ZhangHanDong"
+        description:
+          en: "Claude Code skills for building cross-platform UI applications with Makepad framework in Rust"
+          zh: "使用 Rust Makepad 框架构建跨平台 UI 应用的 Claude Code 技能集合"
+        tags: ["community", "rust", "makepad", "ui", "cross-platform"]
+        featured: true
+
+      - url: "https://github.com/lxfater/nano-image-generator-skill"
+        name: "lxfater"
+        description:
+          en: "Image generation skill using Gemini API with reference image support and multiple aspect ratios"
+          zh: "基于 Gemini API 的图像生成技能，支持参考图像和多种宽高比"
+        tags: ["community", "image-generation", "gemini", "ai-art"]
         featured: true

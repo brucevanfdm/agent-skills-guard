@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useAddRepository, useScanRepository } from "../hooks/useRepositories";
-import type { Skill } from "../types";
 import { api } from "../lib/api";
 import { FeaturedRepositories } from "./FeaturedRepositories";
 import { appToast } from "../lib/toast";
@@ -13,7 +12,15 @@ export function FeaturedRepositoriesPage() {
   const queryClient = useQueryClient();
   const addMutation = useAddRepository();
   const scanMutation = useScanRepository();
-  const [scanningRepoId, setScanningRepoId] = useState<string | null>(null);
+  const [addingUrl, setAddingUrl] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const refreshMutation = useMutation({
     mutationFn: api.refreshFeaturedRepositories,
@@ -60,32 +67,33 @@ export function FeaturedRepositoriesPage() {
         layout="expanded"
         showHeader={false}
         categoryIds={["official", "community"]}
-        onAdd={(url, name) => {
-          addMutation.mutate(
-            { url, name },
-            {
-              onSuccess: (repoId: string) => {
-                appToast.success(t("repositories.toast.added"));
+        onAdd={async (url, name) => {
+          if (isAdding) return;
 
-                setScanningRepoId(repoId);
-                scanMutation.mutate(repoId, {
-                  onSuccess: (skills: Skill[]) => {
-                    setScanningRepoId(null);
-                    appToast.success(t("repositories.toast.foundSkills", { count: skills.length }));
-                  },
-                  onError: (error: any) => {
-                    setScanningRepoId(null);
-                    appToast.error(`${t("repositories.toast.scanError")}${error.message || error}`);
-                  },
-                });
-              },
-              onError: (error: any) => {
-                appToast.error(`${t("repositories.toast.error")}${error.message || error}`);
-              },
+          setIsAdding(true);
+          setAddingUrl(url);
+
+          try {
+            const repoId = await addMutation.mutateAsync({ url, name });
+            appToast.success(t("repositories.toast.added"));
+
+            try {
+              const skills = await scanMutation.mutateAsync(repoId);
+              appToast.success(t("repositories.toast.foundSkills", { count: skills.length }));
+            } catch (error: any) {
+              appToast.error(`${t("repositories.toast.scanError")}${error.message || error}`);
             }
-          );
+          } catch (error: any) {
+            appToast.error(`${t("repositories.toast.error")}${error.message || error}`);
+          } finally {
+            if (isMountedRef.current) {
+              setIsAdding(false);
+              setAddingUrl(null);
+            }
+          }
         }}
-        isAdding={addMutation.isPending || scanMutation.isPending || scanningRepoId !== null}
+        isAdding={isAdding}
+        addingUrl={addingUrl}
       />
     </div>
   );

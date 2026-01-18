@@ -17,6 +17,7 @@ import { appToast } from "@/lib/toast";
 interface FeaturedRepositoriesProps {
   onAdd: (url: string, name: string) => void;
   isAdding: boolean;
+  addingUrl?: string | null;
   variant?: "page" | "sidebar";
   layout?: "collapsible" | "expanded";
   showHeader?: boolean;
@@ -27,6 +28,7 @@ interface FeaturedRepositoriesProps {
 export function FeaturedRepositories({
   onAdd,
   isAdding,
+  addingUrl,
   variant = "page",
   layout = "collapsible",
   showHeader = true,
@@ -117,6 +119,7 @@ export function FeaturedRepositories({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {category.repositories.map((repo) => {
                 const added = isAdded(repo.url);
+                const isAddingThisRepo = addingUrl === repo.url;
                 return (
                   <div
                     key={repo.url}
@@ -156,7 +159,7 @@ export function FeaturedRepositories({
                           <Check className="w-3.5 h-3.5" />
                           {t("repositories.featured.added")}
                         </>
-                      ) : isAdding ? (
+                      ) : isAddingThisRepo ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           {t("repositories.adding")}
@@ -249,6 +252,7 @@ export function FeaturedRepositories({
                   >
                     {category.repositories.map((repo) => {
                       const added = isAdded(repo.url);
+                      const isAddingThisRepo = addingUrl === repo.url;
 
                       return (
                         <div
@@ -293,7 +297,7 @@ export function FeaturedRepositories({
                                 <Check className="w-3.5 h-3.5" />
                                 {t("repositories.featured.added")}
                               </>
-                            ) : isAdding ? (
+                            ) : isAddingThisRepo ? (
                               <>
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 {t("repositories.adding")}
