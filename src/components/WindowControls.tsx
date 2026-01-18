@@ -23,27 +23,36 @@ export function WindowControls() {
   };
 
   const renderMacButtons = () => (
-    <div className="flex items-center gap-2 group">
+    <div className="flex items-center gap-2">
       <button
         onClick={handleClose}
-        className="w-3 h-3 rounded-full bg-[#FF5F57] hover:brightness-110 transition-all flex items-center justify-center"
+        className="group w-3.5 h-3.5 rounded-full bg-[#FF5F57] hover:brightness-110 transition-all flex items-center justify-center"
         aria-label="Close window"
       >
-        <X className="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <X
+          className="w-2.5 h-2.5 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity"
+          strokeWidth={2.5}
+        />
       </button>
       <button
         onClick={handleMinimize}
-        className="w-3 h-3 rounded-full bg-[#FEBC2E] hover:brightness-110 transition-all flex items-center justify-center"
+        className="group w-3.5 h-3.5 rounded-full bg-[#FEBC2E] hover:brightness-110 transition-all flex items-center justify-center"
         aria-label="Minimize window"
       >
-        <Minus className="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Minus
+          className="w-2.5 h-2.5 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity"
+          strokeWidth={2.5}
+        />
       </button>
       <button
         onClick={handleMaximize}
-        className="w-3 h-3 rounded-full bg-[#28C840] hover:brightness-110 transition-all flex items-center justify-center"
+        className="group w-3.5 h-3.5 rounded-full bg-[#28C840] hover:brightness-110 transition-all flex items-center justify-center"
         aria-label="Maximize window"
       >
-        <Plus className="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Plus
+          className="w-2.5 h-2.5 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity"
+          strokeWidth={2.5}
+        />
       </button>
     </div>
   );
