@@ -234,7 +234,7 @@ export function OverviewPage() {
               </button>
             )}
           </div>
-          <div className="max-h-[360px] lg:max-h-[420px] overflow-y-auto">
+          <div className="py-1">
             {filteredIssues.length === 0 ? (
               <div className="text-center py-10">
                 <div className="flex flex-col items-center gap-3">
