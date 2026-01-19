@@ -32,6 +32,42 @@ export interface Skill {
   installed_commit_sha?: string;  // 安装时的 commit SHA，用于版本追踪
 }
 
+export interface Plugin {
+  id: string;
+  name: string;
+  description?: string;
+  version?: string;
+  author?: string;
+  repository_url: string;
+  repository_owner?: string;
+  marketplace_name: string;
+  source: string;
+  installed: boolean;
+  installed_at?: string;
+  security_score?: number;
+  security_issues?: string[];
+  security_level?: string;
+  scanned_at?: string;
+  staging_path?: string;
+  install_log?: string;
+  install_status?: string;
+}
+
+export interface PluginInstallStatus {
+  plugin_id: string;
+  plugin_name: string;
+  status: string;
+  output: string;
+}
+
+export interface PluginInstallResult {
+  marketplace_name: string;
+  marketplace_repo: string;
+  marketplace_status: string;
+  raw_log: string;
+  plugin_statuses: PluginInstallStatus[];
+}
+
 export enum SecurityLevel {
   Safe = "Safe",
   Low = "Low",

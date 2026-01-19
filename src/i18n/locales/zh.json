@@ -164,6 +164,56 @@
       "updateFailed": "[错误] 更新失败"
     }
   },
+  "plugins": {
+    "title": "插件市场",
+    "loading": "加载插件中...",
+    "search": "搜索插件...",
+    "hideInstalled": "隐藏已安装",
+    "clearFilters": "清除筛选",
+    "noPlugins": "暂无插件",
+    "installed": "已安装",
+    "unsupported": "需要手动安装",
+    "install": "安装",
+    "installing": "安装中",
+    "badge": "插件",
+    "scanning": "扫描中",
+    "noDescription": "暂无描述",
+    "marketplace": "Marketplace",
+    "repo": "仓库:",
+    "version": "版本",
+    "installDialog": {
+      "scanResult": "安全扫描结果",
+      "preparingInstall": "准备安装",
+      "securityScore": "安全评分",
+      "issuesDetected": "发现问题",
+      "critical": "严重",
+      "highRisk": "高风险",
+      "mediumRisk": "中风险",
+      "cancel": "取消",
+      "confirmInstall": "确认安装",
+      "installAnyway": "仍然安装",
+      "warningTitle": "强烈不建议安装该插件！",
+      "warningMessage": "检测到严重安全风险，可能危害系统或数据。"
+    },
+    "status": {
+      "label": "状态：",
+      "installed": "已安装",
+      "alreadyInstalled": "已安装",
+      "failed": "失败",
+      "unsupported": "需要手动安装",
+      "blocked": "已阻止",
+      "unknown": "未知"
+    },
+    "viewLog": "查看日志",
+    "logTitle": "安装日志：{{name}}",
+    "noLog": "暂无日志",
+    "close": "关闭",
+    "toast": {
+      "installed": "插件安装成功",
+      "installFailed": "插件安装失败",
+      "scanFailed": "扫描失败"
+    }
+  },
   "repositories": {
     "title": "仓库配置",
     "addRepo": "添加仓库",

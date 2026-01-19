@@ -164,6 +164,56 @@
       "updateFailed": "[ERROR] UPDATE_FAILED"
     }
   },
+  "plugins": {
+    "title": "PLUGIN_MARKETPLACE",
+    "loading": "LOADING_PLUGINS",
+    "search": "SEARCH_PLUGINS...",
+    "hideInstalled": "HIDE_INSTALLED",
+    "clearFilters": "CLEAR_FILTERS",
+    "noPlugins": "NO_PLUGINS_FOUND",
+    "installed": "INSTALLED",
+    "unsupported": "MANUAL_INSTALL_REQUIRED",
+    "install": "INSTALL",
+    "installing": "INSTALLING",
+    "badge": "PLUGIN",
+    "scanning": "SCANNING",
+    "noDescription": "[NO_DESCRIPTION_PROVIDED]",
+    "marketplace": "MARKETPLACE",
+    "repo": "REPO:",
+    "version": "VERSION",
+    "installDialog": {
+      "scanResult": "Security Scan Result",
+      "preparingInstall": "Preparing to install",
+      "securityScore": "Security Score",
+      "issuesDetected": "Issues Detected",
+      "critical": "Critical",
+      "highRisk": "High Risk",
+      "mediumRisk": "Medium Risk",
+      "cancel": "Cancel",
+      "confirmInstall": "Confirm Install",
+      "installAnyway": "Install Anyway",
+      "warningTitle": "Strongly Recommended NOT to Install This Plugin!",
+      "warningMessage": "Severe security threats detected that may harm your system or data."
+    },
+    "status": {
+      "label": "STATUS:",
+      "installed": "INSTALLED",
+      "alreadyInstalled": "ALREADY_INSTALLED",
+      "failed": "FAILED",
+      "unsupported": "MANUAL_INSTALL_REQUIRED",
+      "blocked": "BLOCKED",
+      "unknown": "UNKNOWN"
+    },
+    "viewLog": "VIEW_LOG",
+    "logTitle": "Install Log: {{name}}",
+    "noLog": "NO_LOG_AVAILABLE",
+    "close": "Close",
+    "toast": {
+      "installed": "[SUCCESS] PLUGIN_INSTALLED",
+      "installFailed": "[ERROR] INSTALL_FAILED",
+      "scanFailed": "[ERROR] SCAN_FAILED"
+    }
+  },
   "repositories": {
     "title": "Repository_Config",
     "addRepo": "ADD_REPO",

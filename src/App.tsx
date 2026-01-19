@@ -66,6 +66,7 @@ function AppContent() {
         const scannedRepos = await api.autoScanUnscannedRepositories();
         if (scannedRepos.length > 0) {
           queryClient.invalidateQueries({ queryKey: ["skills"] });
+          queryClient.invalidateQueries({ queryKey: ["plugins"] });
           queryClient.invalidateQueries({ queryKey: ["repositories"] });
         }
       } catch (error) {

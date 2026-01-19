@@ -1,4 +1,4 @@
-use crate::models::{Repository, Skill};
+use crate::models::{Plugin, Repository, Skill};
 use anyhow::{Result, Context};
 use rusqlite::{Connection, params, OptionalExtension};
 use std::path::PathBuf;
@@ -66,6 +66,30 @@ impl Database {
         )?;
 
         conn.execute(
+            "CREATE TABLE IF NOT EXISTS plugins (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                version TEXT,
+                author TEXT,
+                repository_url TEXT NOT NULL,
+                repository_owner TEXT,
+                marketplace_name TEXT NOT NULL,
+                source TEXT NOT NULL,
+                installed INTEGER NOT NULL DEFAULT 0,
+                installed_at TEXT,
+                security_score INTEGER,
+                security_issues TEXT,
+                security_level TEXT,
+                scanned_at TEXT,
+                staging_path TEXT,
+                install_log TEXT,
+                install_status TEXT
+            )",
+            [],
+        )?;
+
+        conn.execute(
             "CREATE TABLE IF NOT EXISTS installations (
                 skill_id TEXT PRIMARY KEY,
                 installed_at TEXT NOT NULL,
@@ -89,6 +113,44 @@ impl Database {
 
         // 初始化默认仓库（忽略返回值，因为在这个阶段我们只是初始化数据库）
         let _ = self.initialize_default_repositories()?;
+
+        Ok(())
+    }
+
+    /// 保存 plugin
+    pub fn save_plugin(&self, plugin: &Plugin) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        let security_issues_json = plugin.security_issues.as_ref()
+            .map(|issues| serde_json::to_string(issues).unwrap());
+
+        conn.execute(
+            "INSERT OR REPLACE INTO plugins
+            (id, name, description, version, author, repository_url, repository_owner, marketplace_name, source,
+             installed, installed_at, security_score, security_issues, security_level, scanned_at, staging_path,
+             install_log, install_status)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+            params![
+                plugin.id,
+                plugin.name,
+                plugin.description,
+                plugin.version,
+                plugin.author,
+                plugin.repository_url,
+                plugin.repository_owner,
+                plugin.marketplace_name,
+                plugin.source,
+                plugin.installed as i32,
+                plugin.installed_at.as_ref().map(|d| d.to_rfc3339()),
+                plugin.security_score,
+                security_issues_json,
+                plugin.security_level,
+                plugin.scanned_at.as_ref().map(|d| d.to_rfc3339()),
+                plugin.staging_path,
+                plugin.install_log,
+                plugin.install_status,
+            ],
+        )?;
 
         Ok(())
     }
@@ -272,6 +334,49 @@ impl Database {
         Ok(skills)
     }
 
+    /// 获取所有 plugins
+    pub fn get_plugins(&self) -> Result<Vec<Plugin>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, description, version, author, repository_url, repository_owner, marketplace_name, source,
+                    installed, installed_at, security_score, security_issues, security_level, scanned_at, staging_path,
+                    install_log, install_status
+             FROM plugins"
+        )?;
+
+        let plugins = stmt.query_map([], |row| {
+            let security_issues: Option<String> = row.get(12)?;
+            let security_issues = security_issues
+                .and_then(|s| serde_json::from_str(&s).ok());
+
+            Ok(Plugin {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                version: row.get(3)?,
+                author: row.get(4)?,
+                repository_url: row.get(5)?,
+                repository_owner: row.get(6)?,
+                marketplace_name: row.get(7)?,
+                source: row.get(8)?,
+                installed: row.get::<_, i32>(9)? != 0,
+                installed_at: row.get::<_, Option<String>>(10)?
+                    .and_then(|s| s.parse().ok()),
+                security_score: row.get(11)?,
+                security_issues,
+                security_level: row.get(13)?,
+                scanned_at: row.get::<_, Option<String>>(14)?
+                    .and_then(|s| s.parse().ok()),
+                staging_path: row.get(15)?,
+                install_log: row.get(16)?,
+                install_status: row.get(17)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(plugins)
+    }
+
     /// 删除仓库
     pub fn delete_repository(&self, repo_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
@@ -289,11 +394,28 @@ impl Database {
         Ok(deleted_count)
     }
 
+    /// 删除指定仓库的所有未安装插件
+    pub fn delete_uninstalled_plugins_by_repository_url(&self, repository_url: &str) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let deleted_count = conn.execute(
+            "DELETE FROM plugins WHERE repository_url = ?1 AND installed = 0",
+            params![repository_url]
+        )?;
+        Ok(deleted_count)
+    }
+
     /// 删除 skill
     pub fn delete_skill(&self, skill_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM skills WHERE id = ?1", params![skill_id])?;
         conn.execute("DELETE FROM installations WHERE skill_id = ?1", params![skill_id])?;
+        Ok(())
+    }
+
+    /// 删除 plugin 记录
+    pub fn delete_plugin(&self, plugin_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM plugins WHERE id = ?1", params![plugin_id])?;
         Ok(())
     }
 

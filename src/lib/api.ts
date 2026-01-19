@@ -1,5 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Repository, Skill, CacheStats, FeaturedRepositoriesConfig, ClearAllCachesResult } from "../types";
+import type {
+  Repository,
+  Skill,
+  Plugin,
+  PluginInstallResult,
+  CacheStats,
+  FeaturedRepositoriesConfig,
+  ClearAllCachesResult,
+} from "../types";
 import type { SecurityReport } from "../types/security";
 
 export const api = {
@@ -105,5 +113,28 @@ export const api = {
   // 自动扫描未扫描的仓库（首次启动）
   async autoScanUnscannedRepositories(): Promise<string[]> {
     return invoke("auto_scan_unscanned_repositories");
+  },
+
+  // Plugin APIs
+  async getPlugins(): Promise<Plugin[]> {
+    return invoke("get_plugins");
+  },
+
+  async preparePluginInstallation(pluginId: string, locale: string): Promise<SecurityReport> {
+    return invoke("prepare_plugin_installation", { pluginId, locale });
+  },
+
+  async confirmPluginInstallation(
+    pluginId: string,
+    claudeCommand?: string
+  ): Promise<PluginInstallResult> {
+    return invoke("confirm_plugin_installation", {
+      pluginId,
+      claudeCommand: claudeCommand || null,
+    });
+  },
+
+  async cancelPluginInstallation(pluginId: string): Promise<void> {
+    return invoke("cancel_plugin_installation", { pluginId });
   },
 };

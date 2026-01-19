@@ -7,7 +7,8 @@ import {
   useUninstallSkillPath,
   useDeleteSkill,
 } from "../hooks/useSkills";
-import { Skill } from "../types";
+import { usePlugins } from "../hooks/usePlugins";
+import type { Plugin, PluginInstallResult, Skill } from "../types";
 import { SecurityReport } from "../types/security";
 import {
   Download,
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
-import { formatRepositoryTag } from "../lib/utils";
+import { formatRepositoryTag, parseRepositoryOwner } from "../lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { countIssuesBySeverity } from "@/lib/security-utils";
 import { addRecentInstallPath } from "@/lib/storage";
@@ -43,10 +44,23 @@ interface MarketplacePageProps {
   onNavigateToRepositories?: () => void;
 }
 
+type MarketplaceItem =
+  | { kind: "skill"; item: Skill }
+  | { kind: "plugin"; item: Plugin };
+
+const ANSI_ESCAPE_REGEX =
+  /[\u001B\u009B][[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
+const OSC_ESCAPE_REGEX = /\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g;
+
+function stripAnsi(input: string): string {
+  return input.replace(OSC_ESCAPE_REGEX, "").replace(ANSI_ESCAPE_REGEX, "");
+}
+
 export function MarketplacePage({ onNavigateToRepositories }: MarketplacePageProps = {}) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const { data: allSkills, isLoading } = useSkills();
+  const { data: allSkills = [], isLoading: isSkillsLoading } = useSkills();
+  const { data: plugins = [], isLoading: isPluginsLoading } = usePlugins();
   const installMutation = useInstallSkill();
   const uninstallMutation = useUninstallSkill();
   const uninstallPathMutation = useUninstallSkillPath();
@@ -59,22 +73,38 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     skill: Skill;
     report: SecurityReport;
   } | null>(null);
+  const [pendingPluginInstall, setPendingPluginInstall] = useState<{
+    plugin: Plugin;
+    report: SecurityReport;
+  } | null>(null);
   const [preparingSkillId, setPreparingSkillId] = useState<string | null>(null);
+  const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
+  const [preparingPluginId, setPreparingPluginId] = useState<string | null>(null);
+  const [installingPluginId, setInstallingPluginId] = useState<string | null>(null);
+  const [logPlugin, setLogPlugin] = useState<Plugin | null>(null);
   const [deletingSkillId, setDeletingSkillId] = useState<string | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const repositorySkills = useMemo(() => {
-    if (!allSkills) return [];
-    return allSkills.filter((skill) => skill.repository_owner !== "local");
-  }, [allSkills]);
+  const isLoading = isSkillsLoading || isPluginsLoading;
+
+  const marketplaceItems = useMemo<MarketplaceItem[]>(() => {
+    const skillItems = allSkills
+      .filter((skill) => skill.repository_owner !== "local")
+      .map((skill) => ({ kind: "skill", item: skill }) as MarketplaceItem);
+    const pluginItems = plugins.map(
+      (plugin) => ({ kind: "plugin", item: plugin }) as MarketplaceItem
+    );
+    return [...skillItems, ...pluginItems];
+  }, [allSkills, plugins]);
 
   const repositories = useMemo(() => {
-    if (!repositorySkills) return [];
+    if (!marketplaceItems.length) return [];
     const ownerMap = new Map<string, number>();
 
-    repositorySkills.forEach((skill) => {
-      const owner = skill.repository_owner || "unknown";
+    marketplaceItems.forEach((entry) => {
+      const owner =
+        entry.item.repository_owner || parseRepositoryOwner(entry.item.repository_url);
       ownerMap.set(owner, (ownerMap.get(owner) || 0) + 1);
     });
 
@@ -89,12 +119,12 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     return [
       {
         owner: "all",
-        count: repositorySkills.length,
+        count: marketplaceItems.length,
         displayName: t("skills.marketplace.allRepos"),
       },
       ...repos,
     ];
-  }, [repositorySkills, i18n.language, t]);
+  }, [marketplaceItems, i18n.language, t]);
 
   const repositoryOptions: CyberSelectOption[] = useMemo(() => {
     return repositories.map((repo) => ({
@@ -103,33 +133,36 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     }));
   }, [repositories]);
 
-  const filteredSkills = useMemo(() => {
-    if (!repositorySkills) return [];
+  const filteredItems = useMemo(() => {
+    if (!marketplaceItems.length) return [];
 
     const query = searchQuery.toLowerCase();
 
-    let filtered = repositorySkills.filter((skill) => {
-      const matchesRepo =
-        selectedRepository === "all" || skill.repository_owner === selectedRepository;
-      const matchesInstalled = !hideInstalled || !skill.installed;
+    let filtered = marketplaceItems.filter((entry) => {
+      const owner =
+        entry.item.repository_owner || parseRepositoryOwner(entry.item.repository_url);
+      const matchesRepo = selectedRepository === "all" || owner === selectedRepository;
+      const matchesInstalled = !hideInstalled || !entry.item.installed;
       const matchesSearch =
         !searchQuery ||
-        skill.name.toLowerCase().includes(query) ||
-        skill.description?.toLowerCase().includes(query);
+        entry.item.name.toLowerCase().includes(query) ||
+        entry.item.description?.toLowerCase().includes(query) ||
+        (entry.kind === "plugin" &&
+          entry.item.marketplace_name.toLowerCase().includes(query));
 
       return matchesSearch && matchesRepo && matchesInstalled;
     });
 
     if (searchQuery) {
-      const nameMatches: Skill[] = [];
-      const descriptionMatches: Skill[] = [];
+      const nameMatches: MarketplaceItem[] = [];
+      const descriptionMatches: MarketplaceItem[] = [];
 
-      filtered.forEach((skill) => {
-        const nameMatch = skill.name.toLowerCase().includes(query);
+      filtered.forEach((entry) => {
+        const nameMatch = entry.item.name.toLowerCase().includes(query);
         if (nameMatch) {
-          nameMatches.push(skill);
+          nameMatches.push(entry);
         } else {
-          descriptionMatches.push(skill);
+          descriptionMatches.push(entry);
         }
       });
 
@@ -137,7 +170,7 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     }
 
     return filtered;
-  }, [repositorySkills, searchQuery, selectedRepository, hideInstalled]);
+  }, [marketplaceItems, searchQuery, selectedRepository, hideInstalled]);
 
   return (
     <div className="flex flex-col h-full">
@@ -207,81 +240,125 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
               <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
               <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
             </div>
-          ) : filteredSkills && filteredSkills.length > 0 ? (
+          ) : filteredItems && filteredItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              {filteredSkills.map((skill) => (
-                <SkillCard
-                  key={skill.id}
-                  skill={skill}
-                  onInstall={async () => {
-                    try {
-                      setPreparingSkillId(skill.id);
-                      const report = await invoke<SecurityReport>("prepare_skill_installation", {
-                        skillId: skill.id,
-                        locale: i18n.language,
-                      });
-                      setPreparingSkillId(null);
-                      setPendingInstall({ skill, report });
-                    } catch (error: any) {
-                      setPreparingSkillId(null);
-                      appToast.error(
-                        `${t("skills.toast.installFailed")}: ${error.message || error}`
-                      );
-                    }
-                  }}
-                  onUninstall={() => {
-                    uninstallMutation.mutate(skill.id, {
-                      onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
-                      onError: (error: any) =>
+              {filteredItems.map((entry) =>
+                entry.kind === "skill" ? (
+                  <SkillCard
+                    key={entry.item.id}
+                    skill={entry.item}
+                    onInstall={async () => {
+                      try {
+                        setPreparingSkillId(entry.item.id);
+                        const report = await invoke<SecurityReport>(
+                          "prepare_skill_installation",
+                          {
+                            skillId: entry.item.id,
+                            locale: i18n.language,
+                          }
+                        );
+                        setPreparingSkillId(null);
+                        setPendingInstall({ skill: entry.item, report });
+                      } catch (error: any) {
+                        setPreparingSkillId(null);
                         appToast.error(
-                          `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
-                        ),
-                    });
-                  }}
-                  onUninstallPath={(path: string) => {
-                    uninstallPathMutation.mutate(
-                      { skillId: skill.id, path },
-                      {
+                          `${t("skills.toast.installFailed")}: ${error.message || error}`
+                        );
+                      }
+                    }}
+                    onUninstall={() => {
+                      uninstallMutation.mutate(entry.item.id, {
                         onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
                         onError: (error: any) =>
                           appToast.error(
                             `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
                           ),
+                      });
+                    }}
+                    onUninstallPath={(path: string) => {
+                      uninstallPathMutation.mutate(
+                        { skillId: entry.item.id, path },
+                        {
+                          onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
+                          onError: (error: any) =>
+                            appToast.error(
+                              `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                            ),
+                        }
+                      );
+                    }}
+                    onDelete={() => {
+                      setDeletingSkillId(entry.item.id);
+                      deleteMutation.mutate(entry.item.id, {
+                        onSuccess: () => {
+                          setDeletingSkillId(null);
+                          appToast.success(t("skills.toast.deleted"));
+                        },
+                        onError: (error: any) => {
+                          setDeletingSkillId(null);
+                          appToast.error(
+                            `${t("skills.toast.deleteFailed")}: ${error.message || error}`
+                          );
+                        },
+                      });
+                    }}
+                    isInstalling={
+                      installingSkillId === entry.item.id ||
+                      (installMutation.isPending &&
+                        installMutation.variables?.skillId === entry.item.id)
+                    }
+                    isUninstalling={
+                      uninstallMutation.isPending &&
+                      uninstallMutation.variables === entry.item.id
+                    }
+                    isDeleting={deletingSkillId === entry.item.id}
+                    isPreparing={preparingSkillId === entry.item.id}
+                    isAnyOperationPending={
+                      installMutation.isPending ||
+                      uninstallMutation.isPending ||
+                      preparingSkillId !== null ||
+                      installingSkillId !== null ||
+                      deletingSkillId !== null ||
+                      preparingPluginId !== null ||
+                      installingPluginId !== null
+                    }
+                    t={t}
+                  />
+                ) : (
+                  <PluginCard
+                    key={entry.item.id}
+                    plugin={entry.item}
+                    isPreparing={preparingPluginId === entry.item.id}
+                    isInstalling={installingPluginId === entry.item.id}
+                    onViewLog={() => setLogPlugin(entry.item)}
+                    onInstall={async () => {
+                      if (
+                        entry.item.install_status === "unsupported" ||
+                        entry.item.install_status === "blocked"
+                      ) {
+                        return;
                       }
-                    );
-                  }}
-                  onDelete={() => {
-                    setDeletingSkillId(skill.id);
-                    deleteMutation.mutate(skill.id, {
-                      onSuccess: () => {
-                        setDeletingSkillId(null);
-                        appToast.success(t("skills.toast.deleted"));
-                      },
-                      onError: (error: any) => {
-                        setDeletingSkillId(null);
-                        appToast.error(
-                          `${t("skills.toast.deleteFailed")}: ${error.message || error}`
+                      try {
+                        setPreparingPluginId(entry.item.id);
+                        const report = await invoke<SecurityReport>(
+                          "prepare_plugin_installation",
+                          {
+                            pluginId: entry.item.id,
+                            locale: i18n.language,
+                          }
                         );
-                      },
-                    });
-                  }}
-                  isInstalling={
-                    installMutation.isPending && installMutation.variables?.skillId === skill.id
-                  }
-                  isUninstalling={
-                    uninstallMutation.isPending && uninstallMutation.variables === skill.id
-                  }
-                  isDeleting={deletingSkillId === skill.id}
-                  isPreparing={preparingSkillId === skill.id}
-                  isAnyOperationPending={
-                    installMutation.isPending ||
-                    uninstallMutation.isPending ||
-                    preparingSkillId !== null ||
-                    deletingSkillId !== null
-                  }
-                  t={t}
-                />
-              ))}
+                        setPendingPluginInstall({ plugin: entry.item, report });
+                      } catch (error: any) {
+                        appToast.error(
+                          `${t("plugins.toast.scanFailed")}: ${error.message || error}`
+                        );
+                      } finally {
+                        setPreparingPluginId(null);
+                      }
+                    }}
+                  />
+                )
+              )}
             </div>
           ) : (
             <div className="apple-card p-12 text-center">
@@ -304,7 +381,7 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
                     {t("skills.marketplace.clearFilters")}
                   </button>
                 </>
-              ) : repositorySkills.length === 0 ? (
+              ) : marketplaceItems.length === 0 ? (
                 <div className="max-w-md mx-auto">
                   <p className="text-sm text-muted-foreground mb-2">
                     {t("skills.marketplace.noSkillsYet")}
@@ -345,36 +422,97 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
       {/* Install Confirmation Dialog */}
       <InstallConfirmDialog
         open={pendingInstall !== null}
-        onClose={async () => {
-          if (pendingInstall) {
-            try {
-              await invoke("cancel_skill_installation", { skillId: pendingInstall.skill.id });
-            } catch (error: any) {
-              console.error("[ERROR] 取消安装失败:", error);
-            }
-          }
+        onClose={() => {
+          const skillId = pendingInstall?.skill.id;
+          const shouldCancel = skillId && installingSkillId !== skillId;
           setPendingInstall(null);
+          if (!shouldCancel) return;
+          void invoke("cancel_skill_installation", { skillId }).catch((error: any) => {
+            console.error("[ERROR] 取消安装失败:", error);
+          });
         }}
         onConfirm={async (selectedPath) => {
-          if (pendingInstall) {
-            try {
-              await invoke("confirm_skill_installation", {
-                skillId: pendingInstall.skill.id,
-                installPath: selectedPath,
-              });
-              addRecentInstallPath(selectedPath);
-              await queryClient.refetchQueries({ queryKey: ["skills"] });
-              await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
-              await queryClient.refetchQueries({ queryKey: ["scanResults"] });
-              appToast.success(t("skills.toast.installed"));
-            } catch (error: any) {
-              appToast.error(`${t("skills.toast.installFailed")}: ${error.message || error}`);
-            }
-          }
+          if (!pendingInstall) return;
+          const skillId = pendingInstall.skill.id;
+          setInstallingSkillId(skillId);
           setPendingInstall(null);
+          try {
+            await invoke("confirm_skill_installation", {
+              skillId,
+              installPath: selectedPath,
+            });
+            addRecentInstallPath(selectedPath);
+            await queryClient.refetchQueries({ queryKey: ["skills"] });
+            await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
+            await queryClient.refetchQueries({ queryKey: ["scanResults"] });
+            appToast.success(t("skills.toast.installed"));
+          } catch (error: any) {
+            appToast.error(`${t("skills.toast.installFailed")}: ${error.message || error}`);
+          } finally {
+            setInstallingSkillId(null);
+          }
         }}
         report={pendingInstall?.report || null}
         skillName={pendingInstall?.skill.name || ""}
+      />
+
+      <PluginInstallConfirmDialog
+        open={pendingPluginInstall !== null}
+        report={pendingPluginInstall?.report || null}
+        pluginName={pendingPluginInstall?.plugin.name || ""}
+        onClose={() => {
+          const pluginId = pendingPluginInstall?.plugin.id;
+          const shouldCancel = pluginId && installingPluginId !== pluginId;
+          setPendingPluginInstall(null);
+          if (!shouldCancel) return;
+          void invoke("cancel_plugin_installation", { pluginId }).catch((error: any) => {
+            console.error("[ERROR] 取消插件安装失败:", error);
+          });
+        }}
+        onConfirm={async () => {
+          if (!pendingPluginInstall) return;
+          const pluginSnapshot = pendingPluginInstall.plugin;
+          const pluginId = pluginSnapshot.id;
+          setInstallingPluginId(pluginId);
+          setPendingPluginInstall(null);
+          try {
+            const result = await invoke<PluginInstallResult>("confirm_plugin_installation", {
+              pluginId,
+              claudeCommand: null,
+            });
+            await queryClient.refetchQueries({ queryKey: ["plugins"] });
+            const hasFailed =
+              result.marketplace_status === "failed" ||
+              result.plugin_statuses.some((status) => status.status === "failed");
+
+            const updatedPlugins = queryClient.getQueryData<Plugin[]>(["plugins"]);
+            const updatedPlugin =
+              updatedPlugins?.find((item) => item.id === pluginId) ?? null;
+
+            if (hasFailed) {
+              appToast.error(t("plugins.toast.installFailed"));
+              setLogPlugin(
+                updatedPlugin ?? {
+                  ...pluginSnapshot,
+                  install_log: result.raw_log,
+                  install_status: "failed",
+                }
+              );
+            } else {
+              appToast.success(t("plugins.toast.installed"));
+            }
+          } catch (error: any) {
+            appToast.error(`${t("plugins.toast.installFailed")}: ${error.message || error}`);
+          } finally {
+            setInstallingPluginId(null);
+          }
+        }}
+      />
+
+      <PluginLogDialog
+        open={logPlugin !== null}
+        plugin={logPlugin}
+        onClose={() => setLogPlugin(null)}
       />
     </div>
   );
@@ -603,6 +741,342 @@ function SkillCard({
       )}
     </div>
   );
+}
+
+interface PluginCardProps {
+  plugin: Plugin;
+  isPreparing: boolean;
+  isInstalling: boolean;
+  onViewLog: () => void;
+  onInstall: () => void;
+}
+
+function PluginCard({
+  plugin,
+  isPreparing,
+  isInstalling,
+  onViewLog,
+  onInstall,
+}: PluginCardProps) {
+  const { t } = useTranslation();
+  const isUnsupported = plugin.install_status === "unsupported";
+  const isBlocked = plugin.install_status === "blocked";
+  const statusLabel = getPluginStatusLabel(plugin.install_status, t);
+  const canViewLog =
+    plugin.install_log != null ||
+    ["installed", "already_installed", "failed"].includes(plugin.install_status ?? "");
+
+  return (
+    <div className="apple-card p-5 flex flex-col">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <h3 className="font-medium text-foreground">{plugin.name}</h3>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600">
+              {t("plugins.badge")}
+            </span>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full ${
+                plugin.repository_owner === "local"
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-blue-500/10 text-blue-600"
+              }`}
+            >
+              {formatRepositoryTag(plugin)}
+            </span>
+            {plugin.installed && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-600">
+                {t("plugins.installed")}
+              </span>
+            )}
+            {isUnsupported && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-700">
+                {t("plugins.unsupported")}
+              </span>
+            )}
+            {isBlocked && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">
+                {t("plugins.status.blocked")}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("plugins.marketplace")}: {plugin.marketplace_name}
+          </p>
+        </div>
+
+        <button
+          onClick={onInstall}
+          disabled={isPreparing || isInstalling || isUnsupported || isBlocked}
+          className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+        >
+          {isPreparing || isInstalling ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span className="hidden sm:inline">
+                {isPreparing ? t("plugins.scanning") : t("plugins.installing")}
+              </span>
+            </>
+          ) : (
+            <>
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t("plugins.install")}</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      <p className="text-sm text-muted-foreground mb-3 leading-5">
+        {plugin.description || t("plugins.noDescription")}
+      </p>
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        <div>
+          <span className="text-blue-500 font-medium">{t("plugins.repo")}</span>{" "}
+          <a
+            href={plugin.repository_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 hover:underline break-all transition-colors"
+          >
+            {plugin.repository_url}
+          </a>
+        </div>
+        {plugin.version && (
+          <div>
+            <span className="text-blue-500 font-medium">{t("plugins.version")}</span>{" "}
+            {plugin.version}
+          </div>
+        )}
+        {statusLabel && (
+          <div>
+            <span className="text-blue-500 font-medium">{t("plugins.status.label")}</span>{" "}
+            {statusLabel}
+          </div>
+        )}
+      </div>
+
+      {canViewLog && (
+        <button
+          onClick={onViewLog}
+          className="mt-3 text-xs text-blue-500 hover:text-blue-600 transition-colors self-start"
+        >
+          {t("plugins.viewLog")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface PluginInstallConfirmDialogProps {
+  open: boolean;
+  report: SecurityReport | null;
+  pluginName: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function PluginInstallConfirmDialog({
+  open,
+  report,
+  pluginName,
+  onClose,
+  onConfirm,
+}: PluginInstallConfirmDialogProps) {
+  const { t } = useTranslation();
+  const isMediumRisk = report ? report.score >= 50 && report.score < 70 : false;
+  const isHighRisk = report ? report.score < 50 || report.blocked : false;
+
+  const issueCounts = useMemo(
+    () => (report ? countIssuesBySeverity(report.issues) : { critical: 0, error: 0, warning: 0 }),
+    [report]
+  );
+
+  if (!report) return null;
+
+  return (
+    <AlertDialog open={open} onOpenChange={onClose}>
+      <AlertDialogContent className="max-w-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            {isHighRisk ? (
+              <XCircle className="w-5 h-5 text-destructive" />
+            ) : isMediumRisk ? (
+              <AlertTriangle className="w-5 h-5 text-warning" />
+            ) : (
+              <CheckCircle className="w-5 h-5 text-success" />
+            )}
+            {t("plugins.installDialog.scanResult")}
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-4 pb-4">
+              <div>
+                {t("plugins.installDialog.preparingInstall")}:{" "}
+                <span className="font-semibold">{pluginName}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <span className="text-sm">{t("plugins.installDialog.securityScore")}:</span>
+                <span
+                  className={`text-3xl font-bold ${
+                    report.score >= 90
+                      ? "text-success"
+                      : report.score >= 70
+                        ? "text-success"
+                        : report.score >= 50
+                          ? "text-warning"
+                          : "text-destructive"
+                  }`}
+                >
+                  {report.score}
+                </span>
+              </div>
+
+              {report.issues.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">
+                    {t("plugins.installDialog.issuesDetected")}:
+                  </div>
+                  <div className="flex gap-4 text-sm">
+                    {issueCounts.critical > 0 && (
+                      <span className="text-destructive">
+                        {t("plugins.installDialog.critical")}: {issueCounts.critical}
+                      </span>
+                    )}
+                    {issueCounts.error > 0 && (
+                      <span className="text-warning">
+                        {t("plugins.installDialog.highRisk")}: {issueCounts.error}
+                      </span>
+                    )}
+                    {issueCounts.warning > 0 && (
+                      <span className="text-warning">
+                        {t("plugins.installDialog.mediumRisk")}: {issueCounts.warning}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {report.issues.length > 0 && (
+                <div
+                  className={`p-3 rounded-lg ${
+                    isHighRisk
+                      ? "bg-destructive/10 border border-destructive/30"
+                      : isMediumRisk
+                        ? "bg-warning/10 border border-warning/30"
+                        : "bg-success/10 border border-success/30"
+                  }`}
+                >
+                  <ul className="space-y-1 text-sm">
+                    {report.issues.slice(0, 3).map((issue, idx) => (
+                      <li key={idx} className="text-xs">
+                        {issue.file_path && (
+                          <span className="text-primary mr-1.5">[{issue.file_path}]</span>
+                        )}
+                        {issue.description}
+                        {issue.line_number && (
+                          <span className="text-muted-foreground ml-2">
+                            (行 {issue.line_number})
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {isHighRisk && (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block mb-1">
+                        {t("plugins.installDialog.warningTitle")}
+                      </strong>
+                      {t("plugins.installDialog.warningMessage")}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>
+            {t("plugins.installDialog.cancel")}
+          </AlertDialogCancel>
+          <button
+            onClick={onConfirm}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isHighRisk
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : isMediumRisk
+                  ? "bg-warning text-white hover:bg-warning/90"
+                  : "bg-success text-white hover:bg-success/90"
+            }`}
+          >
+            {isHighRisk
+              ? t("plugins.installDialog.installAnyway")
+              : t("plugins.installDialog.confirmInstall")}
+          </button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+interface PluginLogDialogProps {
+  open: boolean;
+  plugin: Plugin | null;
+  onClose: () => void;
+}
+
+function PluginLogDialog({ open, plugin, onClose }: PluginLogDialogProps) {
+  const { t } = useTranslation();
+
+  if (!plugin) return null;
+
+  return (
+    <AlertDialog open={open} onOpenChange={onClose}>
+      <AlertDialogContent className="max-w-3xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("plugins.logTitle", { name: plugin.name })}</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                <span className="text-blue-500 font-medium">{t("plugins.status.label")}</span>{" "}
+                {getPluginStatusLabel(plugin.install_status, t) || t("plugins.status.unknown")}
+              </div>
+              <pre className="text-xs bg-muted/40 rounded-lg p-4 max-h-[420px] overflow-y-auto whitespace-pre-wrap">
+                {plugin.install_log ? stripAnsi(plugin.install_log) : t("plugins.noLog")}
+              </pre>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>{t("plugins.close")}</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function getPluginStatusLabel(status: Plugin["install_status"], t: (key: string) => string) {
+  switch (status) {
+    case "installed":
+      return t("plugins.status.installed");
+    case "already_installed":
+      return t("plugins.status.alreadyInstalled");
+    case "failed":
+      return t("plugins.status.failed");
+    case "unsupported":
+      return t("plugins.status.unsupported");
+    case "blocked":
+      return t("plugins.status.blocked");
+    default:
+      return "";
+  }
 }
 
 interface InstallConfirmDialogProps {

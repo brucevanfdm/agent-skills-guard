@@ -28,6 +28,7 @@ export function useDeleteRepository() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
     },
   });
 }
@@ -39,6 +40,7 @@ export function useScanRepository() {
     mutationFn: (repoId: string) => api.scanRepository(repoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
       queryClient.invalidateQueries({ queryKey: ["cache-stats"] });
     },

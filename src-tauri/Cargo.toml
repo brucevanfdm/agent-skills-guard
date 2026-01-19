@@ -75,6 +75,10 @@ tauri-plugin-os = "2.0"
 # 国际化
 rust-i18n = "3"
 
+# PTY 驱动 Claude Code CLI
+portable-pty = "0.8"
+which = "6.0"
+
 
 [features]
 default = ["custom-protocol"]

@@ -1,8 +1,9 @@
 pub mod security;
+pub mod plugins;
 
 use crate::models::{Repository, Skill, FeaturedRepositoriesConfig};
-use crate::services::{Database, GitHubService, SkillManager};
-use std::path::PathBuf;
+use crate::services::{Database, GitHubService, PluginManager, SkillManager};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::Manager;
 use tauri::State;
@@ -11,6 +12,7 @@ use tokio::sync::Mutex;
 pub struct AppState {
     pub db: Arc<Database>,
     pub skill_manager: Arc<Mutex<SkillManager>>,
+    pub plugin_manager: Arc<Mutex<PluginManager>>,
     pub github: Arc<GitHubService>,
 }
 
@@ -57,6 +59,11 @@ pub async fn delete_repository(
 
     log::info!("删除仓库 {} 的 {} 个未安装技能", repo.name, deleted_skills_count);
 
+    let deleted_plugins_count = state.db.delete_uninstalled_plugins_by_repository_url(&repository_url)
+        .map_err(|e| e.to_string())?;
+
+    log::info!("删除仓库 {} 的 {} 个未安装插件", repo.name, deleted_plugins_count);
+
     // 3. 清理缓存目录（失败不中断）
     if let Some(cache_path_str) = cache_path {
         let cache_path_buf = std::path::PathBuf::from(&cache_path_str);
@@ -100,14 +107,12 @@ pub async fn scan_repository(
         .join("agent-skills-guard")
         .join("repositories");
 
-    let skills = if let Some(cache_path) = &repo.cache_path {
+    let cache_path_for_scan = if let Some(cache_path) = &repo.cache_path {
         // 使用缓存扫描(0次API请求)
-        log::info!("使用本地缓存扫描仓库: {}", repo.name);
-
         let cache_path_buf = std::path::PathBuf::from(cache_path);
         if cache_path_buf.exists() && cache_path_buf.is_dir() {
-            state.github.scan_cached_repository(&cache_path_buf, &repo.url, repo.scan_subdirs)
-                .map_err(|e| format!("扫描缓存失败: {}", e))?
+            log::info!("使用本地缓存扫描仓库: {}", repo.name);
+            cache_path_buf
         } else {
             // 缓存路径不存在，重新下载
             log::warn!("缓存路径不存在，重新下载: {:?}", cache_path_buf);
@@ -124,8 +129,7 @@ pub async fn scan_repository(
                 Some(&commit_sha),
             ).map_err(|e| e.to_string())?;
 
-            state.github.scan_cached_repository(&extract_dir, &repo.url, repo.scan_subdirs)
-                .map_err(|e| format!("扫描缓存失败: {}", e))?
+            extract_dir
         }
     } else {
         // 首次扫描: 下载压缩包并缓存(1次API请求)
@@ -144,10 +148,40 @@ pub async fn scan_repository(
             Some(&commit_sha),
         ).map_err(|e| e.to_string())?;
 
-        // 扫描本地缓存
-        state.github.scan_cached_repository(&extract_dir, &repo.url, repo.scan_subdirs)
-            .map_err(|e| format!("扫描缓存失败: {}", e))?
+        extract_dir
     };
+
+    let repo_root = find_repo_root(&cache_path_for_scan)?;
+    if is_marketplace_repo(&repo_root) {
+        log::info!("仓库 {} 识别为 marketplace 插件仓库", repo.name);
+
+        let manager = state.plugin_manager.lock().await;
+        match manager.scan_cached_repository_plugins(&cache_path_for_scan, &repo.url) {
+            Ok(plugins) => {
+                for plugin in plugins {
+                    if let Err(e) = state.db.save_plugin(&plugin) {
+                        log::warn!("保存插件失败: {} ({})", plugin.name, e);
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!("扫描插件失败: {}", e);
+            }
+        }
+
+        let deleted_skills_count = state.db
+            .delete_uninstalled_skills_by_repository_url(&repo.url)
+            .map_err(|e| e.to_string())?;
+        if deleted_skills_count > 0 {
+            log::info!("清理仓库 {} 的 {} 个未安装技能", repo.name, deleted_skills_count);
+        }
+
+        return Ok(Vec::new());
+    }
+
+    let skills = state.github
+        .scan_cached_repository(&cache_path_for_scan, &repo.url, repo.scan_subdirs)
+        .map_err(|e| format!("扫描缓存失败: {}", e))?;
 
     // 保存到数据库
     for skill in &skills {
@@ -159,6 +193,13 @@ pub async fn scan_repository(
 
         state.db.save_skill(skill)
             .map_err(|e| e.to_string())?;
+    }
+
+    let deleted_plugins_count = state.db
+        .delete_uninstalled_plugins_by_repository_url(&repo.url)
+        .map_err(|e| e.to_string())?;
+    if deleted_plugins_count > 0 {
+        log::info!("清理仓库 {} 的 {} 个未安装插件", repo.name, deleted_plugins_count);
     }
 
     Ok(skills)
@@ -460,6 +501,28 @@ fn dir_size(path: &std::path::Path) -> Result<u64, std::io::Error> {
     }
 
     Ok(size)
+}
+
+fn find_repo_root(cache_path: &Path) -> Result<PathBuf, String> {
+    for entry in std::fs::read_dir(cache_path).map_err(|e| format!("无法读取解压目录: {}", e))? {
+        let entry = entry.map_err(|e| format!("无法读取目录条目: {}", e))?;
+        if entry
+            .file_type()
+            .map_err(|e| format!("无法读取目录类型: {}", e))?
+            .is_dir()
+        {
+            return Ok(entry.path());
+        }
+    }
+
+    Err("未找到仓库根目录".to_string())
+}
+
+fn is_marketplace_repo(repo_root: &Path) -> bool {
+    repo_root
+        .join(".claude-plugin")
+        .join("marketplace.json")
+        .is_file()
 }
 
 /// 缓存统计信息
