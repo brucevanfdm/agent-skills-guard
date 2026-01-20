@@ -1,4 +1,5 @@
 use crate::models::{GitHubContent, Repository, Skill};
+use crate::services::ProxyConfig;
 use anyhow::{Result, Context};
 use reqwest::Client;
 use serde::Deserialize;
@@ -47,13 +48,23 @@ pub struct GitHubService {
 
 impl GitHubService {
     pub fn new() -> Self {
+        Self::new_with_proxy(None)
+    }
+
+    pub fn new_with_proxy(proxy_config: Option<ProxyConfig>) -> Self {
+        let client = super::proxy::ProxyService::build_http_client(proxy_config.as_ref())
+            .unwrap_or_else(|e| {
+                log::warn!("创建带代理的 HTTP 客户端失败: {}, 降级使用无代理模式", e);
+                Client::builder()
+                    .user_agent("agent-skills-guard")
+                    .timeout(std::time::Duration::from_secs(30))
+                    .connect_timeout(std::time::Duration::from_secs(10))
+                    .build()
+                    .unwrap()
+            });
+
         Self {
-            client: Client::builder()
-                .user_agent("agent-skills-guard")
-                .timeout(std::time::Duration::from_secs(30))  // 30秒超时
-                .connect_timeout(std::time::Duration::from_secs(10))  // 10秒连接超时
-                .build()
-                .unwrap(),
+            client,
             api_base: "https://api.github.com".to_string(),
         }
     }

@@ -1,6 +1,6 @@
 use crate::models::Skill;
 use crate::security::SecurityScanner;
-use crate::services::{Database, GitHubService};
+use crate::services::{Database, GitHubService, ProxyConfig};
 use anyhow::{Result, Context};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -17,9 +17,20 @@ impl SkillManager {
     pub fn new(db: Arc<Database>) -> Self {
         let skills_dir = Self::get_skills_directory();
 
+        // 读取代理配置
+        let proxy_config = db.get_setting("proxy_config")
+            .ok()
+            .flatten()
+            .and_then(|json| serde_json::from_str::<ProxyConfig>(&json).ok())
+            .filter(|c| c.enabled && c.is_valid());
+
+        if proxy_config.is_some() {
+            log::info!("SkillManager: 已加载代理配置");
+        }
+
         Self {
             db,
-            github: GitHubService::new(),
+            github: GitHubService::new_with_proxy(proxy_config),
             scanner: SecurityScanner::new(),
             skills_dir,
         }
