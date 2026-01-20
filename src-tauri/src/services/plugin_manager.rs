@@ -166,9 +166,7 @@ impl PluginManager {
                 .and_then(|m| m.author.as_ref().and_then(|a| a.to_display()))
                 .or(entry.author.as_ref().and_then(|a| a.to_display()));
 
-            if plugin_manifest.is_none() {
-                plugin.install_status = Some("unsupported".to_string());
-            }
+            // 不再要求 plugin.json 存在，marketplace.json 里的 plugins 条目足够 Claude Code CLI 安装
 
             if let Some(existing) = existing_map.get(&plugin.id) {
                 plugin.installed = existing.installed;
@@ -179,7 +177,11 @@ impl PluginManager {
                 plugin.scanned_at = existing.scanned_at;
                 plugin.staging_path = existing.staging_path.clone();
                 plugin.install_log = existing.install_log.clone();
-                plugin.install_status = existing.install_status.clone().or(plugin.install_status);
+                // 清除旧的 "unsupported" 状态，保留其他有效状态（如 blocked, installed 等）
+                let status = existing.install_status.clone();
+                if status.as_deref() != Some("unsupported") {
+                    plugin.install_status = status.or(plugin.install_status);
+                }
             }
 
             plugins.push(plugin);
@@ -215,7 +217,7 @@ impl PluginManager {
         let mut resolved_plugins = resolve_marketplace_plugins(
             &repo_root,
             &plugin.repository_url,
-            true,
+            false,  // 不强制要求 plugin.json 存在
         )?;
 
         if resolved_plugins.is_empty() {
@@ -299,11 +301,6 @@ impl PluginManager {
             .into_iter()
             .find(|p| p.id == plugin_id)
             .context("未找到该插件")?;
-
-        // 只检查当前选中的 plugin 状态
-        if plugin.install_status.as_deref() == Some("unsupported") {
-            anyhow::bail!("该插件不符合 Claude Code Plugin 规范，暂不支持自动安装");
-        }
 
         if plugin.install_status.as_deref() == Some("blocked") {
             anyhow::bail!("安全扫描未通过，已阻止插件安装");
