@@ -20,7 +20,7 @@ export interface TranslatedSkill extends Skill {
 
 export interface UseSkillTranslationResult {
     translateSkill: (skillId: string, skill: Skill) => Promise<void>;
-    toggleTranslation: (skillId: string) => void;
+    toggleTranslation: (skillId: string, skill?: Skill) => void;
     translatingSkillIds: Set<string>;
     getTranslatedSkill: (skill: Skill) => TranslatedSkill;
     targetLanguage: string;
@@ -92,16 +92,30 @@ export function useSkillTranslation(): UseSkillTranslationResult {
         }
     }, [targetLanguage, translatedSkills]);
 
-    const toggleTranslation = useCallback((skillId: string) => {
+    const toggleTranslation = useCallback((skillId: string, skill?: Skill) => {
         const cacheKey = `${skillId}:${targetLanguage}`;
-        const existing = translatedSkills.get(cacheKey);
+        let existing = translatedSkills.get(cacheKey);
+
+        // If not in state but we have the skill object, try to hydrate from cache
+        if (!existing && skill) {
+            const cachedDescription = skill.description ? getCachedTranslation(skill.description, targetLanguage) : null;
+            if (cachedDescription) {
+                existing = {
+                    ...skill,
+                    translatedDescription: cachedDescription,
+                    isTranslated: true,
+                    isTranslating: false,
+                    showingTranslation: false // Will be toggled to true below
+                };
+            }
+        }
 
         if (existing?.isTranslated) {
             setTranslatedSkills(prev => {
                 const newMap = new Map(prev);
                 newMap.set(cacheKey, {
-                    ...existing,
-                    showingTranslation: !existing.showingTranslation
+                    ...existing!,
+                    showingTranslation: !existing!.showingTranslation
                 });
                 return newMap;
             });

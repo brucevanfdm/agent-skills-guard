@@ -328,7 +328,7 @@ export function InstalledSkillsPage() {
                     key={skill.id}
                     skill={translatedSkill}
                     onTranslate={() => translateSkill(skill.id, skill)}
-                    onToggleTranslation={() => toggleTranslation(skill.id)}
+                    onToggleTranslation={() => toggleTranslation(skill.id, skill)}
                     isTranslatingSkill={translatingSkillIds.has(skill.id)}
                     index={index}
                     onUninstall={() => {
