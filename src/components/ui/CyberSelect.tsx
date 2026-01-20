@@ -78,10 +78,7 @@ export function CyberSelect({
 
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-          <div
-            ref={listRef}
-            className="max-h-60 overflow-y-auto overscroll-contain py-1"
-          >
+          <div ref={listRef} className="max-h-60 overflow-y-auto overscroll-contain py-1">
             {options.map((option) => (
               <button
                 key={option.value}
@@ -95,9 +92,7 @@ export function CyberSelect({
                 }`}
               >
                 <span className="flex-1 text-left truncate">{option.label}</span>
-                {value === option.value && (
-                  <Check className="w-4 h-4 text-primary" />
-                )}
+                {value === option.value && <Check className="w-4 h-4 text-primary" />}
               </button>
             ))}
           </div>

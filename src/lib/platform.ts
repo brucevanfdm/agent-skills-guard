@@ -1,6 +1,6 @@
-import { platform } from '@tauri-apps/plugin-os';
+import { platform } from "@tauri-apps/plugin-os";
 
-export type Platform = 'macos' | 'windows' | 'linux' | 'unknown';
+export type Platform = "macos" | "windows" | "linux" | "unknown";
 
 let cachedPlatform: Platform | null = null;
 
@@ -17,23 +17,23 @@ export async function getPlatform(): Promise<Platform> {
     const platformName = await platform();
 
     switch (platformName) {
-      case 'macos':
-        cachedPlatform = 'macos';
+      case "macos":
+        cachedPlatform = "macos";
         break;
-      case 'windows':
-        cachedPlatform = 'windows';
+      case "windows":
+        cachedPlatform = "windows";
         break;
-      case 'linux':
-        cachedPlatform = 'linux';
+      case "linux":
+        cachedPlatform = "linux";
         break;
       default:
-        cachedPlatform = 'unknown';
+        cachedPlatform = "unknown";
     }
 
     return cachedPlatform;
   } catch (error) {
-    console.error('Failed to detect platform:', error);
-    cachedPlatform = 'unknown';
+    console.error("Failed to detect platform:", error);
+    cachedPlatform = "unknown";
     return cachedPlatform;
   }
 }
@@ -42,12 +42,12 @@ export async function getPlatform(): Promise<Platform> {
  * 检查是否为 macOS
  */
 export async function isMacOS(): Promise<boolean> {
-  return (await getPlatform()) === 'macos';
+  return (await getPlatform()) === "macos";
 }
 
 /**
  * 检查是否为 Windows
  */
 export async function isWindows(): Promise<boolean> {
-  return (await getPlatform()) === 'windows';
+  return (await getPlatform()) === "windows";
 }

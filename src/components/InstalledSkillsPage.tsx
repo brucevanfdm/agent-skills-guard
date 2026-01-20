@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useInstalledSkills, useUninstallSkill, useUninstallSkillPath } from "../hooks/useSkills";
-import { usePlugins, useUninstallPlugin } from "../hooks/usePlugins";
+import { usePlugins, useRemoveMarketplace, useUninstallPlugin } from "../hooks/usePlugins";
 import { Plugin, Skill } from "../types";
 import { SecurityReport } from "../types/security";
 import {
@@ -44,16 +44,23 @@ export function InstalledSkillsPage() {
   const uninstallMutation = useUninstallSkill();
   const uninstallPathMutation = useUninstallSkillPath();
   const uninstallPluginMutation = useUninstallPlugin();
+  const removeMarketplaceMutation = useRemoveMarketplace();
   const queryClient = useQueryClient();
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<"skills" | "plugins" | "marketplaces">("skills");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRepository, setSelectedRepository] = useState("all");
-  const [selectedItemType, setSelectedItemType] = useState("all");
   const [isScanning, setIsScanning] = useState(false);
   const [uninstallingSkillId, setUninstallingSkillId] = useState<string | null>(null);
   const [uninstallingPluginId, setUninstallingPluginId] = useState<string | null>(null);
+  const [pendingMarketplaceRemove, setPendingMarketplaceRemove] = useState<{
+    marketplaceName: string;
+    marketplaceRepo: string;
+    installedPluginNames: string[];
+  } | null>(null);
+  const [removingMarketplaceName, setRemovingMarketplaceName] = useState<string | null>(null);
 
   const [availableUpdates, setAvailableUpdates] = useState<Map<string, string>>(() => {
     try {
@@ -172,23 +179,63 @@ export function InstalledSkillsPage() {
     return allPlugins.filter((plugin) => plugin.installed);
   }, [allPlugins]);
 
-  type InstalledItem = { kind: "skill"; item: Skill } | { kind: "plugin"; item: Plugin };
-
-  const mergedItems = useMemo<InstalledItem[]>(() => {
-    const skillItems: InstalledItem[] = mergedSkills.map((skill) => ({ kind: "skill", item: skill }));
-    const pluginItems: InstalledItem[] = installedPlugins.map((plugin) => ({ kind: "plugin", item: plugin }));
-    return [...skillItems, ...pluginItems];
-  }, [mergedSkills, installedPlugins]);
-
   const isLoading = isSkillsLoading || isPluginsLoading;
 
-  const repositories = useMemo(() => {
-    if (!mergedItems || mergedItems.length === 0) return [];
+  const installedMarketplaces = useMemo(() => {
+    const byMarketplace = new Map<string, { name: string; repoUrl: string; plugins: Plugin[] }>();
+
+    allPlugins.forEach((plugin) => {
+      if (!plugin.marketplace_name) return;
+      const key = plugin.marketplace_name;
+      const existing = byMarketplace.get(key);
+      if (existing) {
+        existing.plugins.push(plugin);
+        if (!existing.repoUrl && plugin.repository_url) existing.repoUrl = plugin.repository_url;
+      } else {
+        byMarketplace.set(key, {
+          name: key,
+          repoUrl: plugin.repository_url,
+          plugins: [plugin],
+        });
+      }
+    });
+
+    return Array.from(byMarketplace.values())
+      .map((marketplace) => {
+        const installedCount = marketplace.plugins.filter((p) => p.installed).length;
+        return {
+          ...marketplace,
+          installedCount,
+          totalCount: marketplace.plugins.length,
+        };
+      })
+      .filter((marketplace) => marketplace.installedCount > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allPlugins]);
+
+  const tabCounts = useMemo(
+    () => ({
+      skills: mergedSkills.length,
+      plugins: installedPlugins.length,
+      marketplaces: installedMarketplaces.length,
+    }),
+    [installedMarketplaces.length, installedPlugins.length, mergedSkills.length]
+  );
+
+  const repositoryOptions: CyberSelectOption[] = useMemo(() => {
+    if (activeTab === "marketplaces") return [];
+
+    const items = activeTab === "skills" ? mergedSkills : installedPlugins;
+    if (!items || items.length === 0) {
+      return [{ value: "all", label: `${t("skills.marketplace.allSources")} (0)` }];
+    }
+
     const ownerMap = new Map<string, number>();
-    mergedItems.forEach((entry) => {
-      const owner = entry.item.repository_owner || "unknown";
+    items.forEach((item) => {
+      const owner = item.repository_owner || "unknown";
       ownerMap.set(owner, (ownerMap.get(owner) || 0) + 1);
     });
+
     const repos = Array.from(ownerMap.entries())
       .map(([owner, count]) => ({
         owner,
@@ -196,77 +243,86 @@ export function InstalledSkillsPage() {
         displayName: owner === "local" ? t("skills.marketplace.localRepo") : `@${owner}`,
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
-    return [
-      { owner: "all", count: mergedItems.length, displayName: t("skills.marketplace.allSources") },
-      ...repos,
-    ];
-  }, [mergedItems, i18n.language, t]);
-
-  const repositoryOptions: CyberSelectOption[] = useMemo(() => {
-    return repositories.map((repo) => ({
-      value: repo.owner,
-      label: `${repo.displayName} (${repo.count})`,
-    }));
-  }, [repositories]);
-
-  const itemTypes = useMemo(() => {
-    if (!mergedItems || mergedItems.length === 0) return [];
-
-    const skillsCount = mergedItems.filter((entry) => entry.kind === "skill").length;
-    const pluginsCount = mergedItems.filter((entry) => entry.kind === "plugin").length;
 
     return [
-      { type: "all", count: mergedItems.length, displayName: t("skills.marketplace.allTypes") },
-      { type: "skills-only", count: skillsCount, displayName: "Skills Only" },
-      { type: "plugins-only", count: pluginsCount, displayName: "Plugins Only" },
+      { value: "all", label: `${t("skills.marketplace.allSources")} (${items.length})` },
+      ...repos.map((repo) => ({
+        value: repo.owner,
+        label: `${repo.displayName} (${repo.count})`,
+      })),
     ];
-  }, [mergedItems, i18n.language, t]);
+  }, [activeTab, installedPlugins, mergedSkills, i18n.language, t]);
 
-  const itemTypeOptions: CyberSelectOption[] = useMemo(() => {
-    return itemTypes.map((type) => ({
-      value: type.type,
-      label: `${type.displayName} (${type.count})`,
-    }));
-  }, [itemTypes]);
+  const filteredSkills = useMemo(() => {
+    let items = mergedSkills;
 
-  const filteredItems = useMemo(() => {
-    if (!mergedItems) return [];
-    let items = mergedItems;
-
-    // 按仓库筛选
     if (selectedRepository !== "all") {
-      items = items.filter((entry) => entry.item.repository_owner === selectedRepository);
+      items = items.filter((skill) => (skill.repository_owner || "unknown") === selectedRepository);
     }
 
-    // 按类型筛选
-    if (selectedItemType === "skills-only") {
-      items = items.filter((entry) => entry.kind === "skill");
-    } else if (selectedItemType === "plugins-only") {
-      items = items.filter((entry) => entry.kind === "plugin");
-    }
-
-    // 按搜索关键词筛选
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const nameMatches: InstalledItem[] = [];
-      const descriptionMatches: InstalledItem[] = [];
-      items.forEach((entry) => {
-        const nameMatch = entry.item.name.toLowerCase().includes(query);
-        const descriptionMatch = entry.item.description?.toLowerCase().includes(query);
-        if (nameMatch) nameMatches.push(entry);
-        else if (descriptionMatch) descriptionMatches.push(entry);
+      const nameMatches: Skill[] = [];
+      const restMatches: Skill[] = [];
+      items.forEach((skill) => {
+        const nameMatch = skill.name.toLowerCase().includes(query);
+        const descriptionMatch = skill.description?.toLowerCase().includes(query);
+        if (nameMatch) nameMatches.push(skill);
+        else if (descriptionMatch) restMatches.push(skill);
       });
-      items = [...nameMatches, ...descriptionMatches];
-    }
-    if (!searchQuery) {
+      items = [...nameMatches, ...restMatches];
+    } else {
       items = [...items].sort((a, b) => {
-        const timeA = a.item.installed_at ? new Date(a.item.installed_at).getTime() : 0;
-        const timeB = b.item.installed_at ? new Date(b.item.installed_at).getTime() : 0;
+        const timeA = a.installed_at ? new Date(a.installed_at).getTime() : 0;
+        const timeB = b.installed_at ? new Date(b.installed_at).getTime() : 0;
         return timeB - timeA;
       });
     }
+
     return items;
-  }, [mergedItems, searchQuery, selectedRepository, selectedItemType]);
+  }, [mergedSkills, searchQuery, selectedRepository]);
+
+  const filteredPlugins = useMemo(() => {
+    let items = installedPlugins;
+
+    if (selectedRepository !== "all") {
+      items = items.filter(
+        (plugin) => (plugin.repository_owner || "unknown") === selectedRepository
+      );
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const nameMatches: Plugin[] = [];
+      const restMatches: Plugin[] = [];
+      items.forEach((plugin) => {
+        const nameMatch = plugin.name.toLowerCase().includes(query);
+        const descriptionMatch = plugin.description?.toLowerCase().includes(query);
+        if (nameMatch) nameMatches.push(plugin);
+        else if (descriptionMatch) restMatches.push(plugin);
+      });
+      items = [...nameMatches, ...restMatches];
+    } else {
+      items = [...items].sort((a, b) => {
+        const timeA = a.installed_at ? new Date(a.installed_at).getTime() : 0;
+        const timeB = b.installed_at ? new Date(b.installed_at).getTime() : 0;
+        return timeB - timeA;
+      });
+    }
+
+    return items;
+  }, [installedPlugins, searchQuery, selectedRepository]);
+
+  const filteredMarketplaces = useMemo(() => {
+    let items = installedMarketplaces;
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      items = items.filter((m) => m.name.toLowerCase().includes(query));
+    }
+
+    return items;
+  }, [installedMarketplaces, searchQuery]);
 
   return (
     <div className="flex flex-col h-full">
@@ -288,54 +344,87 @@ export function InstalledSkillsPage() {
               <h1 className="text-headline text-foreground mb-4">{t("nav.installed")}</h1>
             </div>
 
+            <div className="flex items-center gap-2 mb-4">
+              <InstalledTabButton
+                active={activeTab === "skills"}
+                onClick={() => {
+                  setActiveTab("skills");
+                  setSelectedRepository("all");
+                  setSearchQuery("");
+                }}
+                label={t("installed.tabs.skills", { count: tabCounts.skills })}
+              />
+              <InstalledTabButton
+                active={activeTab === "plugins"}
+                onClick={() => {
+                  setActiveTab("plugins");
+                  setSelectedRepository("all");
+                  setSearchQuery("");
+                }}
+                label={t("installed.tabs.plugins", { count: tabCounts.plugins })}
+              />
+              <InstalledTabButton
+                active={activeTab === "marketplaces"}
+                onClick={() => {
+                  setActiveTab("marketplaces");
+                  setSelectedRepository("all");
+                  setSearchQuery("");
+                }}
+                label={t("installed.tabs.marketplaces", { count: tabCounts.marketplaces })}
+              />
+            </div>
+
             <div className="flex gap-3 items-center flex-wrap">
               <div className="relative flex-1 min-w-[300px]">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder={t("skills.installedPage.search")}
+                  placeholder={
+                    activeTab === "skills"
+                      ? t("skills.installedPage.search")
+                      : activeTab === "plugins"
+                        ? t("plugins.search")
+                        : t("installed.marketplaces.search")
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="apple-input w-full h-10 pl-11 pr-4"
                 />
               </div>
 
-              <CyberSelect
-                value={selectedRepository}
-                onChange={setSelectedRepository}
-                options={repositoryOptions}
-                className="min-w-[200px]"
-              />
+              {activeTab !== "marketplaces" && (
+                <CyberSelect
+                  value={selectedRepository}
+                  onChange={setSelectedRepository}
+                  options={repositoryOptions}
+                  className="min-w-[200px]"
+                />
+              )}
 
-              <CyberSelect
-                value={selectedItemType}
-                onChange={setSelectedItemType}
-                options={itemTypeOptions}
-                className="min-w-[200px]"
-              />
-
-              <button
-                onClick={checkUpdatesWithRefresh}
-                disabled={isScanning || isCheckingUpdates}
-                className="apple-button-primary h-10 px-5 flex items-center gap-2"
-              >
-                {isScanning ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {t("skills.installedPage.scanning")}
-                  </>
-                ) : isCheckingUpdates ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {t("skills.installedPage.checkingUpdates")}
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    {t("skills.installedPage.checkUpdates")}
-                  </>
-                )}
-              </button>
+              {activeTab === "skills" && (
+                <button
+                  onClick={checkUpdatesWithRefresh}
+                  disabled={isScanning || isCheckingUpdates}
+                  className="apple-button-primary h-10 px-5 flex items-center gap-2"
+                >
+                  {isScanning ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("skills.installedPage.scanning")}
+                    </>
+                  ) : isCheckingUpdates ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("skills.installedPage.checkingUpdates")}
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      {t("skills.installedPage.checkUpdates")}
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -355,17 +444,16 @@ export function InstalledSkillsPage() {
               <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
               <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
             </div>
-          ) : filteredItems && filteredItems.length > 0 ? (
+          ) : activeTab === "skills" && filteredSkills.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
-              {filteredItems.map((entry, index) =>
-                entry.kind === "skill" ? (
+              {filteredSkills.map((skill, index) => (
                 <SkillCard
-                  key={entry.item.id}
-                  skill={entry.item}
+                  key={skill.id}
+                  skill={skill}
                   index={index}
                   onUninstall={() => {
-                    setUninstallingSkillId(entry.item.id);
-                    uninstallMutation.mutate(entry.item.id, {
+                    setUninstallingSkillId(skill.id);
+                    uninstallMutation.mutate(skill.id, {
                       onSuccess: () => {
                         setUninstallingSkillId(null);
                         appToast.success(t("skills.toast.uninstalled"));
@@ -380,7 +468,7 @@ export function InstalledSkillsPage() {
                   }}
                   onUninstallPath={(path: string) => {
                     uninstallPathMutation.mutate(
-                      { skillId: entry.item.id, path },
+                      { skillId: skill.id, path },
                       {
                         onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
                         onError: (error: any) =>
@@ -392,13 +480,13 @@ export function InstalledSkillsPage() {
                   }}
                   onUpdate={async () => {
                     try {
-                      setPreparingUpdateSkillId(entry.item.id);
+                      setPreparingUpdateSkillId(skill.id);
                       const [report, conflicts] = await api.prepareSkillUpdate(
-                        entry.item.id,
+                        skill.id,
                         i18n.language
                       );
                       setPreparingUpdateSkillId(null);
-                      setPendingUpdate({ skill: entry.item, report, conflicts });
+                      setPendingUpdate({ skill, report, conflicts });
                     } catch (error: any) {
                       setPreparingUpdateSkillId(null);
                       appToast.error(
@@ -406,10 +494,10 @@ export function InstalledSkillsPage() {
                       );
                     }
                   }}
-                  hasUpdate={availableUpdates.has(entry.item.id)}
-                  isUninstalling={uninstallingSkillId === entry.item.id}
-                  isPreparingUpdate={preparingUpdateSkillId === entry.item.id}
-                  isApplyingUpdate={confirmingUpdateSkillId === entry.item.id}
+                  hasUpdate={availableUpdates.has(skill.id)}
+                  isUninstalling={uninstallingSkillId === skill.id}
+                  isPreparingUpdate={preparingUpdateSkillId === skill.id}
+                  isApplyingUpdate={confirmingUpdateSkillId === skill.id}
                   isAnyOperationPending={
                     uninstallMutation.isPending ||
                     uninstallPathMutation.isPending ||
@@ -419,63 +507,100 @@ export function InstalledSkillsPage() {
                   }
                   t={t}
                 />
-                ) : (
-                  <InstalledPluginCard
-                    key={entry.item.id}
-                    plugin={entry.item}
-                    isUninstalling={uninstallingPluginId === entry.item.id}
-                    isAnyOperationPending={
-                      uninstallMutation.isPending ||
-                      uninstallPathMutation.isPending ||
-                      preparingUpdateSkillId !== null ||
-                      confirmingUpdateSkillId !== null ||
-                      uninstallingPluginId !== null
-                    }
-                    onUninstall={async () => {
-                      try {
-                        setUninstallingPluginId(entry.item.id);
-                        const result = await uninstallPluginMutation.mutateAsync(entry.item.id);
-                        if (result.success) {
-                          appToast.success(t("plugins.toast.uninstalled"));
-                        } else {
-                          appToast.error(t("plugins.toast.uninstallFailed"));
-                        }
-                      } catch (error: any) {
-                        appToast.error(
-                          `${t("plugins.toast.uninstallFailed")}: ${error.message || error}`
-                        );
-                      } finally {
-                        setUninstallingPluginId(null);
+              ))}
+            </div>
+          ) : activeTab === "plugins" && filteredPlugins.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
+              {filteredPlugins.map((plugin) => (
+                <InstalledPluginCard
+                  key={plugin.id}
+                  plugin={plugin}
+                  isUninstalling={uninstallingPluginId === plugin.id}
+                  isAnyOperationPending={
+                    uninstallMutation.isPending ||
+                    uninstallPathMutation.isPending ||
+                    preparingUpdateSkillId !== null ||
+                    confirmingUpdateSkillId !== null ||
+                    uninstallingPluginId !== null ||
+                    removingMarketplaceName !== null
+                  }
+                  onUninstall={async () => {
+                    try {
+                      setUninstallingPluginId(plugin.id);
+                      const result = await uninstallPluginMutation.mutateAsync(plugin.id);
+                      if (result.success) {
+                        appToast.success(t("plugins.toast.uninstalled"));
+                      } else {
+                        appToast.error(t("plugins.toast.uninstallFailed"));
                       }
-                    }}
-                  />
-                )
-              )}
+                    } catch (error: any) {
+                      appToast.error(
+                        `${t("plugins.toast.uninstallFailed")}: ${error.message || error}`
+                      );
+                    } finally {
+                      setUninstallingPluginId(null);
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          ) : activeTab === "marketplaces" && filteredMarketplaces.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
+              {filteredMarketplaces.map((marketplace) => (
+                <InstalledMarketplaceCard
+                  key={marketplace.name}
+                  marketplaceName={marketplace.name}
+                  marketplaceRepo={marketplace.repoUrl}
+                  installedCount={marketplace.installedCount}
+                  totalCount={marketplace.totalCount}
+                  isRemoving={removingMarketplaceName === marketplace.name}
+                  isAnyOperationPending={
+                    uninstallingPluginId !== null ||
+                    uninstallMutation.isPending ||
+                    uninstallPathMutation.isPending ||
+                    removingMarketplaceName !== null
+                  }
+                  onRemove={() => {
+                    const installedPluginNames = marketplace.plugins
+                      .filter((p) => p.installed)
+                      .map((p) => p.name)
+                      .sort((a, b) => a.localeCompare(b));
+                    setPendingMarketplaceRemove({
+                      marketplaceName: marketplace.name,
+                      marketplaceRepo: marketplace.repoUrl,
+                      installedPluginNames,
+                    });
+                  }}
+                />
+              ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 apple-card">
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-5">
-                {searchQuery || selectedRepository !== "all" || selectedItemType !== "all" ? (
+                {searchQuery || (activeTab !== "marketplaces" && selectedRepository !== "all") ? (
                   <SearchX className="w-10 h-10 text-muted-foreground" />
                 ) : (
                   <Package className="w-10 h-10 text-muted-foreground" />
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                {searchQuery || selectedRepository !== "all" || selectedItemType !== "all"
-                  ? t("skills.installedPage.noResults", { query: searchQuery })
-                  : t("skills.installedPage.empty")}
+                {searchQuery || (activeTab !== "marketplaces" && selectedRepository !== "all")
+                  ? t("installed.empty.noResults", { query: searchQuery })
+                  : activeTab === "skills"
+                    ? t("skills.installedPage.empty")
+                    : activeTab === "plugins"
+                      ? t("installed.plugins.empty")
+                      : t("installed.marketplaces.empty")}
               </p>
-              {(searchQuery || selectedRepository !== "all" || selectedItemType !== "all") && (
+              {(searchQuery || (activeTab !== "marketplaces" && selectedRepository !== "all")) && (
                 <button
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedRepository("all");
-                    setSelectedItemType("all");
                   }}
                   className="mt-5 apple-button-secondary"
                 >
-                  {t("skills.marketplace.clearFilters")}
+                  {t("installed.empty.clearFilters")}
                 </button>
               )}
             </div>
@@ -523,6 +648,190 @@ export function InstalledSkillsPage() {
         conflicts={pendingUpdate?.conflicts || []}
         skillName={pendingUpdate?.skill.name || ""}
       />
+
+      <AlertDialog
+        open={pendingMarketplaceRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingMarketplaceRemove(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("plugins.confirmRemoveTitle")}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <div>
+                  {t("plugins.confirmRemoveMessage", {
+                    name: pendingMarketplaceRemove?.marketplaceName || "",
+                    count: pendingMarketplaceRemove?.installedPluginNames.length || 0,
+                  })}
+                </div>
+
+                {(pendingMarketplaceRemove?.installedPluginNames.length || 0) > 0 && (
+                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                    <div className="text-sm font-medium mb-2">
+                      {t("installed.marketplaces.dependentPlugins")}
+                    </div>
+                    <ul className="text-sm text-muted-foreground space-y-1 max-h-52 overflow-y-auto">
+                      {pendingMarketplaceRemove?.installedPluginNames.slice(0, 30).map((name) => (
+                        <li key={name}>- {name}</li>
+                      ))}
+                      {(pendingMarketplaceRemove?.installedPluginNames.length || 0) > 30 && (
+                        <li className="text-xs">
+                          {t("installed.marketplaces.andMore", {
+                            count:
+                              (pendingMarketplaceRemove?.installedPluginNames.length || 0) - 30,
+                          })}
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removingMarketplaceName !== null}>
+              {t("skills.cancel")}
+            </AlertDialogCancel>
+            <button
+              onClick={async () => {
+                if (!pendingMarketplaceRemove) return;
+                const { marketplaceName, marketplaceRepo } = pendingMarketplaceRemove;
+                setRemovingMarketplaceName(marketplaceName);
+                setPendingMarketplaceRemove(null);
+                try {
+                  const result = await removeMarketplaceMutation.mutateAsync({
+                    marketplaceName,
+                    marketplaceRepo,
+                  });
+                  if (result.success) {
+                    appToast.success(
+                      t("plugins.toast.marketplaceRemoved", { count: result.removed_plugins_count })
+                    );
+                  } else {
+                    appToast.error(t("plugins.toast.marketplaceRemoveFailed"));
+                  }
+                } catch (error: any) {
+                  appToast.error(
+                    `${t("plugins.toast.marketplaceRemoveFailed")}: ${error.message || error}`
+                  );
+                } finally {
+                  setRemovingMarketplaceName(null);
+                }
+              }}
+              disabled={removingMarketplaceName !== null}
+              className="apple-button-primary bg-red-500 hover:bg-red-600 disabled:opacity-50"
+            >
+              {removingMarketplaceName
+                ? t("plugins.removingMarketplace")
+                : t("plugins.removeMarketplace")}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function InstalledTabButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-9 px-4 rounded-lg text-sm transition-colors border ${
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function InstalledMarketplaceCard({
+  marketplaceName,
+  marketplaceRepo,
+  installedCount,
+  totalCount,
+  isRemoving,
+  isAnyOperationPending,
+  onRemove,
+}: {
+  marketplaceName: string;
+  marketplaceRepo: string;
+  installedCount: number;
+  totalCount: number;
+  isRemoving: boolean;
+  isAnyOperationPending: boolean;
+  onRemove: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="apple-card p-6 group flex flex-col h-full">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+            <h3 className="font-semibold text-foreground">{marketplaceName}</h3>
+            <span className="text-xs px-2.5 py-1 rounded-full font-medium text-purple-600 bg-purple-500/10">
+              Marketplace
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 ml-4">
+          <button
+            onClick={onRemove}
+            disabled={isAnyOperationPending}
+            className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {isRemoving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {t("plugins.removingMarketplace")}
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-3.5 h-3.5" />
+                {t("plugins.removeMarketplace")}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="text-sm text-muted-foreground mb-4">
+        <span className="text-blue-500 font-medium">{t("installed.marketplaces.source")}</span>{" "}
+        {marketplaceRepo ? (
+          <a
+            href={marketplaceRepo}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 transition-colors break-all"
+          >
+            {marketplaceRepo}
+          </a>
+        ) : (
+          <span>{t("skills.empty")}</span>
+        )}
+      </div>
+
+      <div className="text-sm text-muted-foreground mt-auto">
+        <span className="text-blue-500 font-medium">
+          {t("installed.marketplaces.pluginsCount")}
+        </span>{" "}
+        {installedCount} / {totalCount}
+      </div>
     </div>
   );
 }
@@ -728,62 +1037,79 @@ function InstalledPluginCard({
   const installedAt = plugin.installed_at ? new Date(plugin.installed_at) : null;
 
   return (
-    <div className="apple-card p-5 flex flex-col h-full">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="font-medium text-foreground">{plugin.name}</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600">
+    <div className="apple-card p-6 group flex flex-col h-full">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+            <h3 className="font-semibold text-foreground">{plugin.name}</h3>
+            <span className="text-xs px-2.5 py-1 rounded-full font-medium text-purple-600 bg-purple-500/10">
               {t("plugins.badge")}
             </span>
-            {plugin.repository_owner && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                @{plugin.repository_owner}
-              </span>
-            )}
+            <span
+              className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                plugin.repository_owner === "local"
+                  ? "text-muted-foreground bg-secondary"
+                  : "text-blue-600 bg-blue-500/10"
+              }`}
+            >
+              {formatRepositoryTag(plugin)}
+            </span>
           </div>
           {plugin.marketplace_name && (
-            <p className="text-xs text-muted-foreground mb-1">
+            <div className="text-xs text-muted-foreground">
               {t("plugins.marketplace")}: {plugin.marketplace_name}
-            </p>
+            </div>
           )}
-          {plugin.version && (
-            <p className="text-xs text-muted-foreground">
-              {t("plugins.version")}: {plugin.version}
-            </p>
-          )}
+        </div>
+
+        <div className="flex gap-2 ml-4">
+          <button
+            onClick={onUninstall}
+            disabled={isAnyOperationPending}
+            className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {isUninstalling ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {t("plugins.uninstalling")}
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-3.5 h-3.5" />
+                {t("plugins.uninstall")}
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {plugin.description && (
-        <p className="text-sm text-muted-foreground mb-4 flex-1">{plugin.description}</p>
+      <p className="text-sm text-muted-foreground mb-4 leading-5 h-[6.25rem] overflow-hidden [display:-webkit-box] [-webkit-line-clamp:5] [-webkit-box-orient:vertical]">
+        {plugin.description || t("plugins.noDescription")}
+      </p>
+
+      <div className="text-sm text-muted-foreground mb-4">
+        <span className="text-blue-500 font-medium">{t("plugins.repo")}</span>{" "}
+        <a
+          href={plugin.repository_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-600 transition-colors break-all"
+        >
+          {plugin.repository_url}
+        </a>
+      </div>
+
+      {plugin.version && (
+        <div className="text-xs text-muted-foreground mb-3">
+          <span className="text-blue-500 font-medium">{t("plugins.version")}</span> {plugin.version}
+        </div>
       )}
 
       {installedAt && (
-        <p className="text-xs text-muted-foreground mb-3">
+        <div className="text-xs text-muted-foreground mt-auto">
           {t("skills.installedAt")}: {installedAt.toLocaleString()}
-        </p>
+        </div>
       )}
-
-      <div className="flex gap-2">
-        <button
-          onClick={onUninstall}
-          disabled={isAnyOperationPending}
-          className="apple-button-secondary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {isUninstalling ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {t("plugins.uninstalling")}
-            </>
-          ) : (
-            <>
-              <Trash2 className="w-4 h-4" />
-              {t("plugins.uninstall")}
-            </>
-          )}
-        </button>
-      </div>
     </div>
   );
 }

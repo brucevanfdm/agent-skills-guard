@@ -140,10 +140,7 @@ export const api = {
     return invoke("cancel_plugin_installation", { pluginId });
   },
 
-  async uninstallPlugin(
-    pluginId: string,
-    claudeCommand?: string
-  ): Promise<PluginUninstallResult> {
+  async uninstallPlugin(pluginId: string, claudeCommand?: string): Promise<PluginUninstallResult> {
     return invoke("uninstall_plugin", {
       pluginId,
       claudeCommand: claudeCommand || null,

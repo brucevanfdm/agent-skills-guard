@@ -50,7 +50,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
     font-size: 14px;
     line-height: 1.47059;
     letter-spacing: -0.022em;
@@ -65,13 +66,25 @@
 
   /* Apple 风格动画 - 流畅、克制 */
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.97); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 }
 
@@ -112,7 +125,9 @@
   .apple-button-primary {
     @apply apple-button text-white;
     background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .apple-button-primary:hover {
@@ -153,11 +168,21 @@
   }
 
   /* 兼容旧类名 */
-  .macos-button { @apply apple-button; }
-  .macos-button-primary { @apply apple-button-primary; }
-  .macos-button-secondary { @apply apple-button-secondary; }
-  .macos-button-destructive { @apply apple-button-destructive; }
-  .macos-button-ghost { @apply apple-button-ghost; }
+  .macos-button {
+    @apply apple-button;
+  }
+  .macos-button-primary {
+    @apply apple-button-primary;
+  }
+  .macos-button-secondary {
+    @apply apple-button-secondary;
+  }
+  .macos-button-destructive {
+    @apply apple-button-destructive;
+  }
+  .macos-button-ghost {
+    @apply apple-button-ghost;
+  }
 
   /* Apple 风格输入框 */
   .apple-input {
@@ -167,7 +192,9 @@
     @apply placeholder:text-muted-foreground;
   }
 
-  .macos-input { @apply apple-input; }
+  .macos-input {
+    @apply apple-input;
+  }
 
   /* Apple 风格分组标题 - 更大、更粗 */
   .apple-section-title {
@@ -175,7 +202,9 @@
     letter-spacing: -0.01em;
   }
 
-  .macos-section-title { @apply apple-section-title; }
+  .macos-section-title {
+    @apply apple-section-title;
+  }
 
   /* Apple 风格状态标签 - 药丸形状 */
   .apple-badge {
@@ -201,9 +230,15 @@
   }
 
   /* 兼容旧类名 */
-  .status-safe { @apply apple-badge-success; }
-  .status-medium { @apply apple-badge-warning; }
-  .status-critical { @apply apple-badge-danger; }
+  .status-safe {
+    @apply apple-badge-success;
+  }
+  .status-medium {
+    @apply apple-badge-warning;
+  }
+  .status-critical {
+    @apply apple-badge-danger;
+  }
 
   /* Apple 风格侧边栏导航 */
   .sidebar-item {

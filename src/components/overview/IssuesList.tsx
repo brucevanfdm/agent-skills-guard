@@ -27,19 +27,19 @@ const levelConfig = {
     color: "text-red-600",
     bg: "bg-red-500/10",
     iconBg: "bg-red-500",
-    icon: AlertTriangle
+    icon: AlertTriangle,
   },
   Medium: {
     color: "text-orange-600",
     bg: "bg-orange-500/10",
     iconBg: "bg-orange-500",
-    icon: AlertCircle
+    icon: AlertCircle,
   },
   Safe: {
     color: "text-green-600",
     bg: "bg-green-500/10",
     iconBg: "bg-green-500",
-    icon: Info
+    icon: Info,
   },
 };
 
@@ -103,7 +103,10 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
 
         const uniqueIssues = Array.from(
           new Map(
-            issue.report.issues.map((item) => [`${item.file_path || ""}::${item.description}`, item])
+            issue.report.issues.map((item) => [
+              `${item.file_path || ""}::${item.description}`,
+              item,
+            ])
           ).values()
         );
         const topIssues = uniqueIssues
@@ -189,7 +192,14 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
                     onClick={() => toggleExpanded(issue.skill_id)}
                     className="flex items-center justify-between w-full text-left text-sm font-medium py-2 group"
                   >
-                    <span>{t("overview.issues.found", { count: issue.report.issues.length, breakdown: "" }).split("：")[0]}</span>
+                    <span>
+                      {
+                        t("overview.issues.found", {
+                          count: issue.report.issues.length,
+                          breakdown: "",
+                        }).split("：")[0]
+                      }
+                    </span>
                     <ChevronUp className="w-4 h-4 text-blue-500 group-hover:-translate-y-0.5 transition-transform" />
                   </button>
 
@@ -203,13 +213,17 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
                         key={idx}
                         className="flex items-start gap-3 text-sm p-3 rounded-xl bg-secondary/50"
                       >
-                        <div className={`w-6 h-6 rounded-lg ${issueConfig.iconBg} flex items-center justify-center flex-shrink-0`}>
+                        <div
+                          className={`w-6 h-6 rounded-lg ${issueConfig.iconBg} flex items-center justify-center flex-shrink-0`}
+                        >
                           <IssueIcon className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="text-foreground">
                             {item.file_path && (
-                              <span className="text-blue-500 font-medium mr-1">[{item.file_path}]</span>
+                              <span className="text-blue-500 font-medium mr-1">
+                                [{item.file_path}]
+                              </span>
                             )}
                             {item.description}
                           </span>

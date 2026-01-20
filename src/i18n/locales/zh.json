@@ -4,12 +4,50 @@
     "subtitle": "一站式技能安全管理"
   },
   "nav": {
-    "overview": "系统概览",
-    "installed": "我的技能",
-    "marketplace": "技能市场",
-    "featuredRepositories": "精选仓库",
-    "repositories": "仓库配置",
-    "settings": "应用设置"
+    "overview": "概览",
+    "marketplace": "市场",
+    "installed": "已安装",
+    "repositories": "仓库",
+    "settings": "设置"
+  },
+  "market": {
+    "search": "搜索技能/插件...",
+    "refresh": "刷新",
+    "refreshing": "刷新中",
+    "installed": "已安装",
+    "clearFilters": "清除筛选",
+    "noResults": "没有找到包含\"{{query}}\"的内容",
+    "noItemsInFilter": "当前筛选条件下没有内容",
+    "empty": "市场暂无内容",
+    "scanningRepositories": "正在后台扫描仓库，请稍候...",
+    "goToRepositories": "前往仓库页面",
+    "tabs": {
+      "all": "全部 ({{count}})",
+      "skills": "技能 ({{count}})",
+      "plugins": "插件 ({{count}})"
+    }
+  },
+  "installed": {
+    "tabs": {
+      "skills": "技能 ({{count}})",
+      "plugins": "插件 ({{count}})",
+      "marketplaces": "Marketplace ({{count}})"
+    },
+    "plugins": {
+      "empty": "暂无已安装插件"
+    },
+    "marketplaces": {
+      "search": "搜索 Marketplace...",
+      "empty": "暂无已安装 Marketplace",
+      "source": "来源仓库：",
+      "pluginsCount": "插件数量（已安装/总数）：",
+      "dependentPlugins": "将同时卸载以下插件：",
+      "andMore": "... 还有 {{count}} 个"
+    },
+    "empty": {
+      "noResults": "没有找到包含\"{{query}}\"的内容",
+      "clearFilters": "清除筛选"
+    }
   },
   "footer": {
     "version": "版本",
@@ -45,7 +83,7 @@
     "openFolder": "打开文件夹",
     "empty": "[ 空 ]",
     "noSkillsFound": "未发现技能",
-    "navigateToRepo": "前往仓库配置以扫描仓库",
+    "navigateToRepo": "前往仓库页面以扫描仓库",
     "noDescription": "[未提供描述]",
     "repo": "仓库：",
     "path": "路径：",
@@ -63,6 +101,7 @@
     "medRisk": "中风险",
     "highRisk": "高风险",
     "notScanned": "未扫描",
+    "badge": "技能",
     "viewSecurityReport": "在概览页面查看完整安全报告",
     "safe": "[安全]",
     "lowRiskLabel": "[低风险]",
@@ -217,7 +256,7 @@
     "removeMarketplace": "移除 Marketplace",
     "removingMarketplace": "移除中",
     "confirmRemoveTitle": "确认移除 Marketplace",
-    "confirmRemoveMessage": "确定要移除 Marketplace \"{{name}}\" 吗？这将卸载该 marketplace 下的所有插件（共 {{count}} 个）。",
+    "confirmRemoveMessage": "确定要移除 Marketplace \"{{name}}\" 吗？已安装的插件将被卸载（共 {{count}} 个）。",
     "toast": {
       "installed": "插件安装成功",
       "installFailed": "插件安装失败",
@@ -229,7 +268,19 @@
     }
   },
   "repositories": {
-    "title": "仓库配置",
+    "title": "仓库",
+    "tabs": {
+      "featured": "精选推荐",
+      "my": "我的仓库 ({{count}})"
+    },
+    "preview": {
+      "title": "已添加仓库：{{name}}",
+      "foundTitle": "发现以下内容：",
+      "foundSummary": "技能 {{skills}}，插件 {{plugins}}",
+      "goToMarket": "前往市场查看全部",
+      "close": "关闭",
+      "loadFailed": "加载预览失败: {{error}}"
+    },
     "addRepo": "添加仓库",
     "cancel": "取消",
     "newRepository": "新仓库",

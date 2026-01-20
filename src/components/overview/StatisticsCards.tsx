@@ -44,18 +44,15 @@ export function StatisticsCards({
         const count = counts[index];
 
         return (
-          <div
-            key={card.key}
-            className="apple-card p-6 group"
-          >
+          <div key={card.key} className="apple-card p-6 group">
             <div className="flex items-start justify-between">
               <div>
                 <div className="apple-stat-value text-foreground">{count}</div>
-                <div className="apple-stat-label">
-                  {t(`overview.statistics.${card.key}`)}
-                </div>
+                <div className="apple-stat-label">{t(`overview.statistics.${card.key}`)}</div>
               </div>
-              <div className={`w-11 h-11 rounded-2xl ${card.iconBg} flex items-center justify-center shadow-lg shadow-black/10 group-hover:scale-105 transition-transform duration-300`}>
+              <div
+                className={`w-11 h-11 rounded-2xl ${card.iconBg} flex items-center justify-center shadow-lg shadow-black/10 group-hover:scale-105 transition-transform duration-300`}
+              >
                 <Icon className="w-5 h-5 text-white" strokeWidth={2} />
               </div>
             </div>

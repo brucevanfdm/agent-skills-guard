@@ -5,11 +5,49 @@
   },
   "nav": {
     "overview": "OVERVIEW",
+    "marketplace": "MARKET",
     "installed": "INSTALLED",
-    "marketplace": "MARKETPLACE",
-    "featuredRepositories": "FEATURED_REPOS",
-    "repositories": "REPO_CONFIG",
+    "repositories": "REPOSITORIES",
     "settings": "SETTINGS"
+  },
+  "market": {
+    "search": "SEARCH_SKILLS_PLUGINS...",
+    "refresh": "REFRESH",
+    "refreshing": "REFRESHING",
+    "installed": "INSTALLED",
+    "clearFilters": "CLEAR_FILTERS",
+    "noResults": "No items found containing \"{{query}}\"",
+    "noItemsInFilter": "No items match current filters",
+    "empty": "MARKET_IS_EMPTY",
+    "scanningRepositories": "Scanning repositories in background, please wait...",
+    "goToRepositories": "GO_TO_REPOSITORIES",
+    "tabs": {
+      "all": "ALL ({{count}})",
+      "skills": "SKILLS ({{count}})",
+      "plugins": "PLUGINS ({{count}})"
+    }
+  },
+  "installed": {
+    "tabs": {
+      "skills": "SKILLS ({{count}})",
+      "plugins": "PLUGINS ({{count}})",
+      "marketplaces": "MARKETPLACES ({{count}})"
+    },
+    "plugins": {
+      "empty": "NO_INSTALLED_PLUGINS"
+    },
+    "marketplaces": {
+      "search": "SEARCH_MARKETPLACES...",
+      "empty": "NO_INSTALLED_MARKETPLACES",
+      "source": "SOURCE_REPO:",
+      "pluginsCount": "PLUGINS (INSTALLED/TOTAL):",
+      "dependentPlugins": "Will also uninstall these plugins:",
+      "andMore": "... and {{count}} more"
+    },
+    "empty": {
+      "noResults": "No items found containing \"{{query}}\"",
+      "clearFilters": "CLEAR_FILTERS"
+    }
   },
   "footer": {
     "version": "v",
@@ -45,7 +83,7 @@
     "openFolder": "OPEN_FOLDER",
     "empty": "[ EMPTY ]",
     "noSkillsFound": "NO_SKILLS_FOUND",
-    "navigateToRepo": "Navigate to REPO_CONFIG to scan repositories",
+    "navigateToRepo": "Navigate to Repositories to scan repositories",
     "noDescription": "[NO_DESCRIPTION_PROVIDED]",
     "repo": "REPO:",
     "path": "PATH:",
@@ -63,6 +101,7 @@
     "medRisk": "MEDRISK",
     "highRisk": "HIGHRISK",
     "notScanned": "NOT_SCANNED",
+    "badge": "SKILL",
     "viewSecurityReport": "View full security report in Overview",
     "safe": "[SAFE]",
     "lowRiskLabel": "[LOW_RISK]",
@@ -217,7 +256,7 @@
     "removeMarketplace": "REMOVE_MARKETPLACE",
     "removingMarketplace": "REMOVING...",
     "confirmRemoveTitle": "Confirm Remove Marketplace",
-    "confirmRemoveMessage": "Are you sure you want to remove marketplace \"{{name}}\"? This will uninstall all plugins from this marketplace ({{count}} total).",
+    "confirmRemoveMessage": "Remove Marketplace \"{{name}}\"? Installed plugins will be uninstalled ({{count}}).",
     "toast": {
       "installed": "[SUCCESS] PLUGIN_INSTALLED",
       "installFailed": "[ERROR] INSTALL_FAILED",
@@ -229,7 +268,19 @@
     }
   },
   "repositories": {
-    "title": "Repository_Config",
+    "title": "REPOSITORIES",
+    "tabs": {
+      "featured": "FEATURED",
+      "my": "MY_REPOS ({{count}})"
+    },
+    "preview": {
+      "title": "Repository Added: {{name}}",
+      "foundTitle": "Discovered:",
+      "foundSummary": "Skills {{skills}}, Plugins {{plugins}}",
+      "goToMarket": "GO_TO_MARKET",
+      "close": "CLOSE",
+      "loadFailed": "Failed to load preview: {{error}}"
+    },
     "addRepo": "ADD_REPO",
     "cancel": "CANCEL",
     "newRepository": "NEW_REPOSITORY",

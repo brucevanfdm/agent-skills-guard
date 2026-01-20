@@ -6,16 +6,16 @@ export function LanguageSwitcher() {
   const currentLang = i18n.language;
 
   const toggleLanguage = () => {
-    const newLang = currentLang === 'zh' ? 'en' : 'zh';
+    const newLang = currentLang === "zh" ? "en" : "zh";
 
     i18n.changeLanguage(newLang).catch((error) => {
-      console.error('Failed to change language:', error);
+      console.error("Failed to change language:", error);
     });
 
     try {
-      localStorage.setItem('language', newLang);
+      localStorage.setItem("language", newLang);
     } catch (error) {
-      console.warn('Failed to save language preference:', error);
+      console.warn("Failed to save language preference:", error);
     }
   };
 
@@ -27,17 +27,17 @@ export function LanguageSwitcher() {
     >
       <Languages className="w-4 h-4 text-muted-foreground" />
       <span className="font-medium">
-        {currentLang === 'zh' ? (
+        {currentLang === "zh" ? (
           <>
-            <span className="text-primary">{t('language.zh')}</span>
+            <span className="text-primary">{t("language.zh")}</span>
             <span className="text-muted-foreground mx-1">/</span>
-            <span className="text-muted-foreground">{t('language.en')}</span>
+            <span className="text-muted-foreground">{t("language.en")}</span>
           </>
         ) : (
           <>
-            <span className="text-muted-foreground">{t('language.zh')}</span>
+            <span className="text-muted-foreground">{t("language.zh")}</span>
             <span className="text-muted-foreground mx-1">/</span>
-            <span className="text-primary">{t('language.en')}</span>
+            <span className="text-primary">{t("language.en")}</span>
           </>
         )}
       </span>

@@ -12,8 +12,7 @@ export function useAddRepository() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ url, name }: { url: string; name: string }) =>
-      api.addRepository(url, name),
+    mutationFn: ({ url, name }: { url: string; name: string }) => api.addRepository(url, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
     },

@@ -23,8 +23,13 @@ export function useRemoveMarketplace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ marketplaceName, marketplaceRepo }: { marketplaceName: string; marketplaceRepo: string }) =>
-      api.removeMarketplace(marketplaceName, marketplaceRepo),
+    mutationFn: ({
+      marketplaceName,
+      marketplaceRepo,
+    }: {
+      marketplaceName: string;
+      marketplaceRepo: string;
+    }) => api.removeMarketplace(marketplaceName, marketplaceRepo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plugins"] });
       queryClient.invalidateQueries({ queryKey: ["repositories"] });

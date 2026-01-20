@@ -5,7 +5,6 @@ import { MarketplacePage } from "./components/MarketplacePage";
 import { RepositoriesPage } from "./components/RepositoriesPage";
 import { OverviewPage } from "./components/OverviewPage";
 import { SettingsPage } from "./components/SettingsPage";
-import { FeaturedRepositoriesPage } from "./components/FeaturedRepositoriesPage";
 import { Sidebar } from "./components/Sidebar";
 import { WindowControls } from "./components/WindowControls";
 import { UpdateBadge } from "./components/UpdateBadge";
@@ -16,13 +15,7 @@ import appIconUrl from "../app-icon.png";
 
 const reactQueryClient = new QueryClient();
 
-type TabType =
-  | "overview"
-  | "installed"
-  | "marketplace"
-  | "featuredRepositories"
-  | "repositories"
-  | "settings";
+type TabType = "overview" | "marketplace" | "installed" | "repositories" | "settings";
 
 function AppContent() {
   const queryClient = useQueryClient();
@@ -98,15 +91,8 @@ function AppContent() {
         {/* Windows: 左侧应用图标 + 标题 */}
         {platform === "windows" && (
           <div className="flex items-center gap-2 select-none">
-            <img
-              src={appIconUrl}
-              alt=""
-              className="w-5 h-5"
-              draggable={false}
-            />
-            <div className="text-[13px] font-medium text-foreground/80">
-              Agent Skills Guard
-            </div>
+            <img src={appIconUrl} alt="" className="w-5 h-5" draggable={false} />
+            <div className="text-[13px] font-medium text-foreground/80">Agent Skills Guard</div>
           </div>
         )}
 
@@ -147,20 +133,11 @@ function AppContent() {
               <MarketplacePage onNavigateToRepositories={() => setCurrentTab("repositories")} />
             </div>
           )}
-          {currentTab === "featuredRepositories" && (
-            <div className="h-full overflow-y-auto">
-              <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
-                <div className="max-w-6xl mx-auto">
-                  <FeaturedRepositoriesPage />
-                </div>
-              </div>
-            </div>
-          )}
           {currentTab === "repositories" && (
             <div className="h-full overflow-y-auto">
               <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
                 <div className="max-w-6xl mx-auto">
-                  <RepositoriesPage />
+                  <RepositoriesPage onNavigateToMarket={() => setCurrentTab("marketplace")} />
                 </div>
               </div>
             </div>

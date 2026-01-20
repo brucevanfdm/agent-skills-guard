@@ -55,7 +55,9 @@ export function IssuesSummaryCard({
                 : "hover:scale-[1.02]"
             }`}
           >
-            <div className={`w-9 h-9 rounded-xl ${config.iconBg} flex items-center justify-center mb-3 shadow-lg shadow-black/10`}>
+            <div
+              className={`w-9 h-9 rounded-xl ${config.iconBg} flex items-center justify-center mb-3 shadow-lg shadow-black/10`}
+            >
               <Icon className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <div className={`text-3xl font-semibold tracking-tight ${config.textColor}`}>

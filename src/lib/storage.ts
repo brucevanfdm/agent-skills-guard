@@ -1,4 +1,4 @@
-const RECENT_PATHS_KEY = 'recentInstallPaths';
+const RECENT_PATHS_KEY = "recentInstallPaths";
 const MAX_RECENT_PATHS = 3;
 
 /**
@@ -9,7 +9,7 @@ export function getRecentInstallPaths(): string[] {
     const stored = localStorage.getItem(RECENT_PATHS_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
-    console.warn('Failed to get recent install paths:', error);
+    console.warn("Failed to get recent install paths:", error);
     return [];
   }
 }
@@ -23,7 +23,7 @@ export function addRecentInstallPath(path: string): void {
     let paths = getRecentInstallPaths();
 
     // 移除重复项（不区分大小写比较）
-    paths = paths.filter(p => p.toLowerCase() !== path.toLowerCase());
+    paths = paths.filter((p) => p.toLowerCase() !== path.toLowerCase());
 
     // 添加到开头
     paths.unshift(path);
@@ -35,6 +35,6 @@ export function addRecentInstallPath(path: string): void {
 
     localStorage.setItem(RECENT_PATHS_KEY, JSON.stringify(paths));
   } catch (error) {
-    console.warn('Failed to save recent install path:', error);
+    console.warn("Failed to save recent install path:", error);
   }
 }

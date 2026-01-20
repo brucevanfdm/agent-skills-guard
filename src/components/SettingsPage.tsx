@@ -97,10 +97,7 @@ function renderUpdateNotes(markdown: string) {
         if (block.type === "heading") {
           const HeadingTag = block.level <= 2 ? "h3" : "h4";
           return (
-            <HeadingTag
-              key={`heading-${index}`}
-              className="text-sm font-semibold text-foreground"
-            >
+            <HeadingTag key={`heading-${index}`} className="text-sm font-semibold text-foreground">
               {block.text}
             </HeadingTag>
           );
@@ -149,12 +146,12 @@ export function SettingsPage() {
 
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang).catch((error) => {
-      console.error('Failed to change language:', error);
+      console.error("Failed to change language:", error);
     });
     try {
-      localStorage.setItem('language', lang);
+      localStorage.setItem("language", lang);
     } catch (error) {
-      console.warn('Failed to save language preference:', error);
+      console.warn("Failed to save language preference:", error);
     }
   };
 
@@ -163,7 +160,9 @@ export function SettingsPage() {
       const hasNewUpdate = await updateContext.checkUpdate();
       if (hasNewUpdate) {
         updateContext.resetDismiss();
-        appToast.success(t("update.newVersionAvailable") + ": " + updateContext.updateInfo?.availableVersion);
+        appToast.success(
+          t("update.newVersionAvailable") + ": " + updateContext.updateInfo?.availableVersion
+        );
       } else {
         appToast.success(t("update.upToDate"));
       }
@@ -215,21 +214,21 @@ export function SettingsPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleLanguageChange('zh')}
+                onClick={() => handleLanguageChange("zh")}
                 className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${
-                  currentLang === 'zh'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                  currentLang === "zh"
+                    ? "bg-blue-500 text-white"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                 }`}
               >
                 中文
               </button>
               <button
-                onClick={() => handleLanguageChange('en')}
+                onClick={() => handleLanguageChange("en")}
                 className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${
-                  currentLang === 'en'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                  currentLang === "en"
+                    ? "bg-blue-500 text-white"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                 }`}
               >
                 English
@@ -297,21 +296,27 @@ export function SettingsPage() {
               {isDownloading && (
                 <span className="text-xs text-blue-500 font-medium">
                   {t("update.downloading")}
-                  {typeof downloadPercent === "number" && downloadPercent > 0 ? ` ${downloadPercent}%` : ""}
+                  {typeof downloadPercent === "number" && downloadPercent > 0
+                    ? ` ${downloadPercent}%`
+                    : ""}
                 </span>
               )}
               {isInstalling && (
                 <span className="text-xs text-blue-500 font-medium">{t("update.installing")}</span>
               )}
               {isRestartRequired && (
-                <span className="text-xs text-blue-500 font-medium">{t("update.restartRequired")}</span>
+                <span className="text-xs text-blue-500 font-medium">
+                  {t("update.restartRequired")}
+                </span>
               )}
               <button
                 onClick={handleCheckUpdate}
                 disabled={updateContext.isChecking || isUpdating}
                 className="apple-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${updateContext.isChecking ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${updateContext.isChecking ? "animate-spin" : ""}`}
+                />
                 {updateContext.isChecking ? t("update.checking") : t("update.check")}
               </button>
             </div>

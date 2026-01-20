@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import {
   checkForUpdate,
   type UpdateInfo,
@@ -124,8 +117,8 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
     }
 
     setError(null);
-      setUpdatePhaseSafe("downloading");
-      setUpdateProgress({ total: 0, downloaded: 0, percent: 0 });
+    setUpdatePhaseSafe("downloading");
+    setUpdateProgress({ total: 0, downloaded: 0, percent: 0 });
 
     try {
       await updateHandle.downloadAndInstall((progress) => {
@@ -204,9 +197,7 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
     resetDismiss,
   };
 
-  return (
-    <UpdateContext.Provider value={value}>{children}</UpdateContext.Provider>
-  );
+  return <UpdateContext.Provider value={value}>{children}</UpdateContext.Provider>;
 }
 
 export function useUpdate() {

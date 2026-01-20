@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { User, Clock, FolderPlus } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { getRecentInstallPaths } from '@/lib/storage';
+import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { User, Clock, FolderPlus } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { getRecentInstallPaths } from "@/lib/storage";
 
 interface InstallPathSelectorProps {
   onSelect: (path: string) => void;
@@ -11,22 +11,22 @@ interface InstallPathSelectorProps {
 
 export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelectorProps) {
   const { t } = useTranslation();
-  const [selectedPath, setSelectedPath] = useState<string>('');
-  const [userPath, setUserPath] = useState<string>('');
+  const [selectedPath, setSelectedPath] = useState<string>("");
+  const [userPath, setUserPath] = useState<string>("");
   const [recentPaths, setRecentPaths] = useState<string[]>([]);
-  const [customPath, setCustomPath] = useState<string>('');
+  const [customPath, setCustomPath] = useState<string>("");
   const [isSelecting, setIsSelecting] = useState(false);
 
   useEffect(() => {
-    invoke<string>('get_default_install_path')
-      .then(path => {
+    invoke<string>("get_default_install_path")
+      .then((path) => {
         setUserPath(path);
         const initial = defaultPath || path;
         setSelectedPath(initial);
         onSelect(initial);
       })
-      .catch(error => {
-        console.error('Failed to get default install path:', error);
+      .catch((error) => {
+        console.error("Failed to get default install path:", error);
       });
 
     setRecentPaths(getRecentInstallPaths());
@@ -40,13 +40,13 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
   const handleCustomPath = async () => {
     setIsSelecting(true);
     try {
-      const selectedCustomPath = await invoke<string | null>('select_custom_install_path');
+      const selectedCustomPath = await invoke<string | null>("select_custom_install_path");
       if (selectedCustomPath) {
         setCustomPath(selectedCustomPath);
         handleSelect(selectedCustomPath);
       }
     } catch (error: any) {
-      console.error('Failed to select custom path:', error);
+      console.error("Failed to select custom path:", error);
     } finally {
       setIsSelecting(false);
     }
@@ -55,14 +55,14 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
   return (
     <div className="space-y-3">
       <label className="text-sm text-primary font-medium">
-        {t('skills.pathSelection.selectPath')}:
+        {t("skills.pathSelection.selectPath")}:
       </label>
 
       {/* 用户目录选项 */}
       {userPath && (
         <PathOption
           icon={<User className="w-4 h-4" />}
-          label={t('skills.pathSelection.userDirectory')}
+          label={t("skills.pathSelection.userDirectory")}
           path={userPath}
           selected={selectedPath === userPath}
           onClick={() => handleSelect(userPath)}
@@ -70,18 +70,18 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
       )}
 
       {/* 最近使用的路径 */}
-      {recentPaths.filter(path => path.toLowerCase() !== userPath.toLowerCase()).length > 0 && (
+      {recentPaths.filter((path) => path.toLowerCase() !== userPath.toLowerCase()).length > 0 && (
         <div className="border-t border-border pt-3 mt-3">
           <label className="text-xs text-muted-foreground mb-2 block">
-            {t('skills.pathSelection.recentPaths')}:
+            {t("skills.pathSelection.recentPaths")}:
           </label>
           {recentPaths
-            .filter(path => path.toLowerCase() !== userPath.toLowerCase())
+            .filter((path) => path.toLowerCase() !== userPath.toLowerCase())
             .map((path, idx) => (
               <PathOption
                 key={path}
                 icon={<Clock className="w-4 h-4" />}
-                label={`${t('skills.pathSelection.recent')} ${idx + 1}`}
+                label={`${t("skills.pathSelection.recent")} ${idx + 1}`}
                 path={path}
                 selected={selectedPath === path}
                 onClick={() => handleSelect(path)}
@@ -93,9 +93,7 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
       {/* 显示已选择的自定义路径 */}
       {customPath && customPath !== userPath && !recentPaths.includes(customPath) && (
         <div className="border-t border-border pt-3 mt-3">
-          <label className="text-xs text-muted-foreground mb-2 block">
-            自定义路径:
-          </label>
+          <label className="text-xs text-muted-foreground mb-2 block">自定义路径:</label>
           <PathOption
             icon={<FolderPlus className="w-4 h-4" />}
             label="自定义"
@@ -114,7 +112,7 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
       >
         <FolderPlus className="w-4 h-4 text-primary" />
         <span className="text-sm text-primary">
-          {isSelecting ? t('skills.pathSelection.selecting') : t('skills.pathSelection.customPath')}
+          {isSelecting ? t("skills.pathSelection.selecting") : t("skills.pathSelection.customPath")}
         </span>
       </button>
     </div>
@@ -122,7 +120,13 @@ export function InstallPathSelector({ onSelect, defaultPath }: InstallPathSelect
 }
 
 // PathOption 子组件
-function PathOption({ icon, label, path, selected, onClick }: {
+function PathOption({
+  icon,
+  label,
+  path,
+  selected,
+  onClick,
+}: {
   icon: React.ReactNode;
   label: string;
   path: string;
@@ -133,14 +137,10 @@ function PathOption({ icon, label, path, selected, onClick }: {
     <button
       onClick={onClick}
       className={`w-full flex items-start gap-3 px-4 py-3 border rounded-lg transition-colors ${
-        selected
-          ? 'border-primary bg-primary/5'
-          : 'border-border hover:border-primary/50'
+        selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
       }`}
     >
-      <div className={`mt-0.5 ${selected ? 'text-primary' : 'text-muted-foreground'}`}>
-        {icon}
-      </div>
+      <div className={`mt-0.5 ${selected ? "text-primary" : "text-muted-foreground"}`}>{icon}</div>
       <div className="flex-1 text-left">
         <div className="text-sm font-medium">{label}</div>
         <div className="text-xs text-muted-foreground break-all">{path}</div>

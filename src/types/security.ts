@@ -4,7 +4,7 @@ export interface SecurityIssue {
   description: string;
   line_number?: number;
   code_snippet?: string;
-  file_path?: string;  // 记录哪个文件有风险
+  file_path?: string; // 记录哪个文件有风险
 }
 
 export interface SecurityReport {
@@ -15,7 +15,7 @@ export interface SecurityReport {
   recommendations: string[];
   blocked: boolean;
   hard_trigger_issues: string[];
-  scanned_files: string[];  // 已扫描的文件列表
+  scanned_files: string[]; // 已扫描的文件列表
 }
 
 export interface SkillScanResult {

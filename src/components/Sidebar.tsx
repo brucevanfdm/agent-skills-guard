@@ -1,13 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Package, ShoppingCart, Star, Database, Settings } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Database, Settings } from "lucide-react";
 
-type TabType =
-  | "overview"
-  | "installed"
-  | "marketplace"
-  | "featuredRepositories"
-  | "repositories"
-  | "settings";
+type TabType = "overview" | "marketplace" | "installed" | "repositories" | "settings";
 
 interface SidebarProps {
   currentTab: TabType;
@@ -16,9 +10,8 @@ interface SidebarProps {
 
 const mainNavItems: { id: TabType; icon: typeof LayoutDashboard; labelKey: string }[] = [
   { id: "overview", icon: LayoutDashboard, labelKey: "nav.overview" },
-  { id: "installed", icon: Package, labelKey: "nav.installed" },
   { id: "marketplace", icon: ShoppingCart, labelKey: "nav.marketplace" },
-  { id: "featuredRepositories", icon: Star, labelKey: "nav.featuredRepositories" },
+  { id: "installed", icon: Package, labelKey: "nav.installed" },
   { id: "repositories", icon: Database, labelKey: "nav.repositories" },
 ];
 
