@@ -1,124 +1,105 @@
 /**
- * Hook for translating skill content in the marketplace
+ * Hook for manually translating skill content in the marketplace
  * Uses free Google Translate API - no API key required
+ * Translation is triggered manually per skill
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Skill } from '../types';
-import { translateBatch } from '../lib/translate';
+import { translateText } from '../lib/translate';
 
 export interface TranslatedSkill extends Skill {
     translatedName?: string;
     translatedDescription?: string;
     isTranslated?: boolean;
+    isTranslating?: boolean;
 }
 
-export interface UseTranslatedSkillsResult {
-    skills: TranslatedSkill[];
-    isTranslating: boolean;
-    error: Error | null;
-    translationEnabled: boolean;
+export interface UseSkillTranslationResult {
+    translateSkill: (skillId: string, skill: Skill) => Promise<TranslatedSkill>;
+    translatingSkillIds: Set<string>;
+    translatedSkills: Map<string, TranslatedSkill>;
+    getTranslatedSkill: (skill: Skill) => TranslatedSkill;
+    targetLanguage: string;
 }
 
 /**
- * Hook to translate skill names and descriptions when language is Chinese
- * No API key required - uses free Google Translate endpoint
+ * Hook to manually translate individual skills
+ * Uses the app's current language setting as target language
  */
-export function useTranslatedSkills(skills: Skill[]): UseTranslatedSkillsResult {
+export function useSkillTranslation(): UseSkillTranslationResult {
     const { i18n } = useTranslation();
-    const [translatedSkills, setTranslatedSkills] = useState<TranslatedSkill[]>([]);
-    const [isTranslating, setIsTranslating] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+    const [translatingSkillIds, setTranslatingSkillIds] = useState<Set<string>>(new Set());
+    const [translatedSkills, setTranslatedSkills] = useState<Map<string, TranslatedSkill>>(new Map());
 
-    const isChineseLanguage = i18n.language === 'zh';
-    // Translation is enabled when language is Chinese (no API key needed)
-    const translationEnabled = isChineseLanguage;
+    // Get target language from app settings
+    // Google Translate uses language codes like 'zh-CN', 'en', etc.
+    const targetLanguage = i18n.language === 'zh' ? 'zh-CN' : i18n.language;
 
-    // Generate a stable key for the skills array
-    const skillsKey = useMemo(() => {
-        return skills.map(s => s.id).join(',');
-    }, [skills]);
-
-    useEffect(() => {
-        // If not Chinese, just return original skills
-        if (!translationEnabled) {
-            setTranslatedSkills(skills.map(skill => ({ ...skill })));
-            setError(null);
-            return;
+    const translateSkill = useCallback(async (skillId: string, skill: Skill): Promise<TranslatedSkill> => {
+        // Check if already translated for current language
+        const existingTranslation = translatedSkills.get(`${skillId}:${targetLanguage}`);
+        if (existingTranslation) {
+            return existingTranslation;
         }
 
-        // Skip if no skills
-        if (skills.length === 0) {
-            setTranslatedSkills([]);
-            return;
+        // Mark as translating
+        setTranslatingSkillIds(prev => new Set(prev).add(skillId));
+
+        try {
+            const [translatedName, translatedDescription] = await Promise.all([
+                skill.name ? translateText(skill.name, targetLanguage) : Promise.resolve(skill.name),
+                skill.description ? translateText(skill.description, targetLanguage) : Promise.resolve(skill.description),
+            ]);
+
+            const translated: TranslatedSkill = {
+                ...skill,
+                translatedName,
+                translatedDescription,
+                isTranslated: true,
+                isTranslating: false,
+            };
+
+            // Cache the translation
+            setTranslatedSkills(prev => {
+                const newMap = new Map(prev);
+                newMap.set(`${skillId}:${targetLanguage}`, translated);
+                return newMap;
+            });
+
+            return translated;
+        } catch (error) {
+            console.error('Translation failed:', error);
+            return { ...skill, isTranslating: false };
+        } finally {
+            setTranslatingSkillIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(skillId);
+                return newSet;
+            });
         }
+    }, [targetLanguage, translatedSkills]);
 
-        let cancelled = false;
-
-        async function translateSkills() {
-            setIsTranslating(true);
-            setError(null);
-
-            try {
-                // Collect all texts to translate
-                const textsToTranslate: string[] = [];
-                const textIndices: { skillIndex: number; field: 'name' | 'description' }[] = [];
-
-                skills.forEach((skill, skillIndex) => {
-                    if (skill.name) {
-                        textsToTranslate.push(skill.name);
-                        textIndices.push({ skillIndex, field: 'name' });
-                    }
-                    if (skill.description) {
-                        textsToTranslate.push(skill.description);
-                        textIndices.push({ skillIndex, field: 'description' });
-                    }
-                });
-
-                // Translate in batch (uses free Google Translate API)
-                const translations = await translateBatch(textsToTranslate, 'zh-CN');
-
-                if (cancelled) return;
-
-                // Map translations back to skills
-                const result: TranslatedSkill[] = skills.map(skill => ({ ...skill }));
-
-                textIndices.forEach(({ skillIndex, field }, i) => {
-                    const translatedText = translations[i];
-                    if (field === 'name') {
-                        result[skillIndex].translatedName = translatedText;
-                    } else {
-                        result[skillIndex].translatedDescription = translatedText;
-                    }
-                    result[skillIndex].isTranslated = true;
-                });
-
-                setTranslatedSkills(result);
-            } catch (err) {
-                if (cancelled) return;
-                console.error('Translation error:', err);
-                setError(err instanceof Error ? err : new Error('Translation failed'));
-                // On error, return original skills
-                setTranslatedSkills(skills.map(skill => ({ ...skill })));
-            } finally {
-                if (!cancelled) {
-                    setIsTranslating(false);
-                }
-            }
+    const getTranslatedSkill = useCallback((skill: Skill): TranslatedSkill => {
+        const cached = translatedSkills.get(`${skill.id}:${targetLanguage}`);
+        if (cached) {
+            return cached;
         }
-
-        translateSkills();
-
-        return () => {
-            cancelled = true;
+        return {
+            ...skill,
+            isTranslating: translatingSkillIds.has(skill.id),
         };
-    }, [skillsKey, translationEnabled, skills]);
+    }, [translatedSkills, translatingSkillIds, targetLanguage]);
 
     return {
-        skills: translatedSkills,
-        isTranslating,
-        error,
-        translationEnabled,
+        translateSkill,
+        translatingSkillIds,
+        translatedSkills,
+        getTranslatedSkill,
+        targetLanguage,
     };
 }
+
+// Re-export TranslatedSkill type for convenience
+export type { TranslatedSkill as TranslatedSkillType };

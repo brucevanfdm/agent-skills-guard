@@ -7,7 +7,7 @@ import {
   useUninstallSkillPath,
   useDeleteSkill,
 } from "../hooks/useSkills";
-import { useTranslatedSkills, TranslatedSkill } from "../hooks/useTranslatedSkills";
+import { useSkillTranslation, TranslatedSkill } from "../hooks/useTranslatedSkills";
 import { Skill } from "../types";
 import { SecurityReport } from "../types/security";
 import {
@@ -141,8 +141,8 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     return filtered;
   }, [repositorySkills, searchQuery, selectedRepository, hideInstalled]);
 
-  // Translate skills when language is Chinese
-  const { skills: translatedSkills, isTranslating, translationEnabled } = useTranslatedSkills(filteredSkills);
+  // Manual translation hook
+  const { translateSkill, getTranslatedSkill, translatingSkillIds } = useSkillTranslation();
 
   return (
     <div className="flex flex-col h-full">
@@ -205,95 +205,92 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
         }}
       >
         <div className={`max-w-6xl mx-auto ${isHeaderCollapsed ? "pt-4" : "pt-6"}`}>
-          {/* Translation Status */}
-          {translationEnabled && isTranslating && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-              <Languages className="w-4 h-4 animate-pulse" />
-              <span>{t("skills.translation.translating")}</span>
-            </div>
-          )}
-
           {/* Skills Grid */}
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-16">
               <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
               <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
             </div>
-          ) : translatedSkills && translatedSkills.length > 0 ? (
+          ) : filteredSkills && filteredSkills.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              {translatedSkills.map((skill) => (
-                <SkillCard
-                  key={skill.id}
-                  skill={skill}
-                  onInstall={async () => {
-                    try {
-                      setPreparingSkillId(skill.id);
-                      const report = await invoke<SecurityReport>("prepare_skill_installation", {
-                        skillId: skill.id,
-                        locale: i18n.language,
-                      });
-                      setPreparingSkillId(null);
-                      setPendingInstall({ skill, report });
-                    } catch (error: any) {
-                      setPreparingSkillId(null);
-                      appToast.error(
-                        `${t("skills.toast.installFailed")}: ${error.message || error}`
-                      );
-                    }
-                  }}
-                  onUninstall={() => {
-                    uninstallMutation.mutate(skill.id, {
-                      onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
-                      onError: (error: any) =>
+              {filteredSkills.map((skill) => {
+                const translatedSkill = getTranslatedSkill(skill);
+                return (
+                  <SkillCard
+                    key={skill.id}
+                    skill={translatedSkill}
+                    onTranslate={() => translateSkill(skill.id, skill)}
+                    isTranslatingSkill={translatingSkillIds.has(skill.id)}
+                    onInstall={async () => {
+                      try {
+                        setPreparingSkillId(skill.id);
+                        const report = await invoke<SecurityReport>("prepare_skill_installation", {
+                          skillId: skill.id,
+                          locale: i18n.language,
+                        });
+                        setPreparingSkillId(null);
+                        setPendingInstall({ skill, report });
+                      } catch (error: any) {
+                        setPreparingSkillId(null);
                         appToast.error(
-                          `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
-                        ),
-                    });
-                  }}
-                  onUninstallPath={(path: string) => {
-                    uninstallPathMutation.mutate(
-                      { skillId: skill.id, path },
-                      {
+                          `${t("skills.toast.installFailed")}: ${error.message || error}`
+                        );
+                      }
+                    }}
+                    onUninstall={() => {
+                      uninstallMutation.mutate(skill.id, {
                         onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
                         onError: (error: any) =>
                           appToast.error(
                             `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
                           ),
-                      }
-                    );
-                  }}
-                  onDelete={() => {
-                    setDeletingSkillId(skill.id);
-                    deleteMutation.mutate(skill.id, {
-                      onSuccess: () => {
-                        setDeletingSkillId(null);
-                        appToast.success(t("skills.toast.deleted"));
-                      },
-                      onError: (error: any) => {
-                        setDeletingSkillId(null);
-                        appToast.error(
-                          `${t("skills.toast.deleteFailed")}: ${error.message || error}`
-                        );
-                      },
-                    });
-                  }}
-                  isInstalling={
-                    installMutation.isPending && installMutation.variables?.skillId === skill.id
-                  }
-                  isUninstalling={
-                    uninstallMutation.isPending && uninstallMutation.variables === skill.id
-                  }
-                  isDeleting={deletingSkillId === skill.id}
-                  isPreparing={preparingSkillId === skill.id}
-                  isAnyOperationPending={
-                    installMutation.isPending ||
-                    uninstallMutation.isPending ||
-                    preparingSkillId !== null ||
-                    deletingSkillId !== null
-                  }
-                  t={t}
-                />
-              ))}
+                      });
+                    }}
+                    onUninstallPath={(path: string) => {
+                      uninstallPathMutation.mutate(
+                        { skillId: skill.id, path },
+                        {
+                          onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
+                          onError: (error: any) =>
+                            appToast.error(
+                              `${t("skills.toast.uninstallFailed")}: ${error.message || error}`
+                            ),
+                        }
+                      );
+                    }}
+                    onDelete={() => {
+                      setDeletingSkillId(skill.id);
+                      deleteMutation.mutate(skill.id, {
+                        onSuccess: () => {
+                          setDeletingSkillId(null);
+                          appToast.success(t("skills.toast.deleted"));
+                        },
+                        onError: (error: any) => {
+                          setDeletingSkillId(null);
+                          appToast.error(
+                            `${t("skills.toast.deleteFailed")}: ${error.message || error}`
+                          );
+                        },
+                      });
+                    }}
+                    isInstalling={
+                      installMutation.isPending && installMutation.variables?.skillId === skill.id
+                    }
+                    isUninstalling={
+                      uninstallMutation.isPending && uninstallMutation.variables === skill.id
+                    }
+                    isDeleting={deletingSkillId === skill.id}
+                    isPreparing={preparingSkillId === skill.id}
+                    isAnyOperationPending={
+                      installMutation.isPending ||
+                      uninstallMutation.isPending ||
+                      preparingSkillId !== null ||
+                      deletingSkillId !== null
+                    }
+                    t={t}
+                  />
+                )
+              })}
             </div>
           ) : (
             <div className="apple-card p-12 text-center">
@@ -398,11 +395,13 @@ interface SkillCardProps {
   onUninstall: () => void;
   onUninstallPath: (path: string) => void;
   onDelete: () => void;
+  onTranslate: () => void;
   isInstalling: boolean;
   isUninstalling: boolean;
   isDeleting: boolean;
   isPreparing: boolean;
   isAnyOperationPending: boolean;
+  isTranslatingSkill: boolean;
   t: (key: string, options?: any) => string;
 }
 
@@ -411,10 +410,12 @@ function SkillCard({
   onInstall,
   onUninstall,
   onUninstallPath,
+  onTranslate,
   isInstalling,
   isUninstalling,
   isPreparing,
   isAnyOperationPending,
+  isTranslatingSkill,
   t,
 }: SkillCardProps) {
   const descriptionRef = useRef<HTMLParagraphElement | null>(null);
@@ -447,18 +448,33 @@ function SkillCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h3 className="font-medium text-foreground">{displayName}</h3>
-            {skill.isTranslated && (
-              <span
-                className="text-xs px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600"
-                title={skill.name}
-              >
+            {/* Translate Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!skill.isTranslated && !isTranslatingSkill) {
+                  onTranslate();
+                }
+              }}
+              disabled={isTranslatingSkill}
+              className={`text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1 transition-colors ${skill.isTranslated
+                  ? "bg-purple-500/10 text-purple-600 cursor-default"
+                  : isTranslatingSkill
+                    ? "bg-purple-500/10 text-purple-400"
+                    : "bg-secondary hover:bg-purple-500/10 text-muted-foreground hover:text-purple-600"
+                }`}
+              title={skill.isTranslated ? skill.name : t("skills.translation.translate")}
+            >
+              {isTranslatingSkill ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
                 <Languages className="w-3 h-3" />
-              </span>
-            )}
+              )}
+            </button>
             <span
               className={`text-xs px-2 py-0.5 rounded-full ${skill.repository_owner === "local"
-                  ? "bg-muted text-muted-foreground"
-                  : "bg-blue-500/10 text-blue-600"
+                ? "bg-muted text-muted-foreground"
+                : "bg-blue-500/10 text-blue-600"
                 }`}
             >
               {formatRepositoryTag(skill)}
@@ -682,12 +698,12 @@ function InstallConfirmDialog({
                 <span className="text-sm">{t("skills.marketplace.install.securityScore")}:</span>
                 <span
                   className={`text-3xl font-bold ${report.score >= 90
+                    ? "text-success"
+                    : report.score >= 70
                       ? "text-success"
-                      : report.score >= 70
-                        ? "text-success"
-                        : report.score >= 50
-                          ? "text-warning"
-                          : "text-destructive"
+                      : report.score >= 50
+                        ? "text-warning"
+                        : "text-destructive"
                     }`}
                 >
                   {report.score}
@@ -724,10 +740,10 @@ function InstallConfirmDialog({
               {report.issues.length > 0 && (
                 <div
                   className={`p-3 rounded-lg ${isHighRisk
-                      ? "bg-destructive/10 border border-destructive/30"
-                      : isMediumRisk
-                        ? "bg-warning/10 border border-warning/30"
-                        : "bg-success/10 border border-success/30"
+                    ? "bg-destructive/10 border border-destructive/30"
+                    : isMediumRisk
+                      ? "bg-warning/10 border border-warning/30"
+                      : "bg-success/10 border border-success/30"
                     }`}
                 >
                   <ul className="space-y-1 text-sm">
@@ -779,10 +795,10 @@ function InstallConfirmDialog({
             onClick={() => onConfirm(selectedPath)}
             disabled={!selectedPath}
             className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors ${isHighRisk
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : isMediumRisk
-                  ? "bg-warning text-white hover:bg-warning/90"
-                  : "bg-success text-white hover:bg-success/90"
+              ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              : isMediumRisk
+                ? "bg-warning text-white hover:bg-warning/90"
+                : "bg-success text-white hover:bg-success/90"
               }`}
           >
             {isHighRisk

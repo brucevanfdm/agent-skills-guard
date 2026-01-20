@@ -155,6 +155,7 @@
     },
     "translation": {
       "translating": "TRANSLATING...",
+      "translate": "TRANSLATE",
       "translationFailed": "TRANSLATION_FAILED",
       "translatedContent": "TRANSLATED",
       "apiKeyMissing": "TRANSLATION_REQUIRES_API_KEY",

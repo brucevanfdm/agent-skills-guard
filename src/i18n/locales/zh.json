@@ -155,6 +155,7 @@
     },
     "translation": {
       "translating": "翻译中...",
+      "translate": "翻译",
       "translationFailed": "翻译失败",
       "translatedContent": "已翻译",
       "apiKeyMissing": "翻译需要 API 密钥",
