@@ -9,7 +9,7 @@ import {
 } from "../hooks/useSkills";
 import { usePlugins, useUninstallPlugin, useRemoveMarketplace } from "../hooks/usePlugins";
 import type { Plugin, PluginInstallResult, Skill } from "../types";
-import { SecurityReport } from "../types/security";
+import { SecurityReport, SecurityIssue } from "../types/security";
 import {
   Download,
   Trash2,
@@ -1161,7 +1161,7 @@ function PluginInstallConfirmDialog({
                   }`}
                 >
                   <ul className="space-y-1 text-sm">
-                    {report.issues.slice(0, 3).map((issue, idx) => (
+                    {sortIssuesBySeverity(report.issues).slice(0, 3).map((issue, idx) => (
                       <li key={idx} className="text-xs">
                         {issue.file_path && (
                           <span className="text-primary mr-1.5">[{issue.file_path}]</span>
@@ -1253,6 +1253,21 @@ function PluginLogDialog({ open, plugin, onClose }: PluginLogDialogProps) {
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+// 按严重程度排序 issues（Critical > Error > Warning > Info）
+function sortIssuesBySeverity(issues: SecurityIssue[]): SecurityIssue[] {
+  const severityOrder: Record<string, number> = {
+    Critical: 0,
+    Error: 1,
+    Warning: 2,
+    Info: 3,
+  };
+  return [...issues].sort((a, b) => {
+    const orderA = severityOrder[a.severity] ?? 4;
+    const orderB = severityOrder[b.severity] ?? 4;
+    return orderA - orderB;
+  });
 }
 
 function getPluginStatusLabel(status: Plugin["install_status"], t: (key: string) => string) {
@@ -1381,7 +1396,7 @@ function InstallConfirmDialog({
                   }`}
                 >
                   <ul className="space-y-1 text-sm">
-                    {report.issues.slice(0, 3).map((issue, idx) => (
+                    {sortIssuesBySeverity(report.issues).slice(0, 3).map((issue, idx) => (
                       <li key={idx} className="text-xs">
                         {issue.file_path && (
                           <span className="text-primary mr-1.5">[{issue.file_path}]</span>

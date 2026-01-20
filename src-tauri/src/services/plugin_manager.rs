@@ -578,6 +578,14 @@ struct CommandOutcome {
 fn parse_marketplace_add_output(output: &str) -> CommandOutcome {
     let text = output.to_lowercase();
 
+    // 检查是否已存在（优先判断，因为 Claude Code 输出可能是 "Failed to add: already installed"）
+    let already = text.contains("already") && (text.contains("marketplace") || text.contains("exists") || text.contains("added") || text.contains("installed"));
+
+    // 如果已存在，直接视为成功
+    if already {
+        return CommandOutcome { success: true, already: true };
+    }
+
     // 检查是否有明确的失败信息
     let has_error = text.contains("error")
         || text.contains("failed")
@@ -585,19 +593,15 @@ fn parse_marketplace_add_output(output: &str) -> CommandOutcome {
         || text.contains("unable to")
         || text.contains("could not");
 
-    // 检查是否已存在
-    let already = text.contains("already") && (text.contains("marketplace") || text.contains("exists") || text.contains("added"));
-
     // 检查成功情况（排除错误情况）
     let success = !has_error && (
-        already
-        || text.contains("marketplace added")
+        text.contains("marketplace added")
         || text.contains("added marketplace")
         || text.contains("successfully added")
         || (text.contains("marketplace") && text.contains("added") && !text.contains("not added"))
     );
 
-    CommandOutcome { success, already }
+    CommandOutcome { success, already: false }
 }
 
 fn parse_plugin_install_output(output: &str) -> CommandOutcome {
