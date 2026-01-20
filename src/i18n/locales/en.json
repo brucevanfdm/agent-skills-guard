@@ -400,7 +400,7 @@
       "password": "Password (Optional)",
       "save": "Save",
       "saving": "Saving...",
-      "saved": "Proxy settings saved",
+      "saved": "Proxy settings saved, restart app to apply",
       "saveFailed": "Save failed: {{error}}",
       "test": "Test Proxy",
       "testing": "Testing...",

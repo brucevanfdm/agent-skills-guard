@@ -164,18 +164,60 @@ pub fn run() {
 
             let db = Arc::new(db);
 
-            // 初始化 SkillManager
-            let skill_manager = SkillManager::new(Arc::clone(&db));
-            let skill_manager = Arc::new(Mutex::new(skill_manager));
+            // 加载代理配置
+            let proxy_config = match db.get_setting("proxy_config") {
+                Ok(Some(json)) => {
+                    match serde_json::from_str::<services::ProxyConfig>(&json) {
+                        Ok(config) if config.enabled => {
+                            log::info!("已加载代理配置: {}:{}", config.host, config.port);
+                            
+                            // 设置环境变量，使所有 reqwest 客户端（包括 updater 等插件）都能自动使用代理
+                            let proxy_url = format!("socks5h://{}:{}", config.host, config.port);
+                            std::env::set_var("HTTP_PROXY", &proxy_url);
+                            std::env::set_var("HTTPS_PROXY", &proxy_url);
+                            std::env::set_var("ALL_PROXY", &proxy_url);
+                            
+                            Some(config)
+                        }
+                        Ok(_) => {
+                            log::info!("代理配置存在但未启用");
+                            // 清除环境变量确保不意外使用
+                            std::env::remove_var("HTTP_PROXY");
+                            std::env::remove_var("HTTPS_PROXY");
+                            std::env::remove_var("ALL_PROXY");
+                            None
+                        }
+                        Err(e) => {
+                            log::warn!("解析代理配置失败: {}", e);
+                            None
+                        }
+                    }
+                }
+                _ => {
+                    log::info!("未找到代理配置");
+                    None
+                }
+            };
 
-            // 初始化 GitHub 服务
-            let github = Arc::new(services::GitHubService::new());
+            // 创建共享 HTTP 客户端（已配置代理）
+            let http_client = Arc::new(
+                services::ProxyService::build_http_client(proxy_config.as_ref())
+                    .expect("Failed to build HTTP client")
+            );
+
+            // 初始化 GitHub 服务（使用代理配置）
+            let github = Arc::new(services::GitHubService::new_with_proxy(proxy_config));
+
+            // 初始化 SkillManager
+            let skill_manager = SkillManager::new(Arc::clone(&db), Arc::clone(&github));
+            let skill_manager = Arc::new(Mutex::new(skill_manager));
 
             // 设置应用状态
             app.manage(AppState {
                 db,
                 skill_manager,
                 github,
+                http_client,
             });
 
             // 初始化系统托盘

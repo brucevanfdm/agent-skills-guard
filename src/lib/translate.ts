@@ -122,8 +122,8 @@ export async function translateText(
         // Use Tauri backend to make the translation request
         const translated = await invoke<string>('translate_text', {
             text,
-            targetLang,
-            sourceLang,
+            target_lang: targetLang,
+            source_lang: sourceLang,
         });
 
         // Cache the result

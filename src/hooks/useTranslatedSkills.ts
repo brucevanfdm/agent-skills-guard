@@ -8,6 +8,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Skill } from '../types';
 import { translateText, getCachedTranslation } from '../lib/translate';
+import { appToast } from '@/lib/toast';
 
 export interface TranslatedSkill extends Skill {
     translatedName?: string;
@@ -77,6 +78,7 @@ export function useSkillTranslation(): UseSkillTranslationResult {
             });
         } catch (error) {
             console.error('Translation failed:', error);
+            appToast.error(`翻译失败: ${error instanceof Error ? error.message : String(error)}`);
             // On error, mark as not translated
             setTranslatedSkills(prev => {
                 const newMap = new Map(prev);

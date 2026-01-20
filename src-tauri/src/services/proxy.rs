@@ -40,10 +40,10 @@ impl ProxyConfig {
     pub fn to_proxy_url(&self) -> String {
         if let (Some(username), Some(password)) = (&self.username, &self.password) {
             if !username.is_empty() && !password.is_empty() {
-                return format!("socks5://{}:{}@{}:{}", username, password, self.host, self.port);
+                return format!("socks5h://{}:{}@{}:{}", username, password, self.host, self.port);
             }
         }
-        format!("socks5://{}:{}", self.host, self.port)
+        format!("socks5h://{}:{}", self.host, self.port)
     }
 }
 

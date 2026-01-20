@@ -12,6 +12,8 @@ pub struct AppState {
     pub db: Arc<Database>,
     pub skill_manager: Arc<Mutex<SkillManager>>,
     pub github: Arc<GitHubService>,
+    /// 共享的 HTTP 客户端，已配置代理
+    pub http_client: Arc<reqwest::Client>,
 }
 
 /// 添加仓库
@@ -595,10 +597,11 @@ pub async fn get_featured_repositories(app: tauri::AppHandle) -> Result<Featured
 #[tauri::command]
 pub async fn refresh_featured_repositories(
     app: tauri::AppHandle,
+    state: State<'_, AppState>,
 ) -> Result<FeaturedRepositoriesConfig, String> {
     use std::io::Write;
 
-    let yaml_content = reqwest::Client::new()
+    let yaml_content = state.http_client
         .get(FEATURED_REPOSITORIES_REMOTE_URL)
         .header(reqwest::header::USER_AGENT, "agent-skills-guard")
         .send()
@@ -824,6 +827,7 @@ pub async fn test_proxy(
 /// 翻译文本（使用 Google Translate 免费接口）
 #[tauri::command]
 pub async fn translate_text(
+    state: State<'_, AppState>,
     text: String,
     target_lang: String,
     source_lang: Option<String>,
@@ -844,12 +848,7 @@ pub async fn translate_text(
         urlencoding::encode(&text)
     );
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
-
-    let response = client
+    let response = state.http_client
         .get(&url)
         .header(USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         .send()

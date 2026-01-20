@@ -400,7 +400,7 @@
       "password": "密码（可选）",
       "save": "保存",
       "saving": "保存中...",
-      "saved": "代理设置已保存",
+      "saved": "代理设置已保存，重启应用后生效",
       "saveFailed": "保存失败：{{error}}",
       "test": "测试代理",
       "testing": "测试中...",
