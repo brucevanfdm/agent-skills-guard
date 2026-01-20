@@ -137,6 +137,14 @@ function renderUpdateNotes(markdown: string) {
   );
 }
 
+interface ProxyConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  username: string | null;
+  password: string | null;
+}
+
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const updateContext = useUpdate();
@@ -147,6 +155,31 @@ export function SettingsPage() {
   const isRestartRequired = updatePhase === "restartRequired";
   const isUpdating = isDownloading || isInstalling || isRestartRequired;
   const downloadPercent = updateContext.updateProgress?.percent;
+
+  // Proxy state
+  const [proxyConfig, setProxyConfig] = useState<ProxyConfig>({
+    enabled: false,
+    host: "",
+    port: 1080,
+    username: null,
+    password: null,
+  });
+  const [isSavingProxy, setIsSavingProxy] = useState(false);
+  const [isTestingProxy, setIsTestingProxy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Load proxy config on mount
+  useEffect(() => {
+    const loadProxyConfig = async () => {
+      try {
+        const config = await invoke<ProxyConfig>("get_proxy_config");
+        setProxyConfig(config);
+      } catch (error) {
+        console.error("Failed to load proxy config:", error);
+      }
+    };
+    loadProxyConfig();
+  }, []);
 
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang).catch((error) => {
@@ -185,6 +218,37 @@ export function SettingsPage() {
     }
   };
 
+  const handleSaveProxy = async () => {
+    setIsSavingProxy(true);
+    try {
+      await invoke("save_proxy_config", { config: proxyConfig });
+      appToast.success(t("settings.proxy.saved"));
+    } catch (error) {
+      console.error("Failed to save proxy config:", error);
+      appToast.error(t("settings.proxy.saveFailed", { error: String(error) }));
+    } finally {
+      setIsSavingProxy(false);
+    }
+  };
+
+  const handleTestProxy = async () => {
+    if (!proxyConfig.host || proxyConfig.port <= 0) {
+      appToast.error(t("settings.proxy.testFailed", { error: "Invalid host or port" }));
+      return;
+    }
+
+    setIsTestingProxy(true);
+    try {
+      await invoke("test_proxy", { config: proxyConfig });
+      appToast.success(t("settings.proxy.testSuccess"));
+    } catch (error) {
+      console.error("Proxy test failed:", error);
+      appToast.error(t("settings.proxy.testFailed", { error: String(error) }));
+    } finally {
+      setIsTestingProxy(false);
+    }
+  };
+
   useEffect(() => {
     if (updatePhase === "installing") {
       appToast.success(t("update.installing"));
@@ -218,8 +282,8 @@ export function SettingsPage() {
               <button
                 onClick={() => handleLanguageChange('zh')}
                 className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${currentLang === 'zh'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
                   }`}
               >
                 中文
@@ -227,8 +291,8 @@ export function SettingsPage() {
               <button
                 onClick={() => handleLanguageChange('en')}
                 className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${currentLang === 'en'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
                   }`}
               >
                 English
