@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useInstalledSkills, useUninstallSkill, useUninstallSkillPath } from "../hooks/useSkills";
-import { Skill } from "../types";
+import { usePlugins, useUninstallPlugin } from "../hooks/usePlugins";
+import { Plugin, Skill } from "../types";
 import { SecurityReport } from "../types/security";
 import {
   Trash2,
@@ -9,7 +10,6 @@ import {
   Package,
   Search,
   SearchX,
-  RefreshCw,
   Download,
   AlertTriangle,
   CheckCircle,
@@ -21,7 +21,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
 import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { appToast } from "../lib/toast";
 import { countIssuesBySeverity } from "@/lib/security-utils";
@@ -39,17 +39,21 @@ const AVAILABLE_UPDATES_KEY = "available_updates";
 
 export function InstalledSkillsPage() {
   const { t, i18n } = useTranslation();
-  const { data: installedSkills, isLoading } = useInstalledSkills();
+  const { data: installedSkills, isLoading: isSkillsLoading } = useInstalledSkills();
+  const { data: allPlugins = [], isLoading: isPluginsLoading } = usePlugins();
   const uninstallMutation = useUninstallSkill();
   const uninstallPathMutation = useUninstallSkillPath();
+  const uninstallPluginMutation = useUninstallPlugin();
   const queryClient = useQueryClient();
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRepository, setSelectedRepository] = useState("all");
+  const [selectedItemType, setSelectedItemType] = useState("all");
   const [isScanning, setIsScanning] = useState(false);
   const [uninstallingSkillId, setUninstallingSkillId] = useState<string | null>(null);
+  const [uninstallingPluginId, setUninstallingPluginId] = useState<string | null>(null);
 
   const [availableUpdates, setAvailableUpdates] = useState<Map<string, string>>(() => {
     try {
@@ -104,28 +108,18 @@ export function InstalledSkillsPage() {
     }
   }, [installedSkills, availableUpdates]);
 
-  const scanMutation = useMutation({
-    mutationFn: async () => {
+  const checkUpdatesWithRefresh = async () => {
+    try {
+      // 第一步：刷新本地技能
       setIsScanning(true);
       const localSkills = await api.scanLocalSkills();
-      return localSkills;
-    },
-    onSuccess: (localSkills) => {
       queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
       appToast.success(t("skills.installedPage.scanCompleted", { count: localSkills.length }));
-    },
-    onError: (error: any) => {
-      appToast.error(t("skills.installedPage.scanFailed", { error: error.message }));
-    },
-    onSettled: () => {
       setIsScanning(false);
-    },
-  });
 
-  const checkUpdates = async () => {
-    try {
+      // 第二步：检查更新
       setIsCheckingUpdates(true);
       const updates = await api.checkSkillsUpdates();
       const updateMap = new Map(updates.map(([skillId, latestSha]) => [skillId, latestSha]));
@@ -136,8 +130,13 @@ export function InstalledSkillsPage() {
         appToast.success(t("skills.installedPage.noUpdates"));
       }
     } catch (error: any) {
-      appToast.error(t("skills.installedPage.checkUpdatesFailed", { error: error.message }));
+      if (isScanning) {
+        appToast.error(t("skills.installedPage.scanFailed", { error: error.message }));
+      } else {
+        appToast.error(t("skills.installedPage.checkUpdatesFailed", { error: error.message }));
+      }
     } finally {
+      setIsScanning(false);
       setIsCheckingUpdates(false);
     }
   };
@@ -169,11 +168,25 @@ export function InstalledSkillsPage() {
     return Array.from(skillMap.values());
   }, [installedSkills]);
 
+  const installedPlugins = useMemo(() => {
+    return allPlugins.filter((plugin) => plugin.installed);
+  }, [allPlugins]);
+
+  type InstalledItem = { kind: "skill"; item: Skill } | { kind: "plugin"; item: Plugin };
+
+  const mergedItems = useMemo<InstalledItem[]>(() => {
+    const skillItems: InstalledItem[] = mergedSkills.map((skill) => ({ kind: "skill", item: skill }));
+    const pluginItems: InstalledItem[] = installedPlugins.map((plugin) => ({ kind: "plugin", item: plugin }));
+    return [...skillItems, ...pluginItems];
+  }, [mergedSkills, installedPlugins]);
+
+  const isLoading = isSkillsLoading || isPluginsLoading;
+
   const repositories = useMemo(() => {
-    if (!mergedSkills) return [];
+    if (!mergedItems || mergedItems.length === 0) return [];
     const ownerMap = new Map<string, number>();
-    mergedSkills.forEach((skill) => {
-      const owner = skill.repository_owner || "unknown";
+    mergedItems.forEach((entry) => {
+      const owner = entry.item.repository_owner || "unknown";
       ownerMap.set(owner, (ownerMap.get(owner) || 0) + 1);
     });
     const repos = Array.from(ownerMap.entries())
@@ -184,10 +197,10 @@ export function InstalledSkillsPage() {
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
     return [
-      { owner: "all", count: mergedSkills.length, displayName: t("skills.marketplace.allRepos") },
+      { owner: "all", count: mergedItems.length, displayName: t("skills.marketplace.allSources") },
       ...repos,
     ];
-  }, [mergedSkills, i18n.language, t]);
+  }, [mergedItems, i18n.language, t]);
 
   const repositoryOptions: CyberSelectOption[] = useMemo(() => {
     return repositories.map((repo) => ({
@@ -196,33 +209,64 @@ export function InstalledSkillsPage() {
     }));
   }, [repositories]);
 
-  const filteredSkills = useMemo(() => {
-    if (!mergedSkills) return [];
-    let skills = mergedSkills;
+  const itemTypes = useMemo(() => {
+    if (!mergedItems || mergedItems.length === 0) return [];
+
+    const skillsCount = mergedItems.filter((entry) => entry.kind === "skill").length;
+    const pluginsCount = mergedItems.filter((entry) => entry.kind === "plugin").length;
+
+    return [
+      { type: "all", count: mergedItems.length, displayName: t("skills.marketplace.allTypes") },
+      { type: "skills-only", count: skillsCount, displayName: "Skills Only" },
+      { type: "plugins-only", count: pluginsCount, displayName: "Plugins Only" },
+    ];
+  }, [mergedItems, i18n.language, t]);
+
+  const itemTypeOptions: CyberSelectOption[] = useMemo(() => {
+    return itemTypes.map((type) => ({
+      value: type.type,
+      label: `${type.displayName} (${type.count})`,
+    }));
+  }, [itemTypes]);
+
+  const filteredItems = useMemo(() => {
+    if (!mergedItems) return [];
+    let items = mergedItems;
+
+    // 按仓库筛选
     if (selectedRepository !== "all") {
-      skills = skills.filter((skill) => skill.repository_owner === selectedRepository);
+      items = items.filter((entry) => entry.item.repository_owner === selectedRepository);
     }
+
+    // 按类型筛选
+    if (selectedItemType === "skills-only") {
+      items = items.filter((entry) => entry.kind === "skill");
+    } else if (selectedItemType === "plugins-only") {
+      items = items.filter((entry) => entry.kind === "plugin");
+    }
+
+    // 按搜索关键词筛选
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const nameMatches: Skill[] = [];
-      const descriptionMatches: Skill[] = [];
-      skills.forEach((skill) => {
-        const nameMatch = skill.name.toLowerCase().includes(query);
-        const descriptionMatch = skill.description?.toLowerCase().includes(query);
-        if (nameMatch) nameMatches.push(skill);
-        else if (descriptionMatch) descriptionMatches.push(skill);
+      const nameMatches: InstalledItem[] = [];
+      const descriptionMatches: InstalledItem[] = [];
+      items.forEach((entry) => {
+        const nameMatch = entry.item.name.toLowerCase().includes(query);
+        const descriptionMatch = entry.item.description?.toLowerCase().includes(query);
+        if (nameMatch) nameMatches.push(entry);
+        else if (descriptionMatch) descriptionMatches.push(entry);
       });
-      skills = [...nameMatches, ...descriptionMatches];
+      items = [...nameMatches, ...descriptionMatches];
     }
     if (!searchQuery) {
-      skills = [...skills].sort((a, b) => {
-        const timeA = a.installed_at ? new Date(a.installed_at).getTime() : 0;
-        const timeB = b.installed_at ? new Date(b.installed_at).getTime() : 0;
+      items = [...items].sort((a, b) => {
+        const timeA = a.item.installed_at ? new Date(a.item.installed_at).getTime() : 0;
+        const timeB = b.item.installed_at ? new Date(b.item.installed_at).getTime() : 0;
         return timeB - timeA;
       });
     }
-    return skills;
-  }, [installedSkills, searchQuery, selectedRepository]);
+    return items;
+  }, [mergedItems, searchQuery, selectedRepository, selectedItemType]);
 
   return (
     <div className="flex flex-col h-full">
@@ -263,30 +307,24 @@ export function InstalledSkillsPage() {
                 className="min-w-[200px]"
               />
 
+              <CyberSelect
+                value={selectedItemType}
+                onChange={setSelectedItemType}
+                options={itemTypeOptions}
+                className="min-w-[200px]"
+              />
+
               <button
-                onClick={() => scanMutation.mutate()}
-                disabled={isScanning}
-                className="apple-button-secondary h-10 px-5 flex items-center gap-2"
+                onClick={checkUpdatesWithRefresh}
+                disabled={isScanning || isCheckingUpdates}
+                className="apple-button-primary h-10 px-5 flex items-center gap-2"
               >
                 {isScanning ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     {t("skills.installedPage.scanning")}
                   </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    {t("skills.installedPage.scanLocal")}
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={checkUpdates}
-                disabled={isCheckingUpdates}
-                className="apple-button-primary h-10 px-5 flex items-center gap-2"
-              >
-                {isCheckingUpdates ? (
+                ) : isCheckingUpdates ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     {t("skills.installedPage.checkingUpdates")}
@@ -317,16 +355,17 @@ export function InstalledSkillsPage() {
               <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
               <p className="text-sm text-muted-foreground">{t("skills.loading")}</p>
             </div>
-          ) : filteredSkills && filteredSkills.length > 0 ? (
+          ) : filteredItems && filteredItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-fr">
-              {filteredSkills.map((skill, index) => (
+              {filteredItems.map((entry, index) =>
+                entry.kind === "skill" ? (
                 <SkillCard
-                  key={skill.id}
-                  skill={skill}
+                  key={entry.item.id}
+                  skill={entry.item}
                   index={index}
                   onUninstall={() => {
-                    setUninstallingSkillId(skill.id);
-                    uninstallMutation.mutate(skill.id, {
+                    setUninstallingSkillId(entry.item.id);
+                    uninstallMutation.mutate(entry.item.id, {
                       onSuccess: () => {
                         setUninstallingSkillId(null);
                         appToast.success(t("skills.toast.uninstalled"));
@@ -341,7 +380,7 @@ export function InstalledSkillsPage() {
                   }}
                   onUninstallPath={(path: string) => {
                     uninstallPathMutation.mutate(
-                      { skillId: skill.id, path },
+                      { skillId: entry.item.id, path },
                       {
                         onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
                         onError: (error: any) =>
@@ -353,13 +392,13 @@ export function InstalledSkillsPage() {
                   }}
                   onUpdate={async () => {
                     try {
-                      setPreparingUpdateSkillId(skill.id);
+                      setPreparingUpdateSkillId(entry.item.id);
                       const [report, conflicts] = await api.prepareSkillUpdate(
-                        skill.id,
+                        entry.item.id,
                         i18n.language
                       );
                       setPreparingUpdateSkillId(null);
-                      setPendingUpdate({ skill, report, conflicts });
+                      setPendingUpdate({ skill: entry.item, report, conflicts });
                     } catch (error: any) {
                       setPreparingUpdateSkillId(null);
                       appToast.error(
@@ -367,37 +406,76 @@ export function InstalledSkillsPage() {
                       );
                     }
                   }}
-                  hasUpdate={availableUpdates.has(skill.id)}
-                  isUninstalling={uninstallingSkillId === skill.id}
-                  isPreparingUpdate={preparingUpdateSkillId === skill.id}
-                  isApplyingUpdate={confirmingUpdateSkillId === skill.id}
+                  hasUpdate={availableUpdates.has(entry.item.id)}
+                  isUninstalling={uninstallingSkillId === entry.item.id}
+                  isPreparingUpdate={preparingUpdateSkillId === entry.item.id}
+                  isApplyingUpdate={confirmingUpdateSkillId === entry.item.id}
                   isAnyOperationPending={
                     uninstallMutation.isPending ||
                     uninstallPathMutation.isPending ||
                     preparingUpdateSkillId !== null ||
-                    confirmingUpdateSkillId !== null
+                    confirmingUpdateSkillId !== null ||
+                    uninstallingPluginId !== null
                   }
                   t={t}
                 />
-              ))}
+                ) : (
+                  <InstalledPluginCard
+                    key={entry.item.id}
+                    plugin={entry.item}
+                    isUninstalling={uninstallingPluginId === entry.item.id}
+                    isAnyOperationPending={
+                      uninstallMutation.isPending ||
+                      uninstallPathMutation.isPending ||
+                      preparingUpdateSkillId !== null ||
+                      confirmingUpdateSkillId !== null ||
+                      uninstallingPluginId !== null
+                    }
+                    onUninstall={async () => {
+                      try {
+                        setUninstallingPluginId(entry.item.id);
+                        const result = await uninstallPluginMutation.mutateAsync(entry.item.id);
+                        if (result.success) {
+                          appToast.success(t("plugins.toast.uninstalled"));
+                        } else {
+                          appToast.error(t("plugins.toast.uninstallFailed"));
+                        }
+                      } catch (error: any) {
+                        appToast.error(
+                          `${t("plugins.toast.uninstallFailed")}: ${error.message || error}`
+                        );
+                      } finally {
+                        setUninstallingPluginId(null);
+                      }
+                    }}
+                  />
+                )
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 apple-card">
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-5">
-                {searchQuery ? (
+                {searchQuery || selectedRepository !== "all" || selectedItemType !== "all" ? (
                   <SearchX className="w-10 h-10 text-muted-foreground" />
                 ) : (
                   <Package className="w-10 h-10 text-muted-foreground" />
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                {searchQuery
+                {searchQuery || selectedRepository !== "all" || selectedItemType !== "all"
                   ? t("skills.installedPage.noResults", { query: searchQuery })
                   : t("skills.installedPage.empty")}
               </p>
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="mt-5 apple-button-secondary">
-                  {t("skills.installedPage.clearSearch")}
+              {(searchQuery || selectedRepository !== "all" || selectedItemType !== "all") && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedRepository("all");
+                    setSelectedItemType("all");
+                  }}
+                  className="mt-5 apple-button-secondary"
+                >
+                  {t("skills.marketplace.clearFilters")}
                 </button>
               )}
             </div>
@@ -629,6 +707,83 @@ function SkillCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface InstalledPluginCardProps {
+  plugin: Plugin;
+  isUninstalling: boolean;
+  isAnyOperationPending: boolean;
+  onUninstall: () => void;
+}
+
+function InstalledPluginCard({
+  plugin,
+  isUninstalling,
+  isAnyOperationPending,
+  onUninstall,
+}: InstalledPluginCardProps) {
+  const { t } = useTranslation();
+  const installedAt = plugin.installed_at ? new Date(plugin.installed_at) : null;
+
+  return (
+    <div className="apple-card p-5 flex flex-col h-full">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <h3 className="font-medium text-foreground">{plugin.name}</h3>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600">
+              {t("plugins.badge")}
+            </span>
+            {plugin.repository_owner && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                @{plugin.repository_owner}
+              </span>
+            )}
+          </div>
+          {plugin.marketplace_name && (
+            <p className="text-xs text-muted-foreground mb-1">
+              {t("plugins.marketplace")}: {plugin.marketplace_name}
+            </p>
+          )}
+          {plugin.version && (
+            <p className="text-xs text-muted-foreground">
+              {t("plugins.version")}: {plugin.version}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {plugin.description && (
+        <p className="text-sm text-muted-foreground mb-4 flex-1">{plugin.description}</p>
+      )}
+
+      {installedAt && (
+        <p className="text-xs text-muted-foreground mb-3">
+          {t("skills.installedAt")}: {installedAt.toLocaleString()}
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={onUninstall}
+          disabled={isAnyOperationPending}
+          className="apple-button-secondary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {isUninstalling ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {t("plugins.uninstalling")}
+            </>
+          ) : (
+            <>
+              <Trash2 className="w-4 h-4" />
+              {t("plugins.uninstall")}
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

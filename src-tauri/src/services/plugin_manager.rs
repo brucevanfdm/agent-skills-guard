@@ -80,6 +80,23 @@ pub struct PluginInstallResult {
     pub plugin_statuses: Vec<PluginInstallStatus>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct PluginUninstallResult {
+    pub plugin_id: String,
+    pub plugin_name: String,
+    pub success: bool,
+    pub raw_log: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MarketplaceRemoveResult {
+    pub marketplace_name: String,
+    pub marketplace_repo: String,
+    pub success: bool,
+    pub removed_plugins_count: usize,
+    pub raw_log: String,
+}
+
 pub struct PluginManager {
     db: Arc<Database>,
     github: GitHubService,
@@ -283,36 +300,20 @@ impl PluginManager {
             .find(|p| p.id == plugin_id)
             .context("未找到该插件")?;
 
-        let marketplace_plugins: Vec<Plugin> = self.db.get_plugins()?
-            .into_iter()
-            .filter(|p| {
-                p.repository_url == plugin.repository_url
-                    && p.marketplace_name == plugin.marketplace_name
-            })
-            .collect();
-
-        if marketplace_plugins.is_empty() {
-            anyhow::bail!("未找到可安装的插件");
+        // 只检查当前选中的 plugin 状态
+        if plugin.install_status.as_deref() == Some("unsupported") {
+            anyhow::bail!("该插件不符合 Claude Code Plugin 规范，暂不支持自动安装");
         }
 
-        if marketplace_plugins.iter().any(|p| p.install_status.as_deref() == Some("unsupported")) {
-            anyhow::bail!("仓库不符合 Claude Code Plugin 规范，暂不支持自动安装");
-        }
-
-        if marketplace_plugins.iter().any(|p| p.install_status.as_deref() == Some("blocked")) {
+        if plugin.install_status.as_deref() == Some("blocked") {
             anyhow::bail!("安全扫描未通过，已阻止插件安装");
         }
 
-        let needs_prepare = marketplace_plugins.iter().any(|p| p.staging_path.is_none());
-        if needs_prepare {
+        if plugin.staging_path.is_none() {
             anyhow::bail!("插件尚未准备，请先进行安装前扫描");
         }
 
-        if let Some(staging_path) = marketplace_plugins
-            .iter()
-            .filter_map(|p| p.staging_path.as_ref())
-            .next()
-        {
+        if let Some(staging_path) = &plugin.staging_path {
             let staging_path_buf = PathBuf::from(staging_path);
             if !staging_path_buf.exists() {
                 anyhow::bail!("安装缓存已失效，请重新进行安装前扫描");
@@ -336,6 +337,7 @@ impl PluginManager {
         }
         let claude_cli = ClaudeCli::new(cli_command);
 
+        // 构建命令：1. marketplace add，2. 只安装选中的单个 plugin
         let mut commands = Vec::new();
         commands.push(ClaudeCommand {
             args: vec![
@@ -347,16 +349,15 @@ impl PluginManager {
             timeout: Duration::from_secs(60),
         });
 
-        for entry in &marketplace_plugins {
-            commands.push(ClaudeCommand {
-                args: vec![
-                    "plugin".to_string(),
-                    "install".to_string(),
-                    entry.plugin_spec(),
-                ],
-                timeout: Duration::from_secs(180),
-            });
-        }
+        // 只安装选中的单个 plugin
+        commands.push(ClaudeCommand {
+            args: vec![
+                "plugin".to_string(),
+                "install".to_string(),
+                plugin.plugin_spec(),
+            ],
+            timeout: Duration::from_secs(180),
+        });
 
         let cli_result = claude_cli.run(&commands)?;
         let mut outputs = cli_result.outputs.into_iter();
@@ -380,36 +381,35 @@ impl PluginManager {
         let now = Utc::now();
         let mut plugin_statuses = Vec::new();
 
-        for entry in &marketplace_plugins {
-            let output = outputs.next().map(|o| o.output).unwrap_or_default();
-            let outcome = parse_plugin_install_output(&output);
-            let status = if outcome.success {
-                if outcome.already {
-                    "already_installed"
-                } else {
-                    "installed"
-                }
+        // 只处理选中的单个 plugin
+        let output = outputs.next().map(|o| o.output).unwrap_or_default();
+        let outcome = parse_plugin_install_output(&output);
+        let status = if outcome.success {
+            if outcome.already {
+                "already_installed"
             } else {
-                "failed"
-            };
-
-            let mut updated = entry.clone();
-            updated.install_status = Some(status.to_string());
-            updated.install_log = Some(cli_result.raw_log.clone());
-            updated.staging_path = None;
-            if outcome.success {
-                updated.installed = true;
-                updated.installed_at = Some(now);
+                "installed"
             }
-            self.db.save_plugin(&updated)?;
+        } else {
+            "failed"
+        };
 
-            plugin_statuses.push(PluginInstallStatus {
-                plugin_id: updated.id,
-                plugin_name: updated.name,
-                status: status.to_string(),
-                output,
-            });
+        let mut updated = plugin.clone();
+        updated.install_status = Some(status.to_string());
+        updated.install_log = Some(cli_result.raw_log.clone());
+        updated.staging_path = None;
+        if outcome.success {
+            updated.installed = true;
+            updated.installed_at = Some(now);
         }
+        self.db.save_plugin(&updated)?;
+
+        plugin_statuses.push(PluginInstallStatus {
+            plugin_id: updated.id,
+            plugin_name: updated.name,
+            status: status.to_string(),
+            output,
+        });
 
         Ok(PluginInstallResult {
             marketplace_name,
@@ -426,20 +426,126 @@ impl PluginManager {
             .find(|p| p.id == plugin_id)
             .context("未找到该插件")?;
 
-        let mut updated_plugins: Vec<Plugin> = self.db.get_plugins()?
-            .into_iter()
-            .filter(|p| {
-                p.repository_url == plugin.repository_url
-                    && p.marketplace_name == plugin.marketplace_name
-            })
-            .collect();
-
-        for plugin in &mut updated_plugins {
-            plugin.staging_path = None;
-            self.db.save_plugin(plugin)?;
-        }
+        // 只清除选中的单个 plugin 的 staging_path
+        let mut updated = plugin.clone();
+        updated.staging_path = None;
+        self.db.save_plugin(&updated)?;
 
         Ok(())
+    }
+
+    /// 卸载单个 plugin
+    pub async fn uninstall_plugin(
+        &self,
+        plugin_id: &str,
+        claude_command: Option<String>,
+    ) -> Result<PluginUninstallResult> {
+        let plugin = self.db.get_plugins()?
+            .into_iter()
+            .find(|p| p.id == plugin_id)
+            .context("未找到该插件")?;
+
+        if !plugin.installed {
+            anyhow::bail!("该插件尚未安装");
+        }
+
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            anyhow::bail!("未找到 Claude Code CLI: {}", cli_command);
+        }
+        let claude_cli = ClaudeCli::new(cli_command);
+
+        let commands = vec![
+            ClaudeCommand {
+                args: vec![
+                    "plugin".to_string(),
+                    "uninstall".to_string(),
+                    plugin.plugin_spec(),
+                ],
+                timeout: Duration::from_secs(60),
+            },
+        ];
+
+        let cli_result = claude_cli.run(&commands)?;
+        let output = cli_result.outputs
+            .first()
+            .map(|o| o.output.clone())
+            .unwrap_or_default();
+
+        let outcome = parse_plugin_uninstall_output(&output);
+
+        let mut updated = plugin.clone();
+        if outcome.success {
+            updated.installed = false;
+            updated.installed_at = None;
+            updated.install_status = Some("uninstalled".to_string());
+        } else {
+            updated.install_status = Some("uninstall_failed".to_string());
+        }
+        updated.install_log = Some(cli_result.raw_log.clone());
+        self.db.save_plugin(&updated)?;
+
+        Ok(PluginUninstallResult {
+            plugin_id: updated.id,
+            plugin_name: updated.name,
+            success: outcome.success,
+            raw_log: cli_result.raw_log,
+        })
+    }
+
+    /// 移除整个 marketplace（会自动卸载该 marketplace 的所有 plugins）
+    pub async fn remove_marketplace(
+        &self,
+        marketplace_name: &str,
+        marketplace_repo: &str,
+        claude_command: Option<String>,
+    ) -> Result<MarketplaceRemoveResult> {
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            anyhow::bail!("未找到 Claude Code CLI: {}", cli_command);
+        }
+        let claude_cli = ClaudeCli::new(cli_command);
+
+        let commands = vec![
+            ClaudeCommand {
+                args: vec![
+                    "plugin".to_string(),
+                    "marketplace".to_string(),
+                    "remove".to_string(),
+                    marketplace_name.to_string(),
+                ],
+                timeout: Duration::from_secs(60),
+            },
+        ];
+
+        let cli_result = claude_cli.run(&commands)?;
+        let output = cli_result.outputs
+            .first()
+            .map(|o| o.output.clone())
+            .unwrap_or_default();
+
+        let outcome = parse_marketplace_remove_output(&output);
+
+        // 移除成功后，删除该 marketplace 下的所有 plugin 记录
+        let mut removed_count = 0;
+        if outcome.success {
+            let all_plugins = self.db.get_plugins()?;
+            for plugin in all_plugins {
+                if plugin.marketplace_name == marketplace_name {
+                    // 从数据库删除 plugin 记录
+                    self.db.delete_plugin(&plugin.id)?;
+                    removed_count += 1;
+                }
+            }
+        }
+
+        Ok(MarketplaceRemoveResult {
+            marketplace_name: marketplace_name.to_string(),
+            marketplace_repo: marketplace_repo.to_string(),
+            success: outcome.success,
+            removed_plugins_count: removed_count,
+            raw_log: cli_result.raw_log,
+        })
     }
 
     async fn download_and_cache_repository(&self, repo_id: &str, repo_url: &str) -> Result<PathBuf> {
@@ -474,24 +580,119 @@ struct CommandOutcome {
 
 fn parse_marketplace_add_output(output: &str) -> CommandOutcome {
     let text = output.to_lowercase();
-    let already = text.contains("already") && (text.contains("marketplace") || text.contains("exists"));
-    let success = already
+
+    // 检查是否有明确的失败信息
+    let has_error = text.contains("error")
+        || text.contains("failed")
+        || text.contains("failure")
+        || text.contains("unable to")
+        || text.contains("could not");
+
+    // 检查是否已存在
+    let already = text.contains("already") && (text.contains("marketplace") || text.contains("exists") || text.contains("added"));
+
+    // 检查成功情况（排除错误情况）
+    let success = !has_error && (
+        already
         || text.contains("marketplace added")
         || text.contains("added marketplace")
-        || (text.contains("marketplace") && text.contains("added"));
+        || text.contains("successfully added")
+        || (text.contains("marketplace") && text.contains("added") && !text.contains("not added"))
+    );
 
     CommandOutcome { success, already }
 }
 
 fn parse_plugin_install_output(output: &str) -> CommandOutcome {
     let text = output.to_lowercase();
+
+    // 检查是否有明确的失败信息
+    let has_error = text.contains("error")
+        || text.contains("failed")
+        || text.contains("failure")
+        || text.contains("unable to")
+        || text.contains("could not");
+
+    // 检查是否未安装（否定）
+    let not_installed = text.contains("not installed") || text.contains("not found");
+
+    // 检查是否已存在
     let already = text.contains("already installed") || text.contains("already exists");
-    let success = already
-        || text.contains("installed")
+
+    // 检查成功情况（排除错误和否定情况）
+    let success = !has_error && !not_installed && (
+        already
+        || text.contains("successfully installed")
         || text.contains("installation complete")
-        || text.contains("install success");
+        || text.contains("install success")
+        || text.contains("plugin installed")
+        // 只有当 "installed" 不是在否定上下文中出现时才算成功
+        || (text.contains("installed") && !text.contains("not installed") && !text.contains("isn't installed"))
+    );
 
     CommandOutcome { success, already }
+}
+
+fn parse_plugin_uninstall_output(output: &str) -> CommandOutcome {
+    let text = output.to_lowercase();
+
+    // 检查是否本来就未安装（可视为"成功"卸载）
+    // 优先检查这个，因为 "not found" 比一般错误更具体
+    let not_installed = text.contains("not installed")
+        || text.contains("not found")
+        || text.contains("doesn't exist")
+        || (text.contains("not found") && text.contains("installed plugins"));
+
+    // 检查是否有明确的失败信息（排除 "not found" 的情况）
+    let has_error = !not_installed && (
+        text.contains("error")
+        || text.contains("failed")
+        || text.contains("failure")
+        || text.contains("unable to")
+        || text.contains("could not")
+    );
+
+    // 检查成功情况
+    let success = !has_error && (
+        not_installed  // 本来就不存在，视为成功
+        || text.contains("successfully uninstalled")
+        || text.contains("uninstall success")
+        || text.contains("plugin uninstalled")
+        || text.contains("removed")
+        || (text.contains("uninstalled") && !text.contains("not uninstalled"))
+    );
+
+    CommandOutcome { success, already: not_installed }
+}
+
+fn parse_marketplace_remove_output(output: &str) -> CommandOutcome {
+    let text = output.to_lowercase();
+
+    // 检查是否本来就不存在（可视为"成功"移除）
+    let not_found = text.contains("not found")
+        || text.contains("doesn't exist")
+        || (text.contains("marketplace") && text.contains("not found"));
+
+    // 检查是否有明确的失败信息（排除 "not found" 的情况）
+    let has_error = !not_found && (
+        text.contains("error")
+        || text.contains("failed")
+        || text.contains("failure")
+        || text.contains("unable to")
+        || text.contains("could not")
+    );
+
+    // 检查成功情况
+    let success = !has_error && (
+        not_found  // 本来就不存在，视为成功
+        || text.contains("successfully removed")
+        || text.contains("marketplace removed")
+        || text.contains("removed marketplace")
+        || text.contains("uninstalled")
+        || (text.contains("removed") && !text.contains("not removed"))
+    );
+
+    CommandOutcome { success, already: not_found }
 }
 
 fn read_marketplace_manifest(repo_root: &Path) -> Result<Option<MarketplaceManifest>> {

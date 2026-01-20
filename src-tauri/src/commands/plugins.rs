@@ -1,6 +1,6 @@
 use crate::commands::AppState;
 use crate::models::{Plugin, SecurityReport};
-use crate::services::plugin_manager::PluginInstallResult;
+use crate::services::plugin_manager::{MarketplaceRemoveResult, PluginInstallResult, PluginUninstallResult};
 use tauri::State;
 
 /// 获取所有 plugins
@@ -44,5 +44,30 @@ pub async fn cancel_plugin_installation(
 ) -> Result<(), String> {
     let manager = state.plugin_manager.lock().await;
     manager.cancel_plugin_installation(&plugin_id)
+        .map_err(|e| e.to_string())
+}
+
+/// 卸载 plugin
+#[tauri::command]
+pub async fn uninstall_plugin(
+    state: State<'_, AppState>,
+    plugin_id: String,
+    claude_command: Option<String>,
+) -> Result<PluginUninstallResult, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager.uninstall_plugin(&plugin_id, claude_command).await
+        .map_err(|e| e.to_string())
+}
+
+/// 移除整个 marketplace（会自动卸载该 marketplace 的所有 plugins）
+#[tauri::command]
+pub async fn remove_marketplace(
+    state: State<'_, AppState>,
+    marketplace_name: String,
+    marketplace_repo: String,
+    claude_command: Option<String>,
+) -> Result<MarketplaceRemoveResult, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager.remove_marketplace(&marketplace_name, &marketplace_repo, claude_command).await
         .map_err(|e| e.to_string())
 }

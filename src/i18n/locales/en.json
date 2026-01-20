@@ -91,6 +91,8 @@
       "goToRepositories": "GO_TO_REPOSITORIES",
       "localRepo": "LOCAL",
       "allRepos": "ALL",
+      "allSources": "ALL_SOURCES",
+      "allTypes": "ALL_TYPES",
       "install": {
         "scanResult": "Security Scan Result",
         "preparingInstall": "Preparing to install",
@@ -175,6 +177,8 @@
     "unsupported": "MANUAL_INSTALL_REQUIRED",
     "install": "INSTALL",
     "installing": "INSTALLING",
+    "uninstall": "UNINSTALL",
+    "uninstalling": "UNINSTALLING",
     "badge": "PLUGIN",
     "scanning": "SCANNING",
     "noDescription": "[NO_DESCRIPTION_PROVIDED]",
@@ -202,16 +206,26 @@
       "failed": "FAILED",
       "unsupported": "MANUAL_INSTALL_REQUIRED",
       "blocked": "BLOCKED",
+      "uninstalled": "UNINSTALLED",
+      "uninstallFailed": "UNINSTALL_FAILED",
       "unknown": "UNKNOWN"
     },
     "viewLog": "VIEW_LOG",
     "logTitle": "Install Log: {{name}}",
     "noLog": "NO_LOG_AVAILABLE",
     "close": "Close",
+    "removeMarketplace": "REMOVE_MARKETPLACE",
+    "removingMarketplace": "REMOVING...",
+    "confirmRemoveTitle": "Confirm Remove Marketplace",
+    "confirmRemoveMessage": "Are you sure you want to remove marketplace \"{{name}}\"? This will uninstall all plugins from this marketplace ({{count}} total).",
     "toast": {
       "installed": "[SUCCESS] PLUGIN_INSTALLED",
       "installFailed": "[ERROR] INSTALL_FAILED",
-      "scanFailed": "[ERROR] SCAN_FAILED"
+      "scanFailed": "[ERROR] SCAN_FAILED",
+      "uninstalled": "[SUCCESS] PLUGIN_UNINSTALLED",
+      "uninstallFailed": "[ERROR] UNINSTALL_FAILED",
+      "marketplaceRemoved": "[SUCCESS] MARKETPLACE_REMOVED ({{count}} plugins deleted)",
+      "marketplaceRemoveFailed": "[ERROR] MARKETPLACE_REMOVE_FAILED"
     }
   },
   "repositories": {

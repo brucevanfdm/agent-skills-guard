@@ -68,6 +68,21 @@ export interface PluginInstallResult {
   plugin_statuses: PluginInstallStatus[];
 }
 
+export interface PluginUninstallResult {
+  plugin_id: string;
+  plugin_name: string;
+  success: boolean;
+  raw_log: string;
+}
+
+export interface MarketplaceRemoveResult {
+  marketplace_name: string;
+  marketplace_repo: string;
+  success: boolean;
+  removed_plugins_count: number;
+  raw_log: string;
+}
+
 export enum SecurityLevel {
   Safe = "Safe",
   Low = "Low",

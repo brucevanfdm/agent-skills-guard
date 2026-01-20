@@ -7,7 +7,7 @@ import {
   useUninstallSkillPath,
   useDeleteSkill,
 } from "../hooks/useSkills";
-import { usePlugins } from "../hooks/usePlugins";
+import { usePlugins, useUninstallPlugin, useRemoveMarketplace } from "../hooks/usePlugins";
 import type { Plugin, PluginInstallResult, Skill } from "../types";
 import { SecurityReport } from "../types/security";
 import {
@@ -56,6 +56,15 @@ function stripAnsi(input: string): string {
   return input.replace(OSC_ESCAPE_REGEX, "").replace(ANSI_ESCAPE_REGEX, "");
 }
 
+function extractRepoOwnerAndName(repoUrl: string): { owner: string; repo: string } {
+  // 支持 https://github.com/owner/repo 或 git@github.com:owner/repo.git 格式
+  const match = repoUrl.match(/github\.com[/:]([\w-]+)\/([\w-]+)/);
+  if (match) {
+    return { owner: match[1], repo: match[2].replace(/\.git$/, "") };
+  }
+  return { owner: "unknown", repo: "unknown" };
+}
+
 export function MarketplacePage({ onNavigateToRepositories }: MarketplacePageProps = {}) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -65,10 +74,19 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
   const uninstallMutation = useUninstallSkill();
   const uninstallPathMutation = useUninstallSkillPath();
   const deleteMutation = useDeleteSkill();
+  const uninstallPluginMutation = useUninstallPlugin();
+  const removeMarketplaceMutation = useRemoveMarketplace();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRepository, setSelectedRepository] = useState("all");
+  const [selectedMarketplace, setSelectedMarketplace] = useState("all");
   const [hideInstalled, setHideInstalled] = useState(false);
+  const [pendingMarketplaceRemove, setPendingMarketplaceRemove] = useState<{
+    marketplaceName: string;
+    marketplaceRepo: string;
+    pluginCount: number;
+  } | null>(null);
+  const [removingMarketplace, setRemovingMarketplace] = useState<string | null>(null);
   const [pendingInstall, setPendingInstall] = useState<{
     skill: Skill;
     report: SecurityReport;
@@ -81,6 +99,7 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
   const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
   const [preparingPluginId, setPreparingPluginId] = useState<string | null>(null);
   const [installingPluginId, setInstallingPluginId] = useState<string | null>(null);
+  const [uninstallingPluginId, setUninstallingPluginId] = useState<string | null>(null);
   const [logPlugin, setLogPlugin] = useState<Plugin | null>(null);
   const [deletingSkillId, setDeletingSkillId] = useState<string | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
@@ -120,7 +139,7 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
       {
         owner: "all",
         count: marketplaceItems.length,
-        displayName: t("skills.marketplace.allRepos"),
+        displayName: t("skills.marketplace.allSources"),
       },
       ...repos,
     ];
@@ -133,6 +152,53 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     }));
   }, [repositories]);
 
+  const marketplaces = useMemo(() => {
+    if (!marketplaceItems.length) return [];
+
+    const skillsOnlyCount = marketplaceItems.filter((entry) => entry.kind === "skill").length;
+    const marketplaceMap = new Map<string, number>();
+
+    marketplaceItems.forEach((entry) => {
+      if (entry.kind === "plugin") {
+        const marketplaceName = entry.item.marketplace_name;
+        marketplaceMap.set(marketplaceName, (marketplaceMap.get(marketplaceName) || 0) + 1);
+      }
+    });
+
+    const marketplaceList = Array.from(marketplaceMap.entries())
+      .map(([name, count]) => ({
+        name,
+        count,
+        displayName: name,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    const result = [
+      {
+        name: "all",
+        count: marketplaceItems.length,
+        displayName: t("skills.marketplace.allTypes"),
+      },
+    ];
+
+    if (skillsOnlyCount > 0) {
+      result.push({
+        name: "skills-only",
+        count: skillsOnlyCount,
+        displayName: "Skills Only",
+      });
+    }
+
+    return [...result, ...marketplaceList];
+  }, [marketplaceItems, i18n.language, t]);
+
+  const marketplaceOptions: CyberSelectOption[] = useMemo(() => {
+    return marketplaces.map((marketplace) => ({
+      value: marketplace.name,
+      label: `${marketplace.displayName} (${marketplace.count})`,
+    }));
+  }, [marketplaces]);
+
   const filteredItems = useMemo(() => {
     if (!marketplaceItems.length) return [];
 
@@ -143,6 +209,15 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
         entry.item.repository_owner || parseRepositoryOwner(entry.item.repository_url);
       const matchesRepo = selectedRepository === "all" || owner === selectedRepository;
       const matchesInstalled = !hideInstalled || !entry.item.installed;
+
+      // Marketplace 筛选
+      let matchesMarketplace = true;
+      if (selectedMarketplace === "skills-only") {
+        matchesMarketplace = entry.kind === "skill";
+      } else if (selectedMarketplace !== "all") {
+        matchesMarketplace = entry.kind === "plugin" && entry.item.marketplace_name === selectedMarketplace;
+      }
+
       const matchesSearch =
         !searchQuery ||
         entry.item.name.toLowerCase().includes(query) ||
@@ -150,7 +225,7 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
         (entry.kind === "plugin" &&
           entry.item.marketplace_name.toLowerCase().includes(query));
 
-      return matchesSearch && matchesRepo && matchesInstalled;
+      return matchesSearch && matchesRepo && matchesInstalled && matchesMarketplace;
     });
 
     if (searchQuery) {
@@ -170,7 +245,7 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     }
 
     return filtered;
-  }, [marketplaceItems, searchQuery, selectedRepository, hideInstalled]);
+  }, [marketplaceItems, searchQuery, selectedRepository, selectedMarketplace, hideInstalled]);
 
   return (
     <div className="flex flex-col h-full">
@@ -208,6 +283,13 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
                 value={selectedRepository}
                 onChange={setSelectedRepository}
                 options={repositoryOptions}
+                className="min-w-[200px]"
+              />
+
+              <CyberSelect
+                value={selectedMarketplace}
+                onChange={setSelectedMarketplace}
+                options={marketplaceOptions}
                 className="min-w-[200px]"
               />
 
@@ -330,6 +412,17 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
                     plugin={entry.item}
                     isPreparing={preparingPluginId === entry.item.id}
                     isInstalling={installingPluginId === entry.item.id}
+                    isUninstalling={uninstallingPluginId === entry.item.id}
+                    isAnyOperationPending={
+                      installMutation.isPending ||
+                      uninstallMutation.isPending ||
+                      preparingSkillId !== null ||
+                      installingSkillId !== null ||
+                      deletingSkillId !== null ||
+                      preparingPluginId !== null ||
+                      installingPluginId !== null ||
+                      uninstallingPluginId !== null
+                    }
                     onViewLog={() => setLogPlugin(entry.item)}
                     onInstall={async () => {
                       if (
@@ -354,6 +447,23 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
                         );
                       } finally {
                         setPreparingPluginId(null);
+                      }
+                    }}
+                    onUninstall={async () => {
+                      try {
+                        setUninstallingPluginId(entry.item.id);
+                        const result = await uninstallPluginMutation.mutateAsync(entry.item.id);
+                        if (result.success) {
+                          appToast.success(t("plugins.toast.uninstalled"));
+                        } else {
+                          appToast.error(t("plugins.toast.uninstallFailed"));
+                        }
+                      } catch (error: any) {
+                        appToast.error(
+                          `${t("plugins.toast.uninstallFailed")}: ${error.message || error}`
+                        );
+                      } finally {
+                        setUninstallingPluginId(null);
                       }
                     }}
                   />
@@ -514,6 +624,61 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
         plugin={logPlugin}
         onClose={() => setLogPlugin(null)}
       />
+
+      {/* Marketplace Remove Confirmation Dialog */}
+      <AlertDialog
+        open={pendingMarketplaceRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingMarketplaceRemove(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("plugins.confirmRemoveTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("plugins.confirmRemoveMessage", {
+                name: pendingMarketplaceRemove?.marketplaceName || "",
+                count: pendingMarketplaceRemove?.pluginCount || 0,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("skills.cancel")}</AlertDialogCancel>
+            <button
+              onClick={async () => {
+                if (!pendingMarketplaceRemove) return;
+                const { marketplaceName, marketplaceRepo } = pendingMarketplaceRemove;
+                setRemovingMarketplace(marketplaceName);
+                setPendingMarketplaceRemove(null);
+                try {
+                  const result = await removeMarketplaceMutation.mutateAsync({
+                    marketplaceName,
+                    marketplaceRepo,
+                  });
+                  if (result.success) {
+                    appToast.success(
+                      t("plugins.toast.marketplaceRemoved", { count: result.removed_plugins_count })
+                    );
+                  } else {
+                    appToast.error(t("plugins.toast.marketplaceRemoveFailed"));
+                  }
+                } catch (error: any) {
+                  appToast.error(
+                    `${t("plugins.toast.marketplaceRemoveFailed")}: ${error.message || error}`
+                  );
+                } finally {
+                  setRemovingMarketplace(null);
+                }
+              }}
+              className="apple-button-primary bg-red-500 hover:bg-red-600"
+            >
+              {t("plugins.removeMarketplace")}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -747,16 +912,22 @@ interface PluginCardProps {
   plugin: Plugin;
   isPreparing: boolean;
   isInstalling: boolean;
+  isUninstalling: boolean;
+  isAnyOperationPending: boolean;
   onViewLog: () => void;
   onInstall: () => void;
+  onUninstall: () => void;
 }
 
 function PluginCard({
   plugin,
   isPreparing,
   isInstalling,
+  isUninstalling,
+  isAnyOperationPending,
   onViewLog,
   onInstall,
+  onUninstall,
 }: PluginCardProps) {
   const { t } = useTranslation();
   const isUnsupported = plugin.install_status === "unsupported";
@@ -764,7 +935,7 @@ function PluginCard({
   const statusLabel = getPluginStatusLabel(plugin.install_status, t);
   const canViewLog =
     plugin.install_log != null ||
-    ["installed", "already_installed", "failed"].includes(plugin.install_status ?? "");
+    ["installed", "already_installed", "failed", "uninstalled", "uninstall_failed"].includes(plugin.install_status ?? "");
 
   return (
     <div className="apple-card p-5 flex flex-col">
@@ -805,25 +976,47 @@ function PluginCard({
           </p>
         </div>
 
-        <button
-          onClick={onInstall}
-          disabled={isPreparing || isInstalling || isUnsupported || isBlocked}
-          className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
-        >
-          {isPreparing || isInstalling ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span className="hidden sm:inline">
-                {isPreparing ? t("plugins.scanning") : t("plugins.installing")}
-              </span>
-            </>
+        <div className="flex gap-2">
+          {plugin.installed ? (
+            <button
+              onClick={onUninstall}
+              disabled={isAnyOperationPending}
+              className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isUninstalling ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="hidden sm:inline">{t("plugins.uninstalling")}</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("plugins.uninstall")}</span>
+                </>
+              )}
+            </button>
           ) : (
-            <>
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t("plugins.install")}</span>
-            </>
+            <button
+              onClick={onInstall}
+              disabled={isAnyOperationPending || isUnsupported || isBlocked}
+              className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isPreparing || isInstalling ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="hidden sm:inline">
+                    {isPreparing ? t("plugins.scanning") : t("plugins.installing")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("plugins.install")}</span>
+                </>
+              )}
+            </button>
           )}
-        </button>
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground mb-3 leading-5">
@@ -1074,6 +1267,10 @@ function getPluginStatusLabel(status: Plugin["install_status"], t: (key: string)
       return t("plugins.status.unsupported");
     case "blocked":
       return t("plugins.status.blocked");
+    case "uninstalled":
+      return t("plugins.status.uninstalled");
+    case "uninstall_failed":
+      return t("plugins.status.uninstallFailed");
     default:
       return "";
   }

@@ -91,6 +91,8 @@
       "goToRepositories": "前往仓库页面",
       "localRepo": "本地",
       "allRepos": "全部",
+      "allSources": "全部来源",
+      "allTypes": "全部类型",
       "install": {
         "scanResult": "安全扫描结果",
         "preparingInstall": "准备安装",
@@ -175,6 +177,8 @@
     "unsupported": "需要手动安装",
     "install": "安装",
     "installing": "安装中",
+    "uninstall": "卸载",
+    "uninstalling": "卸载中",
     "badge": "插件",
     "scanning": "扫描中",
     "noDescription": "暂无描述",
@@ -202,16 +206,26 @@
       "failed": "失败",
       "unsupported": "需要手动安装",
       "blocked": "已阻止",
+      "uninstalled": "已卸载",
+      "uninstallFailed": "卸载失败",
       "unknown": "未知"
     },
     "viewLog": "查看日志",
     "logTitle": "安装日志：{{name}}",
     "noLog": "暂无日志",
     "close": "关闭",
+    "removeMarketplace": "移除 Marketplace",
+    "removingMarketplace": "移除中",
+    "confirmRemoveTitle": "确认移除 Marketplace",
+    "confirmRemoveMessage": "确定要移除 Marketplace \"{{name}}\" 吗？这将卸载该 marketplace 下的所有插件（共 {{count}} 个）。",
     "toast": {
       "installed": "插件安装成功",
       "installFailed": "插件安装失败",
-      "scanFailed": "扫描失败"
+      "scanFailed": "扫描失败",
+      "uninstalled": "插件卸载成功",
+      "uninstallFailed": "插件卸载失败",
+      "marketplaceRemoved": "Marketplace 移除成功（已删除 {{count}} 个插件）",
+      "marketplaceRemoveFailed": "Marketplace 移除失败"
     }
   },
   "repositories": {

@@ -4,6 +4,8 @@ import type {
   Skill,
   Plugin,
   PluginInstallResult,
+  PluginUninstallResult,
+  MarketplaceRemoveResult,
   CacheStats,
   FeaturedRepositoriesConfig,
   ClearAllCachesResult,
@@ -136,5 +138,27 @@ export const api = {
 
   async cancelPluginInstallation(pluginId: string): Promise<void> {
     return invoke("cancel_plugin_installation", { pluginId });
+  },
+
+  async uninstallPlugin(
+    pluginId: string,
+    claudeCommand?: string
+  ): Promise<PluginUninstallResult> {
+    return invoke("uninstall_plugin", {
+      pluginId,
+      claudeCommand: claudeCommand || null,
+    });
+  },
+
+  async removeMarketplace(
+    marketplaceName: string,
+    marketplaceRepo: string,
+    claudeCommand?: string
+  ): Promise<MarketplaceRemoveResult> {
+    return invoke("remove_marketplace", {
+      marketplaceName,
+      marketplaceRepo,
+      claudeCommand: claudeCommand || null,
+    });
   },
 };

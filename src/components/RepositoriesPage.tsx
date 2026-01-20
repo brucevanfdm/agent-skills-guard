@@ -60,6 +60,7 @@ export function RepositoriesPage() {
     onSuccess: (skills) => {
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
       appToast.success(t("repositories.cache.refreshed", { count: skills.length }));
     },
     onError: (error: any) => {

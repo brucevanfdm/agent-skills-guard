@@ -271,6 +271,8 @@ pub fn run() {
             commands::plugins::prepare_plugin_installation,
             commands::plugins::confirm_plugin_installation,
             commands::plugins::cancel_plugin_installation,
+            commands::plugins::uninstall_plugin,
+            commands::plugins::remove_marketplace,
             scan_all_installed_skills,
             get_scan_results,
             scan_skill_archive,
