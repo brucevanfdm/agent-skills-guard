@@ -1,11 +1,13 @@
 /**
  * Translation service for skill marketplace content
- * Uses Google Translate API with local caching
+ * Uses Google Translate free public endpoint with local caching
+ * No API key required - uses client: 'gtx' endpoint
  */
 
 const TRANSLATION_CACHE_KEY = 'skillTranslationCache';
 const CACHE_EXPIRY_DAYS = 30;
-const GOOGLE_TRANSLATE_API_URL = 'https://translation.googleapis.com/language/translate/v2';
+// Free Google Translate endpoint - no API key required
+const GOOGLE_TRANSLATE_FREE_URL = 'https://translate.googleapis.com/translate_a/single';
 
 interface TranslationCacheEntry {
     text: string;
@@ -16,14 +18,6 @@ interface TranslationCache {
     [cacheKey: string]: TranslationCacheEntry;
 }
 
-interface GoogleTranslateResponse {
-    data: {
-        translations: Array<{
-            translatedText: string;
-        }>;
-    };
-}
-
 /**
  * Generate a simple hash for cache key
  */
@@ -32,7 +26,7 @@ function hashText(text: string): string {
     for (let i = 0; i < text.length; i++) {
         const char = text.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
+        hash = hash & hash;
     }
     return hash.toString(36);
 }
@@ -49,7 +43,6 @@ function getCache(): TranslationCache {
         const now = Date.now();
         const expiryMs = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
-        // Clean expired entries
         const cleanedCache: TranslationCache = {};
         for (const [key, entry] of Object.entries(cache)) {
             if (now - entry.translatedAt < expiryMs) {
@@ -105,15 +98,39 @@ function cacheTranslation(originalText: string, translatedText: string, targetLa
 }
 
 /**
- * Translate a single text string
+ * Parse Google Translate free API response
+ * Response format: [[["translated text","original text",null,null,10]],null,"en",...]
+ */
+function parseGoogleTranslateResponse(response: unknown): string | null {
+    try {
+        if (!Array.isArray(response) || !Array.isArray(response[0])) {
+            return null;
+        }
+
+        let translatedText = '';
+        for (const item of response[0]) {
+            if (Array.isArray(item) && typeof item[0] === 'string') {
+                translatedText += item[0];
+            }
+        }
+
+        return translatedText || null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Translate a single text string using free Google Translate endpoint
+ * No API key required
  * @param text - Text to translate
- * @param targetLang - Target language code (e.g., 'zh')
- * @param apiKey - Google Translate API key
+ * @param targetLang - Target language code (e.g., 'zh-CN')
+ * @param sourceLang - Source language code (default: 'auto')
  */
 export async function translateText(
     text: string,
-    targetLang: string,
-    apiKey: string
+    targetLang: string = 'zh-CN',
+    sourceLang: string = 'auto'
 ): Promise<string> {
     if (!text || !text.trim()) {
         return text;
@@ -126,49 +143,49 @@ export async function translateText(
     }
 
     try {
-        const response = await fetch(`${GOOGLE_TRANSLATE_API_URL}?key=${apiKey}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                q: text,
-                target: targetLang,
-                format: 'text',
-            }),
+        const params = new URLSearchParams({
+            client: 'gtx',
+            sl: sourceLang,
+            tl: targetLang,
+            dt: 't',
+            q: text,
         });
+
+        const response = await fetch(`${GOOGLE_TRANSLATE_FREE_URL}?${params.toString()}`);
 
         if (!response.ok) {
             throw new Error(`Translation API error: ${response.status}`);
         }
 
-        const data: GoogleTranslateResponse = await response.json();
-        const translatedText = data.data.translations[0]?.translatedText || text;
+        const data = await response.json();
+        const translatedText = parseGoogleTranslateResponse(data);
 
-        // Cache the result
-        cacheTranslation(text, translatedText, targetLang);
+        if (translatedText) {
+            cacheTranslation(text, translatedText, targetLang);
+            return translatedText;
+        }
 
-        return translatedText;
+        return text;
     } catch (error) {
         console.error('Translation failed:', error);
-        return text; // Return original text on failure
+        return text;
     }
 }
 
 /**
- * Translate multiple texts in batch
+ * Translate multiple texts in batch (translates one by one for free API)
  * @param texts - Array of texts to translate
  * @param targetLang - Target language code
- * @param apiKey - Google Translate API key
+ * @param sourceLang - Source language code (default: 'auto')
  */
 export async function translateBatch(
     texts: string[],
-    targetLang: string,
-    apiKey: string
+    targetLang: string = 'zh-CN',
+    sourceLang: string = 'auto'
 ): Promise<string[]> {
     if (!texts.length) return [];
 
-    const results: string[] = [];
+    const results: string[] = new Array(texts.length);
     const uncachedTexts: { index: number; text: string }[] = [];
 
     // Check cache for each text
@@ -187,45 +204,13 @@ export async function translateBatch(
         }
     }
 
-    // Translate uncached texts
-    if (uncachedTexts.length > 0) {
+    // Translate uncached texts one by one (free API doesn't support batch)
+    for (const { index, text } of uncachedTexts) {
         try {
-            const textsToTranslate = uncachedTexts.map(item => item.text);
-
-            const response = await fetch(`${GOOGLE_TRANSLATE_API_URL}?key=${apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    q: textsToTranslate,
-                    target: targetLang,
-                    format: 'text',
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`Translation API error: ${response.status}`);
-            }
-
-            const data: GoogleTranslateResponse = await response.json();
-            const translations = data.data.translations;
-
-            // Map results back and cache them
-            for (let i = 0; i < uncachedTexts.length; i++) {
-                const { index, text } = uncachedTexts[i];
-                const translatedText = translations[i]?.translatedText || text;
-                results[index] = translatedText;
-                cacheTranslation(text, translatedText, targetLang);
-            }
-        } catch (error) {
-            console.error('Batch translation failed:', error);
-            // Fill in original texts for failed translations
-            for (const { index, text } of uncachedTexts) {
-                if (results[index] === undefined) {
-                    results[index] = text;
-                }
-            }
+            const translatedText = await translateText(text, targetLang, sourceLang);
+            results[index] = translatedText;
+        } catch {
+            results[index] = text;
         }
     }
 

@@ -1,36 +1,12 @@
 /**
  * Hook for translating skill content in the marketplace
+ * Uses free Google Translate API - no API key required
  */
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Skill } from '../types';
 import { translateBatch } from '../lib/translate';
-
-// API key storage key
-const TRANSLATE_API_KEY_STORAGE_KEY = 'googleTranslateApiKey';
-
-/**
- * Get the Google Translate API key from localStorage
- */
-export function getTranslateApiKey(): string | null {
-    try {
-        return localStorage.getItem(TRANSLATE_API_KEY_STORAGE_KEY);
-    } catch {
-        return null;
-    }
-}
-
-/**
- * Set the Google Translate API key to localStorage
- */
-export function setTranslateApiKey(apiKey: string): void {
-    try {
-        localStorage.setItem(TRANSLATE_API_KEY_STORAGE_KEY, apiKey);
-    } catch (error) {
-        console.warn('Failed to save API key:', error);
-    }
-}
 
 export interface TranslatedSkill extends Skill {
     translatedName?: string;
@@ -47,6 +23,7 @@ export interface UseTranslatedSkillsResult {
 
 /**
  * Hook to translate skill names and descriptions when language is Chinese
+ * No API key required - uses free Google Translate endpoint
  */
 export function useTranslatedSkills(skills: Skill[]): UseTranslatedSkillsResult {
     const { i18n } = useTranslation();
@@ -55,8 +32,8 @@ export function useTranslatedSkills(skills: Skill[]): UseTranslatedSkillsResult 
     const [error, setError] = useState<Error | null>(null);
 
     const isChineseLanguage = i18n.language === 'zh';
-    const apiKey = useMemo(() => getTranslateApiKey(), []);
-    const translationEnabled = isChineseLanguage && !!apiKey;
+    // Translation is enabled when language is Chinese (no API key needed)
+    const translationEnabled = isChineseLanguage;
 
     // Generate a stable key for the skills array
     const skillsKey = useMemo(() => {
@@ -64,7 +41,7 @@ export function useTranslatedSkills(skills: Skill[]): UseTranslatedSkillsResult 
     }, [skills]);
 
     useEffect(() => {
-        // If not Chinese or no API key, just return original skills
+        // If not Chinese, just return original skills
         if (!translationEnabled) {
             setTranslatedSkills(skills.map(skill => ({ ...skill })));
             setError(null);
@@ -99,8 +76,8 @@ export function useTranslatedSkills(skills: Skill[]): UseTranslatedSkillsResult 
                     }
                 });
 
-                // Translate in batch
-                const translations = await translateBatch(textsToTranslate, 'zh', apiKey!);
+                // Translate in batch (uses free Google Translate API)
+                const translations = await translateBatch(textsToTranslate, 'zh-CN');
 
                 if (cancelled) return;
 
@@ -136,7 +113,7 @@ export function useTranslatedSkills(skills: Skill[]): UseTranslatedSkillsResult 
         return () => {
             cancelled = true;
         };
-    }, [skillsKey, translationEnabled, apiKey, skills]);
+    }, [skillsKey, translationEnabled, skills]);
 
     return {
         skills: translatedSkills,

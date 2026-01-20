@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Network, CheckCircle2, XCircle, Eye, EyeOff } from "lucide-react";
+import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Network, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { appToast } from "@/lib/toast";
@@ -298,6 +298,132 @@ export function SettingsPage() {
                 English
               </button>
             </div>
+          </div>
+        </GroupCardItem>
+      </GroupCard>
+
+      {/* 网络代理设置 */}
+      <GroupCard>
+        <GroupCardItem className="py-3">
+          <div className="apple-section-title mb-0">{t("settings.proxy.title")}</div>
+        </GroupCardItem>
+
+        {/* 启用代理 */}
+        <GroupCardItem>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center">
+                <Network className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-medium">{t("settings.proxy.enabled")}</span>
+            </div>
+            <button
+              onClick={() => setProxyConfig({ ...proxyConfig, enabled: !proxyConfig.enabled })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${proxyConfig.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${proxyConfig.enabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+              />
+            </button>
+          </div>
+        </GroupCardItem>
+
+        {/* 服务器地址 */}
+        <GroupCardItem>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">{t("settings.proxy.host")}</span>
+            <input
+              type="text"
+              value={proxyConfig.host}
+              onChange={(e) => setProxyConfig({ ...proxyConfig, host: e.target.value })}
+              placeholder={t("settings.proxy.hostPlaceholder")}
+              className="w-48 h-8 px-3 text-sm bg-secondary rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </GroupCardItem>
+
+        {/* 端口 */}
+        <GroupCardItem>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">{t("settings.proxy.port")}</span>
+            <input
+              type="number"
+              value={proxyConfig.port}
+              onChange={(e) => setProxyConfig({ ...proxyConfig, port: parseInt(e.target.value) || 0 })}
+              placeholder={t("settings.proxy.portPlaceholder")}
+              className="w-24 h-8 px-3 text-sm bg-secondary rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </GroupCardItem>
+
+        {/* 用户名（可选） */}
+        <GroupCardItem>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">{t("settings.proxy.username")}</span>
+            <input
+              type="text"
+              value={proxyConfig.username || ""}
+              onChange={(e) => setProxyConfig({ ...proxyConfig, username: e.target.value || null })}
+              className="w-48 h-8 px-3 text-sm bg-secondary rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </GroupCardItem>
+
+        {/* 密码（可选） */}
+        <GroupCardItem>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">{t("settings.proxy.password")}</span>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={proxyConfig.password || ""}
+                onChange={(e) => setProxyConfig({ ...proxyConfig, password: e.target.value || null })}
+                className="w-48 h-8 px-3 pr-8 text-sm bg-secondary rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </GroupCardItem>
+
+        {/* 保存和测试按钮 */}
+        <GroupCardItem noBorder>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={handleTestProxy}
+              disabled={isTestingProxy || !proxyConfig.host}
+              className="h-8 px-4 text-sm font-medium rounded-lg bg-secondary text-muted-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              {isTestingProxy ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  {t("settings.proxy.testing")}
+                </>
+              ) : (
+                t("settings.proxy.test")
+              )}
+            </button>
+            <button
+              onClick={handleSaveProxy}
+              disabled={isSavingProxy}
+              className="h-8 px-4 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              {isSavingProxy ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  {t("settings.proxy.saving")}
+                </>
+              ) : (
+                t("settings.proxy.save")
+              )}
+            </button>
           </div>
         </GroupCardItem>
       </GroupCard>
