@@ -261,6 +261,7 @@ pub fn run() {
             commands::select_custom_install_path,
             commands::get_featured_repositories,
             commands::refresh_featured_repositories,
+            commands::reset_app_data,
             commands::is_repository_added,
             commands::check_skills_updates,
             commands::prepare_skill_update,

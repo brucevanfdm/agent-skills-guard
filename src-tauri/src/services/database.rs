@@ -27,6 +27,35 @@ impl Database {
         Ok(db)
     }
 
+    /// 重置数据库中的所有业务数据（保留表结构与迁移）
+    pub fn reset_all_data(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute_batch(
+            r#"
+            PRAGMA foreign_keys=OFF;
+            BEGIN IMMEDIATE;
+            DELETE FROM installations;
+            DELETE FROM plugins;
+            DELETE FROM skills;
+            DELETE FROM repositories;
+            COMMIT;
+            PRAGMA foreign_keys=ON;
+            "#,
+        )?;
+
+        // 若启用了 WAL，尽量将 WAL 截断，避免残留旧页面
+        let _ = conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
+
+        // 尽量释放空间（不影响正确性）
+        let _ = conn.execute_batch("VACUUM;");
+
+        drop(conn);
+        let _ = self.initialize_default_repositories()?;
+
+        Ok(())
+    }
+
     /// 初始化数据库架构
     fn initialize_schema(&self) -> Result<()> {
         let conn = self.conn.lock().unwrap();

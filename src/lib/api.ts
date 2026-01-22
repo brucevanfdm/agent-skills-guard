@@ -158,4 +158,9 @@ export const api = {
       claudeCommand: claudeCommand || null,
     });
   },
+
+  // Reset
+  async resetAppData(): Promise<void> {
+    return invoke("reset_app_data");
+  },
 };

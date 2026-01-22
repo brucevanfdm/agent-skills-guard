@@ -493,6 +493,19 @@
       "repository": "GitHub 仓库",
       "updates": "检查更新"
     },
+    "reset": {
+      "title": "重置",
+      "label": "重置本地数据",
+      "description": "将清除应用配置、缓存与本地数据库（不会删除你已安装到磁盘的 skill 文件）。操作完成后会自动重启。",
+      "button": "重置",
+      "confirmTitle": "确定要重置所有本地数据吗？",
+      "confirmDescription": "该操作会删除本地配置、缓存与数据库内容。应用将重启，并表现得像全新安装。",
+      "confirmCancel": "取消",
+      "confirmConfirm": "重置并重启",
+      "working": "重置中...",
+      "success": "重置完成，正在重启...",
+      "failed": "重置失败"
+    },
     "preferences": {
       "title": "偏好设置",
       "comingSoon": "更多设置项即将推出..."

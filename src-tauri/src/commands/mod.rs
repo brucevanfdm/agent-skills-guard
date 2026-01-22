@@ -698,6 +698,58 @@ pub async fn refresh_featured_repositories(
     Ok(config)
 }
 
+/// 重置应用的本地数据（数据库 + 缓存 + 配置文件）
+///
+/// 注意：不会删除用户自定义的技能安装目录中的文件，只会清空应用自身的索引/缓存。
+#[tauri::command]
+pub async fn reset_app_data(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    // 1) 清空数据库内容（保留表结构与默认仓库）
+    state
+        .db
+        .reset_all_data()
+        .map_err(|e| format!("Failed to reset database: {}", e))?;
+
+    // 2) 清理 app_data_dir 下除数据库文件外的内容（如精选仓库缓存、可能的设置文件）
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    if let Ok(entries) = std::fs::read_dir(&app_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+
+            // 数据库相关文件保持在位（连接仍在使用中；内容已在上方清空）
+            if file_name.starts_with("agent-skills.db") {
+                continue;
+            }
+
+            if path.is_dir() {
+                if let Err(e) = std::fs::remove_dir_all(&path) {
+                    log::warn!("清理 app data 子目录失败: {:?}, 错误: {}", path, e);
+                }
+            } else if path.exists() {
+                if let Err(e) = std::fs::remove_file(&path) {
+                    log::warn!("清理 app data 文件失败: {:?}, 错误: {}", path, e);
+                }
+            }
+        }
+    }
+
+    // 3) 清理 cache_dir 下的应用缓存（仓库压缩包、staging、备份等）
+    if let Some(cache_dir) = dirs::cache_dir() {
+        let cache_root = cache_dir.join("agent-skills-guard");
+        if cache_root.exists() {
+            if let Err(e) = std::fs::remove_dir_all(&cache_root) {
+                log::warn!("清理 cache_dir 失败: {:?}, 错误: {}", cache_root, e);
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// 检查仓库是否已添加
 #[tauri::command]
 pub async fn is_repository_added(

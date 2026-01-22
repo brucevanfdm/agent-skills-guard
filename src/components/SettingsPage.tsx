@@ -1,9 +1,23 @@
 import { useTranslation } from "react-i18next";
-import { Info, Github, RefreshCw, ExternalLink, Hash, Languages } from "lucide-react";
-import { useEffect } from "react";
+import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { appToast } from "@/lib/toast";
 import { useUpdate } from "../contexts/UpdateContext";
 import { GroupCard, GroupCardItem } from "./ui/GroupCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
+import { clearWebPersistedData } from "@/lib/reset";
+import { api } from "@/lib/api";
+import { relaunchApp } from "@/lib/updater";
 
 declare const __APP_VERSION__: string;
 
@@ -137,6 +151,8 @@ export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const updateContext = useUpdate();
   const currentLang = i18n.language;
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const updatePhase = updateContext.updatePhase;
   const isDownloading = updatePhase === "downloading";
   const isInstalling = updatePhase === "installing" || updatePhase === "restarting";
@@ -191,6 +207,25 @@ export function SettingsPage() {
       appToast.success(t("update.restartRequired"));
     }
   }, [updatePhase, t]);
+
+  const handleResetAppData = async () => {
+    if (isResetting) return;
+
+    setIsResetting(true);
+    try {
+      appToast.info(t("settings.reset.working"));
+      await clearWebPersistedData();
+      await api.resetAppData();
+      appToast.success(t("settings.reset.success"));
+      await relaunchApp();
+    } catch (error) {
+      console.error("Reset app data error:", error);
+      appToast.error(t("settings.reset.failed"));
+    } finally {
+      setIsResetting(false);
+      setResetDialogOpen(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -345,6 +380,56 @@ export function SettingsPage() {
           </GroupCardItem>
         </GroupCard>
       )}
+
+      {/* 重置应用数据 */}
+      <GroupCard>
+        <GroupCardItem className="py-3">
+          <div className="apple-section-title mb-0">{t("settings.reset.title")}</div>
+        </GroupCardItem>
+        <GroupCardItem noBorder>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Trash2 className="w-4 h-4 text-white" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{t("settings.reset.label")}</div>
+                <div className="text-xs text-muted-foreground">{t("settings.reset.description")}</div>
+              </div>
+            </div>
+
+            <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <button
+                  disabled={isResetting}
+                  className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {t("settings.reset.button")}
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("settings.reset.confirmTitle")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("settings.reset.confirmDescription")}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isResetting}>
+                    {t("settings.reset.confirmCancel")}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => void handleResetAppData()}
+                    disabled={isResetting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isResetting ? t("settings.reset.working") : t("settings.reset.confirmConfirm")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </GroupCardItem>
+      </GroupCard>
     </div>
   );
 }

@@ -493,6 +493,19 @@
       "repository": "GITHUB_REPOSITORY",
       "updates": "CHECK_UPDATES"
     },
+    "reset": {
+      "title": "RESET",
+      "label": "Reset local data",
+      "description": "Clears app settings, caches, and local database (does not delete your installed skill files). The app will restart.",
+      "button": "Reset",
+      "confirmTitle": "Reset all local data?",
+      "confirmDescription": "This will delete local configuration, caches, and database contents. The app will relaunch and behave like a fresh install.",
+      "confirmCancel": "Cancel",
+      "confirmConfirm": "Reset & Restart",
+      "working": "Resetting...",
+      "success": "Reset complete. Restarting...",
+      "failed": "Reset failed"
+    },
     "preferences": {
       "title": "PREFERENCES",
       "comingSoon": "More settings coming soon..."
