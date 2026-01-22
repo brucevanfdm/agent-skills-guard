@@ -177,7 +177,19 @@
       "conflictDetected": "File Conflicts Detected",
       "conflictDescription": "The following files have been modified locally and will be overwritten by the update:",
       "forceOverwrite": "I understand the risks, force overwrite local changes",
-      "andMore": "and {{count}} more..."
+      "andMore": "and {{count}} more...",
+      "upgradeBadge": "UPGRADE_TO_PLUGIN_AVAILABLE",
+      "upgradeToPlugin": "UPGRADE_TO_PLUGIN",
+      "upgradeDialog": {
+        "title": "Plugin Version Available",
+        "description": "This skill also has a Claude Code Plugin version. Installing it as a plugin enables the full feature set (commands/tools).",
+        "plugin": "PLUGIN:",
+        "marketplaceRepo": "MARKETPLACE_REPO:",
+        "commands": "COMMANDS:",
+        "copy": "COPY_COMMANDS",
+        "copied": "COPIED",
+        "copyFailed": "COPY_FAILED: {{error}}"
+      }
     },
     "folder": {
       "opened": "FOLDER_OPENED",
@@ -225,6 +237,34 @@
     "marketplace": "MARKETPLACE",
     "repo": "REPO:",
     "version": "VERSION",
+    "installedVersion": "INSTALLED_VERSION",
+    "updates": {
+      "check": "CHECK_UPDATES",
+      "checking": "CHECKING_UPDATES...",
+      "checked": "UPDATES_CHECKED ({{count}} available)",
+      "checkFailed": "CHECK_UPDATES_FAILED: {{error}}",
+      "available": "UPDATE_AVAILABLE {{version}}",
+      "update": "UPDATE",
+      "updating": "UPDATING...",
+      "updated": "PLUGIN_UPDATED (restart required)",
+      "alreadyLatest": "ALREADY_LATEST",
+      "updateFailed": "UPDATE_FAILED",
+      "updateFailedWithError": "UPDATE_FAILED: {{error}}"
+    },
+    "marketplaces": {
+      "updates": {
+        "check": "CHECK_UPDATES",
+        "checking": "CHECKING_UPDATES...",
+        "checked": "UPDATES_CHECKED ({{count}} available)",
+        "checkFailed": "CHECK_UPDATES_FAILED: {{error}}",
+        "available": "UPDATE_AVAILABLE {{version}}",
+        "update": "UPDATE",
+        "updating": "UPDATING...",
+        "updated": "MARKETPLACE_UPDATED",
+        "updateFailed": "UPDATE_FAILED",
+        "updateFailedWithError": "UPDATE_FAILED: {{error}}"
+      }
+    },
     "installDialog": {
       "scanResult": "Security Scan Result",
       "preparingInstall": "Preparing to install",
@@ -412,6 +452,8 @@
     },
     "statistics": {
       "installedSkills": "INSTALLED_SKILLS",
+      "installedPlugins": "INSTALLED_PLUGINS",
+      "marketplaces": "CONFIGURED_MARKETPLACES",
       "repositories": "REPOSITORIES",
       "scannedSkills": "SCANNED_SKILLS"
     },
@@ -420,6 +462,7 @@
       "scanned": "SCANNED",
       "of": "/",
       "skills": "SKILLS",
+      "items": "ITEMS",
       "scanAll": "SCAN_ALL",
       "scanning": "SCANNING...",
       "completed": "SCAN_COMPLETE: {{count}} ISSUES_FOUND",
@@ -431,7 +474,7 @@
       "localSkillsFailed": "LOCAL_SCAN_FAILED: {{error}}",
       "completed": "SECURITY_SCAN_COMPLETE: {{count}} SKILLS_SCANNED",
       "failed": "SECURITY_SCAN_FAILED: {{error}}",
-      "allCompleted": "SCAN_COMPLETE: {{localCount}} LOCAL_SKILLS_FOUND, {{scannedCount}} SCANNED"
+      "allCompleted": "SCAN_COMPLETE: {{localCount}} LOCAL_SKILLS_FOUND, PLUGINS {{pluginCount}}, MARKETPLACES {{marketplaceCount}}, {{scannedCount}} SKILLS_SCANNED, {{scannedPluginsCount}} PLUGINS_SCANNED"
     },
     "riskLevels": {
       "critical": "CRITICAL",

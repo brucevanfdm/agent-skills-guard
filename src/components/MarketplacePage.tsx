@@ -79,9 +79,10 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     const skillItems = allSkills
       .filter((skill) => skill.repository_owner !== "local")
       .map((skill) => ({ kind: "skill", item: skill }) as MarketplaceItem);
-    const pluginItems = plugins.map(
-      (plugin) => ({ kind: "plugin", item: plugin }) as MarketplaceItem
-    );
+    const pluginItems = plugins
+      // 排除仅通过 Claude CLI 同步出来的“已安装”插件，避免污染 Marketplace 浏览列表
+      .filter((plugin) => plugin.discovery_source !== "claude_cli")
+      .map((plugin) => ({ kind: "plugin", item: plugin }) as MarketplaceItem);
     return [...skillItems, ...pluginItems];
   }, [allSkills, plugins]);
 

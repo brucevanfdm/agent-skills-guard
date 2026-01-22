@@ -62,7 +62,7 @@ export function ScanStatusCard({
               {scannedCount}
               <span className="text-muted-foreground"> / {totalCount}</span>
             </div>
-            <div className="text-xs text-muted-foreground">{t("overview.scanStatus.skills")}</div>
+            <div className="text-xs text-muted-foreground">{t("overview.scanStatus.items")}</div>
           </div>
         </div>
 
@@ -74,6 +74,14 @@ export function ScanStatusCard({
               style={{ width: `${progress}%` }}
             />
           </div>
+          {isScanning && (
+            <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+              <span>
+                {t("overview.scanStatus.scanned")}: {scannedCount}
+              </span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+          )}
 
           {/* 状态文字 */}
           <div className="flex items-center gap-2">

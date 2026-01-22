@@ -18,8 +18,8 @@ import { api } from "@/lib/api";
 import { appToast } from "@/lib/toast";
 
 interface IssuesListProps {
-  issues: SkillScanResult[];
-  onOpenDirectory: (localPath: string) => void;
+  issues: Array<SkillScanResult & { kind: "skill" | "plugin"; local_path?: string }>;
+  onOpenDirectory: (item: SkillScanResult & { kind: "skill" | "plugin"; local_path?: string }) => void;
 }
 
 const levelConfig = {
@@ -143,20 +143,22 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => onOpenDirectory(issue.skill_id)}
+                  onClick={() => onOpenDirectory(issue)}
                   className="apple-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t("overview.issues.openDirectory")}</span>
                 </button>
-                <button
-                  onClick={() => uninstallMutation.mutate(issue.skill_id)}
-                  disabled={uninstallMutation.isPending}
-                  className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t("overview.issues.uninstall")}</span>
-                </button>
+                {issue.kind === "skill" && (
+                  <button
+                    onClick={() => uninstallMutation.mutate(issue.skill_id)}
+                    disabled={uninstallMutation.isPending}
+                    className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t("overview.issues.uninstall")}</span>
+                  </button>
+                )}
               </div>
             </div>
 

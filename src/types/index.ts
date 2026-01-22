@@ -34,16 +34,23 @@ export interface Skill {
 
 export interface Plugin {
   id: string;
+  claude_id?: string;
   name: string;
   description?: string;
   version?: string;
+  installed_version?: string;
   author?: string;
   repository_url: string;
   repository_owner?: string;
   marketplace_name: string;
   source: string;
+  discovery_source?: string;
   installed: boolean;
   installed_at?: string;
+  claude_scope?: string;
+  claude_enabled?: boolean;
+  claude_install_path?: string;
+  claude_last_updated?: string;
   security_score?: number;
   security_issues?: string[];
   security_level?: string;
@@ -81,6 +88,39 @@ export interface MarketplaceRemoveResult {
   success: boolean;
   removed_plugins_count: number;
   raw_log: string;
+}
+
+export interface ClaudeMarketplace {
+  name: string;
+  source?: string;
+  repo?: string;
+  repository_url?: string;
+  install_location?: string;
+}
+
+export interface PluginUpdateResult {
+  plugin_id: string;
+  plugin_name: string;
+  status: string;
+  raw_log: string;
+}
+
+export interface MarketplaceUpdateResult {
+  marketplace_name: string;
+  success: boolean;
+  raw_log: string;
+}
+
+export interface SkillPluginUpgradeCandidate {
+  skill_id: string;
+  skill_name: string;
+  plugin_id: string; // name@marketplace
+  plugin_name: string;
+  marketplace_name: string;
+  marketplace_repo?: string;
+  marketplace_repository_url?: string;
+  latest_version?: string;
+  reason: string;
 }
 
 export enum SecurityLevel {

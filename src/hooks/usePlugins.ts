@@ -8,6 +8,13 @@ export function usePlugins() {
   });
 }
 
+export function useClaudeMarketplaces() {
+  return useQuery({
+    queryKey: ["claudeMarketplaces"],
+    queryFn: () => api.getClaudeMarketplaces(),
+  });
+}
+
 export function useUninstallPlugin() {
   const queryClient = useQueryClient();
 
@@ -33,6 +40,7 @@ export function useRemoveMarketplace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plugins"] });
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
+      queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
     },
   });
 }

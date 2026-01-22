@@ -5,16 +5,27 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Plugin {
     pub id: String,
+    /// Claude Code CLI 的插件标识：`name@marketplace`
+    pub claude_id: Option<String>,
     pub name: String,
     pub description: Option<String>,
     pub version: Option<String>,
+    /// 实际已安装版本（来自 `claude plugin list --json`）
+    pub installed_version: Option<String>,
     pub author: Option<String>,
     pub repository_url: String,
     pub repository_owner: Option<String>,
     pub marketplace_name: String,
     pub source: String,
+    /// 记录该 plugin 是从哪里发现的：`repository_scan` / `claude_cli`
+    pub discovery_source: Option<String>,
     pub installed: bool,
     pub installed_at: Option<DateTime<Utc>>,
+    /// Claude Code 的安装信息（来自 `claude plugin list --json`）
+    pub claude_scope: Option<String>,
+    pub claude_enabled: Option<bool>,
+    pub claude_install_path: Option<String>,
+    pub claude_last_updated: Option<DateTime<Utc>>,
     pub security_score: Option<i32>,
     pub security_issues: Option<Vec<String>>,
     pub security_level: Option<String>,
@@ -33,19 +44,27 @@ impl Plugin {
     ) -> Self {
         let repository_owner = Self::parse_repository_owner(&repository_url);
         let id = format!("{}::{}::{}", repository_url, marketplace_name, name);
+        let claude_id = Some(format!("{}@{}", name, marketplace_name));
 
         Self {
             id,
+            claude_id,
             name,
             description: None,
             version: None,
+            installed_version: None,
             author: None,
             repository_url,
             repository_owner: Some(repository_owner),
             marketplace_name,
             source,
+            discovery_source: Some("repository_scan".to_string()),
             installed: false,
             installed_at: None,
+            claude_scope: None,
+            claude_enabled: None,
+            claude_install_path: None,
+            claude_last_updated: None,
             security_score: None,
             security_issues: None,
             security_level: None,

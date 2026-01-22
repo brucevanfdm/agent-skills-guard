@@ -3,14 +3,19 @@ import type {
   Repository,
   Skill,
   Plugin,
+  ClaudeMarketplace,
   PluginInstallResult,
   PluginUninstallResult,
   MarketplaceRemoveResult,
+  PluginUpdateResult,
+  MarketplaceUpdateResult,
+  SkillPluginUpgradeCandidate,
   CacheStats,
   FeaturedRepositoriesConfig,
   ClearAllCachesResult,
 } from "../types";
 import type { SecurityReport } from "../types/security";
+import type { SkillScanResult } from "../types/security";
 
 export const api = {
   // Repository APIs
@@ -157,6 +162,50 @@ export const api = {
       marketplaceRepo,
       claudeCommand: claudeCommand || null,
     });
+  },
+
+  async getClaudeMarketplaces(claudeCommand?: string): Promise<ClaudeMarketplace[]> {
+    return invoke("get_claude_marketplaces", { claudeCommand: claudeCommand || null });
+  },
+
+  async checkPluginsUpdates(claudeCommand?: string): Promise<Array<[string, string]>> {
+    return invoke("check_plugins_updates", { claudeCommand: claudeCommand || null });
+  },
+
+  async updatePlugin(pluginId: string, claudeCommand?: string): Promise<PluginUpdateResult> {
+    return invoke("update_plugin", { pluginId, claudeCommand: claudeCommand || null });
+  },
+
+  async checkMarketplacesUpdates(claudeCommand?: string): Promise<Array<[string, string]>> {
+    return invoke("check_marketplaces_updates", { claudeCommand: claudeCommand || null });
+  },
+
+  async updateMarketplace(
+    marketplaceName: string,
+    claudeCommand?: string
+  ): Promise<MarketplaceUpdateResult> {
+    return invoke("update_marketplace", {
+      marketplaceName,
+      claudeCommand: claudeCommand || null,
+    });
+  },
+
+  async getSkillPluginUpgradeCandidates(
+    claudeCommand?: string
+  ): Promise<SkillPluginUpgradeCandidate[]> {
+    return invoke("get_skill_plugin_upgrade_candidates", { claudeCommand: claudeCommand || null });
+  },
+
+  async scanAllInstalledPlugins(locale: string, claudeCommand?: string): Promise<string[]> {
+    return invoke("scan_all_installed_plugins", { locale, claudeCommand: claudeCommand || null });
+  },
+
+  async scanInstalledSkill(skillId: string, locale: string): Promise<SkillScanResult> {
+    return invoke("scan_installed_skill", { skillId, locale });
+  },
+
+  async scanInstalledPlugin(pluginId: string, locale: string, claudeCommand?: string): Promise<string> {
+    return invoke("scan_installed_plugin", { pluginId, locale, claudeCommand: claudeCommand || null });
   },
 
   // Reset

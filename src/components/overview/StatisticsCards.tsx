@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { Package, FolderGit, Shield } from "lucide-react";
+import { Package, FolderGit, Plug, Store } from "lucide-react";
 
 interface StatisticsCardsProps {
   installedCount: number;
+  pluginCount: number;
+  marketplaceCount: number;
   repositoryCount: number;
-  scannedCount: number;
 }
 
 // Apple 官方色彩
@@ -16,29 +17,36 @@ const cards = [
     iconBg: "bg-blue-500",
   },
   {
+    key: "installedPlugins",
+    icon: Plug,
+    gradient: "from-indigo-500 to-indigo-600",
+    iconBg: "bg-indigo-500",
+  },
+  {
+    key: "marketplaces",
+    icon: Store,
+    gradient: "from-fuchsia-500 to-fuchsia-600",
+    iconBg: "bg-fuchsia-500",
+  },
+  {
     key: "repositories",
     icon: FolderGit,
     gradient: "from-green-500 to-green-600",
     iconBg: "bg-green-500",
   },
-  {
-    key: "scannedSkills",
-    icon: Shield,
-    gradient: "from-purple-500 to-purple-600",
-    iconBg: "bg-purple-500",
-  },
 ];
 
 export function StatisticsCards({
   installedCount,
+  pluginCount,
+  marketplaceCount,
   repositoryCount,
-  scannedCount,
 }: StatisticsCardsProps) {
   const { t } = useTranslation();
-  const counts = [installedCount, repositoryCount, scannedCount];
+  const counts = [installedCount, pluginCount, marketplaceCount, repositoryCount];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
       {cards.map((card, index) => {
         const Icon = card.icon;
         const count = counts[index];

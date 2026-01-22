@@ -79,6 +79,70 @@ pub async fn scan_all_installed_skills(
     Ok(results)
 }
 
+/// 扫描单个已安装 skill（用于前端展示扫描进度）
+#[tauri::command]
+pub async fn scan_installed_skill(
+    state: State<'_, AppState>,
+    skill_id: String,
+    locale: String,
+) -> Result<SkillScanResult, String> {
+    let locale = validate_locale(&locale);
+    let mut skill = state
+        .db
+        .get_skills()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find(|s| s.id == skill_id)
+        .ok_or_else(|| "Skill not found".to_string())?;
+
+    if !skill.installed || skill.local_path.is_none() {
+        return Err("Skill is not installed".to_string());
+    }
+
+    let local_path = skill.local_path.clone().unwrap_or_default();
+    let path = PathBuf::from(&local_path);
+    if !path.exists() || !path.is_dir() {
+        return Err(format!("Skill directory does not exist: {}", local_path));
+    }
+
+    let scanner = SecurityScanner::new();
+    let report = scanner
+        .scan_directory(path.to_str().unwrap_or(""), &skill.id, &locale)
+        .map_err(|e| e.to_string())?;
+
+    skill.security_score = Some(report.score);
+    skill.security_level = Some(report.level.as_str().to_string());
+    skill.security_issues = Some(
+        report
+            .issues
+            .iter()
+            .map(|i| {
+                let file_info = i
+                    .file_path
+                    .as_ref()
+                    .map(|f| format!("[{}] ", f))
+                    .unwrap_or_default();
+                format!("{}{:?}: {}", file_info, i.severity, i.description)
+            })
+            .collect(),
+    );
+    skill.scanned_at = Some(chrono::Utc::now());
+
+    state
+        .db
+        .save_skill(&skill)
+        .map_err(|e| format!("Failed to save skill: {}", e))?;
+
+    Ok(SkillScanResult {
+        skill_id: skill.id.clone(),
+        skill_name: skill.name.clone(),
+        score: report.score,
+        level: report.level.as_str().to_string(),
+        scanned_at: chrono::Utc::now().to_rfc3339(),
+        report,
+    })
+}
+
 /// 获取缓存的扫描结果
 #[tauri::command]
 pub async fn get_scan_results(

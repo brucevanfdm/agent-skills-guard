@@ -177,7 +177,19 @@
       "conflictDetected": "检测到文件冲突",
       "conflictDescription": "以下文件在本地已被修改，更新将覆盖这些修改：",
       "forceOverwrite": "我了解风险，强制覆盖本地修改",
-      "andMore": "还有 {{count}} 个..."
+      "andMore": "还有 {{count}} 个...",
+      "upgradeBadge": "可升级为插件",
+      "upgradeToPlugin": "升级为插件",
+      "upgradeDialog": {
+        "title": "可升级为 Claude Code Plugin",
+        "description": "检测到该技能也提供 Claude Code Plugin 版本。建议以插件方式安装以获得完整功能（命令/工具等）。",
+        "plugin": "插件：",
+        "marketplaceRepo": "Marketplace 仓库：",
+        "commands": "命令：",
+        "copy": "复制命令",
+        "copied": "已复制到剪贴板",
+        "copyFailed": "复制失败：{{error}}"
+      }
     },
     "folder": {
       "opened": "已打开文件夹",
@@ -225,6 +237,34 @@
     "marketplace": "Marketplace",
     "repo": "仓库:",
     "version": "版本",
+    "installedVersion": "已安装版本",
+    "updates": {
+      "check": "检查更新",
+      "checking": "检查更新中...",
+      "checked": "检查更新完成（{{count}} 个可更新）",
+      "checkFailed": "检查更新失败：{{error}}",
+      "available": "可更新 {{version}}",
+      "update": "更新",
+      "updating": "更新中...",
+      "updated": "插件已更新（重启后生效）",
+      "alreadyLatest": "插件已是最新版本",
+      "updateFailed": "插件更新失败",
+      "updateFailedWithError": "插件更新失败：{{error}}"
+    },
+    "marketplaces": {
+      "updates": {
+        "check": "检查更新",
+        "checking": "检查更新中...",
+        "checked": "检查更新完成（{{count}} 个可更新）",
+        "checkFailed": "检查更新失败：{{error}}",
+        "available": "可更新 {{version}}",
+        "update": "更新",
+        "updating": "更新中...",
+        "updated": "Marketplace 已更新",
+        "updateFailed": "Marketplace 更新失败",
+        "updateFailedWithError": "Marketplace 更新失败：{{error}}"
+      }
+    },
     "installDialog": {
       "scanResult": "安全扫描结果",
       "preparingInstall": "准备安装",
@@ -412,6 +452,8 @@
     },
     "statistics": {
       "installedSkills": "已安装技能",
+      "installedPlugins": "已安装插件",
+      "marketplaces": "已配置市场",
       "repositories": "已添加仓库",
       "scannedSkills": "已扫描技能"
     },
@@ -420,6 +462,7 @@
       "scanned": "已扫描",
       "of": "/",
       "skills": "个技能",
+      "items": "个技能插件",
       "scanAll": "一键扫描",
       "scanning": "正在扫描",
       "completed": "扫描完成，发现 {{count}} 个问题",
@@ -431,7 +474,7 @@
       "localSkillsFailed": "扫描本地技能失败：{{error}}",
       "completed": "安全扫描完成，已扫描 {{count}} 个技能",
       "failed": "安全扫描失败：{{error}}",
-      "allCompleted": "扫描完成：发现 {{localCount}} 个技能，安全扫描 {{scannedCount}} 个"
+      "allCompleted": "扫描完成：发现 {{localCount}} 个技能，插件 {{pluginCount}} 个，Marketplace {{marketplaceCount}} 个，安全扫描 {{scannedCount}} 个技能，插件安全扫描 {{scannedPluginsCount}} 个"
     },
     "riskLevels": {
       "critical": "严重",

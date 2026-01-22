@@ -97,16 +97,23 @@ impl Database {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS plugins (
                 id TEXT PRIMARY KEY,
+                claude_id TEXT,
                 name TEXT NOT NULL,
                 description TEXT,
                 version TEXT,
+                installed_version TEXT,
                 author TEXT,
                 repository_url TEXT NOT NULL,
                 repository_owner TEXT,
                 marketplace_name TEXT NOT NULL,
                 source TEXT NOT NULL,
+                discovery_source TEXT,
                 installed INTEGER NOT NULL DEFAULT 0,
                 installed_at TEXT,
+                claude_scope TEXT,
+                claude_enabled INTEGER,
+                claude_install_path TEXT,
+                claude_last_updated TEXT,
                 security_score INTEGER,
                 security_issues TEXT,
                 security_level TEXT,
@@ -139,6 +146,7 @@ impl Database {
         self.migrate_add_security_enhancement_fields()?;
         self.migrate_add_local_paths()?;
         self.migrate_add_installed_commit_sha()?;
+        self.migrate_add_plugin_claude_fields()?;
 
         // 初始化默认仓库（忽略返回值，因为在这个阶段我们只是初始化数据库）
         let _ = self.initialize_default_repositories()?;
@@ -155,22 +163,30 @@ impl Database {
 
         conn.execute(
             "INSERT OR REPLACE INTO plugins
-            (id, name, description, version, author, repository_url, repository_owner, marketplace_name, source,
-             installed, installed_at, security_score, security_issues, security_level, scanned_at, staging_path,
-             install_log, install_status)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+            (id, claude_id, name, description, version, installed_version, author, repository_url, repository_owner,
+             marketplace_name, source, discovery_source, installed, installed_at, claude_scope, claude_enabled,
+             claude_install_path, claude_last_updated, security_score, security_issues, security_level, scanned_at,
+             staging_path, install_log, install_status)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25)",
             params![
                 plugin.id,
+                plugin.claude_id,
                 plugin.name,
                 plugin.description,
                 plugin.version,
+                plugin.installed_version,
                 plugin.author,
                 plugin.repository_url,
                 plugin.repository_owner,
                 plugin.marketplace_name,
                 plugin.source,
+                plugin.discovery_source,
                 plugin.installed as i32,
                 plugin.installed_at.as_ref().map(|d| d.to_rfc3339()),
+                plugin.claude_scope,
+                plugin.claude_enabled.map(|v| if v { 1 } else { 0 }),
+                plugin.claude_install_path,
+                plugin.claude_last_updated.as_ref().map(|d| d.to_rfc3339()),
                 plugin.security_score,
                 security_issues_json,
                 plugin.security_level,
@@ -367,38 +383,47 @@ impl Database {
     pub fn get_plugins(&self) -> Result<Vec<Plugin>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, version, author, repository_url, repository_owner, marketplace_name, source,
-                    installed, installed_at, security_score, security_issues, security_level, scanned_at, staging_path,
-                    install_log, install_status
+            "SELECT id, claude_id, name, description, version, installed_version, author, repository_url, repository_owner,
+                    marketplace_name, source, discovery_source, installed, installed_at, claude_scope, claude_enabled,
+                    claude_install_path, claude_last_updated, security_score, security_issues, security_level, scanned_at,
+                    staging_path, install_log, install_status
              FROM plugins"
         )?;
 
         let plugins = stmt.query_map([], |row| {
-            let security_issues: Option<String> = row.get(12)?;
+            let security_issues: Option<String> = row.get(19)?;
             let security_issues = security_issues
                 .and_then(|s| serde_json::from_str(&s).ok());
 
             Ok(Plugin {
                 id: row.get(0)?,
-                name: row.get(1)?,
-                description: row.get(2)?,
-                version: row.get(3)?,
-                author: row.get(4)?,
-                repository_url: row.get(5)?,
-                repository_owner: row.get(6)?,
-                marketplace_name: row.get(7)?,
-                source: row.get(8)?,
-                installed: row.get::<_, i32>(9)? != 0,
-                installed_at: row.get::<_, Option<String>>(10)?
+                claude_id: row.get(1)?,
+                name: row.get(2)?,
+                description: row.get(3)?,
+                version: row.get(4)?,
+                installed_version: row.get(5)?,
+                author: row.get(6)?,
+                repository_url: row.get(7)?,
+                repository_owner: row.get(8)?,
+                marketplace_name: row.get(9)?,
+                source: row.get(10)?,
+                discovery_source: row.get(11)?,
+                installed: row.get::<_, i32>(12)? != 0,
+                installed_at: row.get::<_, Option<String>>(13)?
                     .and_then(|s| s.parse().ok()),
-                security_score: row.get(11)?,
+                claude_scope: row.get(14)?,
+                claude_enabled: row.get::<_, Option<i32>>(15)?.map(|v| v != 0),
+                claude_install_path: row.get(16)?,
+                claude_last_updated: row.get::<_, Option<String>>(17)?
+                    .and_then(|s| s.parse().ok()),
+                security_score: row.get(18)?,
                 security_issues,
-                security_level: row.get(13)?,
-                scanned_at: row.get::<_, Option<String>>(14)?
+                security_level: row.get(20)?,
+                scanned_at: row.get::<_, Option<String>>(21)?
                     .and_then(|s| s.parse().ok()),
-                staging_path: row.get(15)?,
-                install_log: row.get(16)?,
-                install_status: row.get(17)?,
+                staging_path: row.get(22)?,
+                install_log: row.get(23)?,
+                install_status: row.get(24)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -562,6 +587,36 @@ impl Database {
         // 添加 installed_commit_sha 列
         let _ = conn.execute(
             "ALTER TABLE skills ADD COLUMN installed_commit_sha TEXT",
+            [],
+        );
+
+        Ok(())
+    }
+
+    /// 数据库迁移：为 plugins 增加 Claude CLI 同步字段
+    fn migrate_add_plugin_claude_fields(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_id TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN installed_version TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN discovery_source TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_scope TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_enabled INTEGER", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_install_path TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_last_updated TEXT", []);
+
+        // 填充缺失字段，保证旧数据可被新逻辑识别
+        let _ = conn.execute(
+            "UPDATE plugins
+             SET claude_id = name || '@' || marketplace_name
+             WHERE claude_id IS NULL",
+            [],
+        );
+
+        let _ = conn.execute(
+            "UPDATE plugins
+             SET discovery_source = 'repository_scan'
+             WHERE discovery_source IS NULL",
             [],
         );
 

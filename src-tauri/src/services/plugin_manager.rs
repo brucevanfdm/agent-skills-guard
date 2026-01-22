@@ -1,12 +1,13 @@
-use crate::models::{Plugin, Repository, SecurityLevel, SecurityReport};
+use crate::models::{Plugin, Repository, SecurityLevel, SecurityReport, Skill};
 use crate::security::SecurityScanner;
 use crate::services::claude_cli::{ClaudeCli, ClaudeCommand};
 use crate::services::{Database, GitHubService};
 use anyhow::{Context, Result};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::sync::Arc;
 use std::time::Duration;
 use which::which;
@@ -97,6 +98,83 @@ pub struct MarketplaceRemoveResult {
     pub raw_log: String,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct ClaudeMarketplace {
+    pub name: String,
+    pub source: Option<String>,
+    pub repo: Option<String>,
+    pub repository_url: Option<String>,
+    pub install_location: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PluginUpdateResult {
+    pub plugin_id: String,
+    pub plugin_name: String,
+    pub status: String,
+    pub raw_log: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MarketplaceUpdateResult {
+    pub marketplace_name: String,
+    pub success: bool,
+    pub raw_log: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SkillPluginUpgradeCandidate {
+    pub skill_id: String,
+    pub skill_name: String,
+    pub plugin_id: String,
+    pub plugin_name: String,
+    pub marketplace_name: String,
+    pub marketplace_repo: Option<String>,
+    pub marketplace_repository_url: Option<String>,
+    pub latest_version: Option<String>,
+    pub reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClaudeMarketplaceListEntry {
+    name: String,
+    #[allow(dead_code)]
+    source: Option<String>,
+    repo: Option<String>,
+    #[serde(rename = "installLocation")]
+    install_location: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct ClaudeInstalledPluginEntry {
+    id: String,
+    version: Option<String>,
+    scope: Option<String>,
+    enabled: Option<bool>,
+    #[serde(rename = "installPath")]
+    install_path: Option<String>,
+    #[serde(rename = "installedAt")]
+    installed_at: Option<String>,
+    #[serde(rename = "lastUpdated")]
+    last_updated: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClaudeAvailablePluginEntry {
+    #[serde(rename = "pluginId")]
+    plugin_id: String,
+    name: Option<String>,
+    #[serde(rename = "marketplaceName")]
+    marketplace_name: Option<String>,
+    version: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClaudePluginListWithAvailable {
+    installed: Vec<ClaudeInstalledPluginEntry>,
+    available: Vec<ClaudeAvailablePluginEntry>,
+}
+
 pub struct PluginManager {
     db: Arc<Database>,
     github: GitHubService,
@@ -171,6 +249,13 @@ impl PluginManager {
             if let Some(existing) = existing_map.get(&plugin.id) {
                 plugin.installed = existing.installed;
                 plugin.installed_at = existing.installed_at;
+                plugin.installed_version = existing.installed_version.clone();
+                plugin.claude_id = existing.claude_id.clone().or(plugin.claude_id);
+                plugin.discovery_source = existing.discovery_source.clone().or(plugin.discovery_source);
+                plugin.claude_scope = existing.claude_scope.clone();
+                plugin.claude_enabled = existing.claude_enabled;
+                plugin.claude_install_path = existing.claude_install_path.clone();
+                plugin.claude_last_updated = existing.claude_last_updated;
                 plugin.security_score = existing.security_score;
                 plugin.security_level = existing.security_level.clone();
                 plugin.security_issues = existing.security_issues.clone();
@@ -188,6 +273,523 @@ impl PluginManager {
         }
 
         Ok(plugins)
+    }
+
+    /// 同步 Claude Code CLI 的本地安装状态（用于识别非本程序安装的 plugins/marketplaces）。
+    ///
+    /// 原则：不直接读写 Claude 的缓存目录，仅通过 CLI `list --json` 获取状态并落库。
+    pub async fn sync_claude_installed_state(&self, claude_command: Option<String>) -> Result<()> {
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            // 未安装 Claude CLI 时，跳过同步，保持 DB 原样
+            log::debug!("未找到 Claude Code CLI: {}，跳过 plugins 同步", cli_command);
+            return Ok(());
+        }
+
+        let claude_cli = ClaudeCli::new(cli_command);
+        let commands = vec![
+            ClaudeCommand {
+                args: vec![
+                    "plugin".to_string(),
+                    "marketplace".to_string(),
+                    "list".to_string(),
+                    "--json".to_string(),
+                ],
+                timeout: Duration::from_secs(15),
+            },
+            ClaudeCommand {
+                args: vec![
+                    "plugin".to_string(),
+                    "list".to_string(),
+                    "--json".to_string(),
+                ],
+                timeout: Duration::from_secs(15),
+            },
+        ];
+
+        let cli_result = claude_cli.run(&commands)?;
+        let marketplace_output = cli_result.outputs.get(0).map(|o| o.output.as_str()).unwrap_or_default();
+        let plugins_output = cli_result.outputs.get(1).map(|o| o.output.as_str()).unwrap_or_default();
+
+        let marketplaces: Vec<ClaudeMarketplaceListEntry> = match parse_json_output(marketplace_output) {
+            Ok(v) => v,
+            Err(e) => {
+                log::warn!(
+                    "解析 `claude plugin marketplace list --json` 失败，尝试解析文本输出: {}",
+                    e
+                );
+                parse_marketplace_list_text(marketplace_output)
+                    .into_iter()
+                    .map(|m| ClaudeMarketplaceListEntry {
+                        name: m.name,
+                        source: m.source,
+                        repo: m.repo,
+                        install_location: m.install_location,
+                    })
+                    .collect()
+            }
+        };
+        let installed_plugins: Vec<ClaudeInstalledPluginEntry> = parse_json_output(plugins_output)
+            .context("解析 `claude plugin list --json` 输出失败")?;
+
+        let mut marketplace_repo_url_by_name: HashMap<String, String> = HashMap::new();
+        for entry in marketplaces {
+            if let Some(repo_url) = marketplace_repo_url(&entry) {
+                marketplace_repo_url_by_name.insert(entry.name, repo_url);
+            }
+        }
+
+        let existing_plugins = self.db.get_plugins().unwrap_or_default();
+        let mut plugins_by_claude_id: HashMap<String, Plugin> = HashMap::new();
+        for plugin in existing_plugins {
+            if let Some(claude_id) = plugin.claude_id.clone() {
+                plugins_by_claude_id.insert(claude_id, plugin);
+            }
+        }
+
+        let mut installed_claude_ids: HashSet<String> = HashSet::new();
+
+        for entry in installed_plugins {
+            installed_claude_ids.insert(entry.id.clone());
+
+            let (plugin_name, marketplace_name) = match parse_claude_plugin_id(&entry.id) {
+                Some(v) => v,
+                None => {
+                    log::warn!("无法解析 Claude plugin id: {}", entry.id);
+                    continue;
+                }
+            };
+
+            let repository_url = marketplace_repo_url_by_name
+                .get(&marketplace_name)
+                .cloned()
+                .unwrap_or_else(|| "local".to_string());
+
+            let mut plugin = plugins_by_claude_id
+                .get(&entry.id)
+                .cloned()
+                .unwrap_or_else(|| {
+                    let mut p = Plugin::new(
+                        plugin_name.clone(),
+                        repository_url.clone(),
+                        marketplace_name.clone(),
+                        "external".to_string(),
+                    );
+                    p.discovery_source = Some("claude_cli".to_string());
+                    p
+                });
+
+            plugin.claude_id = Some(entry.id.clone());
+            plugin.installed = true;
+            plugin.installed_version = entry.version.clone();
+            plugin.claude_scope = entry.scope.clone();
+            plugin.claude_enabled = entry.enabled;
+            plugin.claude_install_path = entry.install_path.clone();
+            plugin.claude_last_updated = parse_datetime(&entry.last_updated);
+            if plugin.installed_at.is_none() {
+                plugin.installed_at = parse_datetime(&entry.installed_at);
+            }
+
+            // 让 UI 可以展示 marketplace 归属（外部安装时 DB 里没有可用清单）
+            if plugin.marketplace_name.is_empty() {
+                plugin.marketplace_name = marketplace_name.clone();
+            }
+            if plugin.name.is_empty() {
+                plugin.name = plugin_name.clone();
+            }
+
+            self.db.save_plugin(&plugin)?;
+        }
+
+        // 反向同步：DB 标记为 installed 但 CLI 已不存在 -> 标记为未安装
+        let current_plugins = self.db.get_plugins().unwrap_or_default();
+        for plugin in current_plugins {
+            let claude_id = match plugin.claude_id.as_deref() {
+                Some(v) => v,
+                None => continue,
+            };
+
+            if plugin.installed && !installed_claude_ids.contains(claude_id) {
+                let mut updated = plugin.clone();
+                updated.installed = false;
+                updated.installed_at = None;
+                updated.installed_version = None;
+                updated.claude_scope = None;
+                updated.claude_enabled = None;
+                updated.claude_install_path = None;
+                updated.claude_last_updated = None;
+                self.db.save_plugin(&updated)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn get_claude_marketplaces(&self, claude_command: Option<String>) -> Result<Vec<ClaudeMarketplace>> {
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            return Ok(Vec::new());
+        }
+
+        let claude_cli = ClaudeCli::new(cli_command);
+        let commands = vec![ClaudeCommand {
+            args: vec![
+                "plugin".to_string(),
+                "marketplace".to_string(),
+                "list".to_string(),
+                "--json".to_string(),
+            ],
+            timeout: Duration::from_secs(15),
+        }];
+
+        let cli_result = claude_cli.run(&commands)?;
+        let output = cli_result.outputs.first().map(|o| o.output.as_str()).unwrap_or_default();
+        let entries: Vec<ClaudeMarketplaceListEntry> = match parse_json_output(output) {
+            Ok(v) => v,
+            Err(e) => {
+                log::warn!(
+                    "解析 `claude plugin marketplace list --json` 失败，尝试解析文本输出: {}",
+                    e
+                );
+                parse_marketplace_list_text(output)
+                    .into_iter()
+                    .map(|m| ClaudeMarketplaceListEntry {
+                        name: m.name,
+                        source: m.source,
+                        repo: m.repo,
+                        install_location: m.install_location,
+                    })
+                    .collect()
+            }
+        };
+
+        Ok(entries
+            .into_iter()
+            .map(|e| ClaudeMarketplace {
+                repository_url: marketplace_repo_url(&e),
+                name: e.name,
+                source: e.source,
+                repo: e.repo,
+                install_location: e.install_location,
+            })
+            .collect())
+    }
+
+    /// 检查已安装 plugins 的更新：返回 Vec<(plugin_db_id, latest_version)>
+    pub async fn check_plugins_updates(&self, claude_command: Option<String>) -> Result<Vec<(String, String)>> {
+        self.sync_claude_installed_state(claude_command.clone()).await?;
+
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            return Ok(Vec::new());
+        }
+
+        let claude_cli = ClaudeCli::new(cli_command);
+        let commands = vec![ClaudeCommand {
+            args: vec![
+                "plugin".to_string(),
+                "list".to_string(),
+                "--json".to_string(),
+                "--available".to_string(),
+            ],
+            timeout: Duration::from_secs(30),
+        }];
+
+        let cli_result = claude_cli.run(&commands)?;
+        let output = cli_result.outputs.first().map(|o| o.output.as_str()).unwrap_or_default();
+        let payload: ClaudePluginListWithAvailable = parse_json_output(output)
+            .context("解析 `claude plugin list --json --available` 输出失败")?;
+
+        let mut available_versions: HashMap<String, String> = HashMap::new();
+        for entry in payload.available {
+            if let Some(version) = entry.version {
+                if !version.trim().is_empty() {
+                    available_versions.insert(entry.plugin_id, version);
+                }
+            }
+        }
+
+        let current_plugins = self.db.get_plugins().unwrap_or_default();
+        let mut plugins_by_claude_id: HashMap<String, Plugin> = HashMap::new();
+        for plugin in current_plugins {
+            if let Some(claude_id) = plugin.claude_id.clone() {
+                plugins_by_claude_id.insert(claude_id, plugin);
+            }
+        }
+
+        let mut updates = Vec::new();
+        for installed in payload.installed {
+            let installed_version = installed.version.unwrap_or_default();
+            let latest = match available_versions.get(&installed.id) {
+                Some(v) => v,
+                None => continue,
+            };
+
+            if latest.trim().is_empty() || installed_version.trim().is_empty() {
+                continue;
+            }
+
+            if latest != &installed_version {
+                if let Some(plugin) = plugins_by_claude_id.get(&installed.id) {
+                    updates.push((plugin.id.clone(), latest.clone()));
+                }
+            }
+        }
+
+        Ok(updates)
+    }
+
+    /// 更新单个 plugin（调用 Claude Code CLI），并写回日志/状态
+    pub async fn update_plugin(&self, plugin_id: &str, claude_command: Option<String>) -> Result<PluginUpdateResult> {
+        let plugin = self
+            .db
+            .get_plugins()?
+            .into_iter()
+            .find(|p| p.id == plugin_id)
+            .context("未找到该插件")?;
+
+        if !plugin.installed {
+            anyhow::bail!("该插件尚未安装");
+        }
+
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            anyhow::bail!("未找到 Claude Code CLI: {}", cli_command);
+        }
+
+        let scope = plugin.claude_scope.clone().unwrap_or_else(|| "user".to_string());
+        let plugin_spec = plugin
+            .claude_id
+            .clone()
+            .unwrap_or_else(|| plugin.plugin_spec());
+
+        let claude_cli = ClaudeCli::new(cli_command);
+        let commands = vec![ClaudeCommand {
+            args: vec![
+                "plugin".to_string(),
+                "update".to_string(),
+                "--scope".to_string(),
+                scope,
+                plugin_spec,
+            ],
+            timeout: Duration::from_secs(180),
+        }];
+
+        let cli_result = claude_cli.run(&commands)?;
+        let output = cli_result.outputs.first().map(|o| o.output.clone()).unwrap_or_default();
+        let status = parse_plugin_update_output(&output);
+
+        // 写回日志与状态；并再次同步以获取最新 installed_version 等字段
+        let mut updated = plugin.clone();
+        updated.install_log = Some(cli_result.raw_log.clone());
+        updated.install_status = Some(status.clone());
+        self.db.save_plugin(&updated)?;
+
+        self.sync_claude_installed_state(None).await.ok();
+
+        Ok(PluginUpdateResult {
+            plugin_id: updated.id,
+            plugin_name: updated.name,
+            status,
+            raw_log: cli_result.raw_log,
+        })
+    }
+
+    /// 检查 marketplace 更新：返回 Vec<(marketplace_name, latest_head_short_sha)>
+    pub async fn check_marketplaces_updates(&self, claude_command: Option<String>) -> Result<Vec<(String, String)>> {
+        if which("git").is_err() {
+            return Ok(Vec::new());
+        }
+
+        let marketplaces = self.get_claude_marketplaces(claude_command).await?;
+        let mut updates = Vec::new();
+
+        for mp in marketplaces {
+            let install_location = match mp.install_location.as_deref() {
+                Some(v) if !v.trim().is_empty() => v,
+                _ => continue,
+            };
+
+            let repo = match mp.repo.as_deref() {
+                Some(v) if !v.trim().is_empty() => v.trim(),
+                _ => continue,
+            };
+
+            // 仅对 GitHub marketplace 做 HEAD 对比（owner/repo）
+            let remote_url = if repo.starts_with("http://") || repo.starts_with("https://") {
+                repo.to_string()
+            } else {
+                format!("https://github.com/{}.git", repo)
+            };
+
+            let local_head = git_output(&["-C", install_location, "rev-parse", "HEAD"]).ok();
+            let remote_head = git_output(&["ls-remote", &remote_url, "HEAD"]).ok();
+            let (Some(local_head), Some(remote_head)) = (local_head, remote_head) else { continue };
+
+            let local_head = local_head.trim().to_string();
+            let remote_head_full = remote_head.split_whitespace().next().unwrap_or("").to_string();
+            if local_head.is_empty() || remote_head_full.is_empty() {
+                continue;
+            }
+
+            if remote_head_full != local_head {
+                let short = remote_head_full.chars().take(12).collect::<String>();
+                updates.push((mp.name, short));
+            }
+        }
+
+        Ok(updates)
+    }
+
+    /// 更新单个 marketplace（调用 Claude Code CLI）
+    pub async fn update_marketplace(&self, marketplace_name: &str, claude_command: Option<String>) -> Result<MarketplaceUpdateResult> {
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            anyhow::bail!("未找到 Claude Code CLI: {}", cli_command);
+        }
+
+        let claude_cli = ClaudeCli::new(cli_command);
+        let commands = vec![ClaudeCommand {
+            args: vec![
+                "plugin".to_string(),
+                "marketplace".to_string(),
+                "update".to_string(),
+                marketplace_name.to_string(),
+            ],
+            timeout: Duration::from_secs(60),
+        }];
+
+        let cli_result = claude_cli.run(&commands)?;
+        let output = cli_result.outputs.first().map(|o| o.output.clone()).unwrap_or_default();
+        let success = parse_marketplace_update_output(&output);
+
+        Ok(MarketplaceUpdateResult {
+            marketplace_name: marketplace_name.to_string(),
+            success,
+            raw_log: cli_result.raw_log,
+        })
+    }
+
+    /// 检测：已安装 skills 中，哪些“也存在 Claude Code Plugin 版本”，用于提示用户升级为 plugin 完整安装。
+    ///
+    /// 说明：此处仅做“提示候选”，不自动安装/不移除 skill；安装仍建议走本应用的安全扫描 + plugin 安装流程。
+    pub async fn get_skill_plugin_upgrade_candidates(
+        &self,
+        claude_command: Option<String>,
+    ) -> Result<Vec<SkillPluginUpgradeCandidate>> {
+        let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
+        if which(&cli_command).is_err() {
+            return Ok(Vec::new());
+        }
+
+        // 拉取 marketplaces（用于给出 marketplace add 的 repo 参数）
+        let marketplaces = self.get_claude_marketplaces(Some(cli_command.clone())).await?;
+        let mut marketplace_repo_by_name: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
+        for mp in marketplaces {
+            marketplace_repo_by_name.insert(
+                mp.name.clone(),
+                (mp.repo.clone(), mp.repository_url.clone()),
+            );
+        }
+
+        // 拉取 installed plugins（用于过滤：已安装的不提示）
+        let claude_cli = ClaudeCli::new(cli_command.clone());
+        let installed_output = claude_cli.run(&[ClaudeCommand {
+            args: vec!["plugin".to_string(), "list".to_string(), "--json".to_string()],
+            timeout: Duration::from_secs(20),
+        }])?;
+        let installed_text = installed_output.outputs.first().map(|o| o.output.as_str()).unwrap_or_default();
+        let installed_plugins: Vec<ClaudeInstalledPluginEntry> = parse_json_output(installed_text)
+            .context("解析 `claude plugin list --json` 输出失败")?;
+        let installed_ids: HashSet<String> = installed_plugins
+            .into_iter()
+            .map(|p| p.id)
+            .collect();
+
+        // 拉取 available plugins（用于匹配 skill->plugin）
+        let available_output = claude_cli.run(&[ClaudeCommand {
+            args: vec![
+                "plugin".to_string(),
+                "list".to_string(),
+                "--json".to_string(),
+                "--available".to_string(),
+            ],
+            timeout: Duration::from_secs(30),
+        }])?;
+        let available_text = available_output.outputs.first().map(|o| o.output.as_str()).unwrap_or_default();
+        let payload: ClaudePluginListWithAvailable = parse_json_output(available_text)
+            .context("解析 `claude plugin list --json --available` 输出失败")?;
+
+        // 选择每个 name 的“最优 marketplace”作为推荐目标（优先官方 marketplace）
+        let mut best_by_name: HashMap<String, ClaudeAvailablePluginEntry> = HashMap::new();
+        for entry in payload.available {
+            let plugin_name = entry
+                .name
+                .clone()
+                .or_else(|| parse_claude_plugin_id(&entry.plugin_id).map(|v| v.0))
+                .unwrap_or_default();
+            if plugin_name.trim().is_empty() {
+                continue;
+            }
+
+            let key = plugin_name.to_lowercase();
+            match best_by_name.get(&key) {
+                None => {
+                    best_by_name.insert(key, entry);
+                }
+                Some(existing) => {
+                    let existing_mp = existing.marketplace_name.clone().unwrap_or_default();
+                    let candidate_mp = entry.marketplace_name.clone().unwrap_or_default();
+                    let existing_is_official = existing_mp == "claude-plugins-official";
+                    let candidate_is_official = candidate_mp == "claude-plugins-official";
+                    if candidate_is_official && !existing_is_official {
+                        best_by_name.insert(key, entry);
+                    }
+                }
+            }
+        }
+
+        let skills: Vec<Skill> = self.db.get_skills().unwrap_or_default();
+        let installed_skills = skills.into_iter().filter(|s| s.installed).collect::<Vec<_>>();
+
+        let mut candidates = Vec::new();
+        for skill in installed_skills {
+            let skill_name = skill.name.trim().to_string();
+            if skill_name.is_empty() {
+                continue;
+            }
+
+            let key = skill_name.to_lowercase();
+            let Some(best) = best_by_name.get(&key) else { continue };
+
+            let (plugin_name, marketplace_name) = match parse_claude_plugin_id(&best.plugin_id) {
+                Some(v) => v,
+                None => continue,
+            };
+
+            if installed_ids.contains(&best.plugin_id) {
+                continue;
+            }
+
+            let (marketplace_repo, marketplace_repository_url) = marketplace_repo_by_name
+                .get(&marketplace_name)
+                .cloned()
+                .unwrap_or((None, None));
+
+            candidates.push(SkillPluginUpgradeCandidate {
+                skill_id: skill.id,
+                skill_name: skill.name,
+                plugin_id: best.plugin_id.clone(),
+                plugin_name,
+                marketplace_name,
+                marketplace_repo,
+                marketplace_repository_url,
+                latest_version: best.version.clone(),
+                reason: "name_match".to_string(),
+            });
+        }
+
+        Ok(candidates)
     }
 
     pub async fn prepare_plugin_installation(&self, plugin_id: &str, locale: &str) -> Result<SecurityReport> {
@@ -234,6 +836,13 @@ impl PluginManager {
             if let Some(existing) = existing_map.get(&resolved.plugin.id) {
                 resolved.plugin.installed = existing.installed;
                 resolved.plugin.installed_at = existing.installed_at;
+                resolved.plugin.installed_version = existing.installed_version.clone();
+                resolved.plugin.claude_id = existing.claude_id.clone().or(resolved.plugin.claude_id.clone());
+                resolved.plugin.discovery_source = existing.discovery_source.clone().or(resolved.plugin.discovery_source.clone());
+                resolved.plugin.claude_scope = existing.claude_scope.clone();
+                resolved.plugin.claude_enabled = existing.claude_enabled;
+                resolved.plugin.claude_install_path = existing.claude_install_path.clone();
+                resolved.plugin.claude_last_updated = existing.claude_last_updated;
                 resolved.plugin.install_log = existing.install_log.clone();
                 resolved.plugin.install_status = existing.install_status.clone();
             }
@@ -567,6 +1176,215 @@ impl PluginManager {
 
         Ok(extract_dir)
     }
+}
+
+fn parse_claude_plugin_id(id: &str) -> Option<(String, String)> {
+    let (name, marketplace) = id.rsplit_once('@')?;
+    if name.is_empty() || marketplace.is_empty() {
+        return None;
+    }
+    Some((name.to_string(), marketplace.to_string()))
+}
+
+fn marketplace_repo_url(entry: &ClaudeMarketplaceListEntry) -> Option<String> {
+    let repo = entry.repo.as_deref()?.trim();
+    if repo.is_empty() {
+        return None;
+    }
+
+    // Claude CLI 的 github source 通常返回 owner/repo
+    if repo.starts_with("http://") || repo.starts_with("https://") {
+        return Some(repo.to_string());
+    }
+
+    Some(format!("https://github.com/{}", repo))
+}
+
+fn parse_datetime(value: &Option<String>) -> Option<DateTime<Utc>> {
+    value.as_ref().and_then(|s| s.parse().ok())
+}
+
+fn parse_json_output<T: for<'de> Deserialize<'de>>(output: &str) -> Result<T> {
+    let cleaned = strip_terminal_escapes(output);
+    let payload = extract_json_payload(&cleaned).unwrap_or(cleaned.as_str());
+    serde_json::from_str(payload).context("JSON 解析失败")
+}
+
+fn extract_json_payload(output: &str) -> Option<&str> {
+    let start = output.find(|c| c == '{' || c == '[')?;
+    let end = output.rfind(|c| c == '}' || c == ']')?;
+    if end < start {
+        return None;
+    }
+    Some(&output[start..=end])
+}
+
+fn strip_terminal_escapes(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        let ch = chars[i];
+        if ch == '\u{001b}' {
+            // CSI: ESC [
+            if i + 1 < chars.len() && chars[i + 1] == '[' {
+                i += 2;
+                while i < chars.len() {
+                    let c = chars[i];
+                    // CSI sequences typically end with a byte in @..~
+                    if ('@'..='~').contains(&c) {
+                        i += 1;
+                        break;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+
+            // OSC: ESC ]
+            if i + 1 < chars.len() && chars[i + 1] == ']' {
+                i += 2;
+                while i < chars.len() {
+                    let c = chars[i];
+                    // BEL ends OSC
+                    if c == '\u{0007}' {
+                        i += 1;
+                        break;
+                    }
+                    // ST ends OSC: ESC \
+                    if c == '\u{001b}' && i + 1 < chars.len() && chars[i + 1] == '\\' {
+                        i += 2;
+                        break;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+
+            // Other ESC sequences: best-effort skip next char
+            i += 1;
+            if i < chars.len() {
+                i += 1;
+            }
+            continue;
+        }
+
+        out.push(ch);
+        i += 1;
+    }
+
+    out
+}
+
+fn parse_marketplace_list_text(output: &str) -> Vec<ClaudeMarketplace> {
+    let cleaned = strip_terminal_escapes(output);
+    let mut results: Vec<ClaudeMarketplace> = Vec::new();
+    let mut current_index: Option<usize> = None;
+
+    for raw_line in cleaned.lines() {
+        let line = raw_line.trim_end();
+        let trimmed = line.trim_start();
+
+        if let Some(rest) = trimmed.strip_prefix('>') {
+            let name = rest.trim().to_string();
+            if name.is_empty() {
+                continue;
+            }
+            let install_location = default_marketplace_install_location(&name);
+            results.push(ClaudeMarketplace {
+                name,
+                source: None,
+                repo: None,
+                repository_url: None,
+                install_location,
+            });
+            current_index = Some(results.len() - 1);
+            continue;
+        }
+
+        let Some(idx) = current_index else { continue };
+        if !trimmed.to_lowercase().starts_with("source:") {
+            continue;
+        }
+
+        // Example:
+        // Source: GitHub (anthropics/claude-plugins-official)
+        // Source: URL (https://...)
+        let after = trimmed.splitn(2, ':').nth(1).unwrap_or("").trim();
+        if after.is_empty() {
+            continue;
+        }
+
+        let (source_text, paren) = match after.split_once('(') {
+            Some((a, b)) => (a.trim(), Some(b.trim_end_matches(')').trim())),
+            None => (after.trim(), None),
+        };
+
+        if !source_text.is_empty() {
+            results[idx].source = Some(source_text.to_string());
+        }
+
+        if let Some(value) = paren {
+            if !value.is_empty() {
+                // GitHub: owner/repo; URL/Local: value as-is
+                results[idx].repo = Some(value.to_string());
+                results[idx].repository_url = if value.starts_with("http://") || value.starts_with("https://") {
+                    Some(value.to_string())
+                } else if value.contains('/') {
+                    Some(format!("https://github.com/{}", value))
+                } else {
+                    None
+                };
+            }
+        }
+    }
+
+    results
+}
+
+fn default_marketplace_install_location(name: &str) -> Option<String> {
+    if name.trim().is_empty() {
+        return None;
+    }
+    let home = dirs::home_dir()?;
+    Some(
+        home.join(".claude")
+            .join("plugins")
+            .join("marketplaces")
+            .join(name)
+            .to_string_lossy()
+            .to_string(),
+    )
+}
+
+fn git_output(args: &[&str]) -> Result<String> {
+    let out = Command::new("git").args(args).output().context("执行 git 命令失败")?;
+    if !out.status.success() {
+        anyhow::bail!("git 命令返回非零状态");
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).to_string())
+}
+
+fn parse_plugin_update_output(output: &str) -> String {
+    let text = output.to_lowercase();
+    if text.contains("already") && text.contains("latest") {
+        return "already_latest".to_string();
+    }
+    if text.contains("success") && text.contains("updated") {
+        return "updated".to_string();
+    }
+    if text.contains("updated") {
+        return "updated".to_string();
+    }
+    "failed".to_string()
+}
+
+fn parse_marketplace_update_output(output: &str) -> bool {
+    let text = output.to_lowercase();
+    text.contains("successfully updated marketplace")
+        || (text.contains("updated") && text.contains("marketplace") && !text.contains("failed"))
+        || text.contains("already up to date")
 }
 
 #[derive(Debug)]

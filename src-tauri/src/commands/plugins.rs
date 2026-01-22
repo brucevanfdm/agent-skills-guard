@@ -1,6 +1,18 @@
 use crate::commands::AppState;
 use crate::models::{Plugin, SecurityReport};
-use crate::services::plugin_manager::{MarketplaceRemoveResult, PluginInstallResult, PluginUninstallResult};
+use crate::services::plugin_manager::{
+    ClaudeMarketplace,
+    MarketplaceRemoveResult,
+    MarketplaceUpdateResult,
+    PluginInstallResult,
+    PluginUninstallResult,
+    PluginUpdateResult,
+    SkillPluginUpgradeCandidate,
+};
+use crate::security::SecurityScanner;
+use crate::i18n::validate_locale;
+use chrono::Utc;
+use std::path::PathBuf;
 use tauri::State;
 
 /// 获取所有 plugins
@@ -8,8 +20,20 @@ use tauri::State;
 pub async fn get_plugins(
     state: State<'_, AppState>,
 ) -> Result<Vec<Plugin>, String> {
-    state.db.get_plugins()
-        .map_err(|e| e.to_string())
+    // 通过 Claude CLI 同步本地安装状态（包含非本程序安装的 plugins/marketplaces）
+    // 同步失败不阻塞 UI：回退到 DB 缓存
+    if let Ok(manager) = state.plugin_manager.try_lock() {
+        if let Err(e) = manager.sync_claude_installed_state(None).await {
+            log::warn!("同步 Claude plugins 状态失败: {}", e);
+        }
+    } else {
+        let manager = state.plugin_manager.lock().await;
+        if let Err(e) = manager.sync_claude_installed_state(None).await {
+            log::warn!("同步 Claude plugins 状态失败: {}", e);
+        }
+    }
+
+    state.db.get_plugins().map_err(|e| e.to_string())
 }
 
 /// 准备安装 plugin：下载并扫描 marketplace repo
@@ -70,4 +94,224 @@ pub async fn remove_marketplace(
     let manager = state.plugin_manager.lock().await;
     manager.remove_marketplace(&marketplace_name, &marketplace_repo, claude_command).await
         .map_err(|e| e.to_string())
+}
+
+/// 获取 Claude Code 已配置的 marketplaces（来自 CLI）
+#[tauri::command]
+pub async fn get_claude_marketplaces(
+    state: State<'_, AppState>,
+    claude_command: Option<String>,
+) -> Result<Vec<ClaudeMarketplace>, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager
+        .get_claude_marketplaces(claude_command)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 检查已安装 plugins 的更新（来自 CLI）
+/// 返回：Vec<(plugin_id, latest_version)>
+#[tauri::command]
+pub async fn check_plugins_updates(
+    state: State<'_, AppState>,
+    claude_command: Option<String>,
+) -> Result<Vec<(String, String)>, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager
+        .check_plugins_updates(claude_command)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 更新单个 plugin（调用 Claude Code CLI）
+#[tauri::command]
+pub async fn update_plugin(
+    state: State<'_, AppState>,
+    plugin_id: String,
+    claude_command: Option<String>,
+) -> Result<PluginUpdateResult, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager
+        .update_plugin(&plugin_id, claude_command)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 检查 marketplaces 的更新（基于本地安装目录的 git HEAD 对比）
+/// 返回：Vec<(marketplace_name, latest_head_short_sha)>
+#[tauri::command]
+pub async fn check_marketplaces_updates(
+    state: State<'_, AppState>,
+    claude_command: Option<String>,
+) -> Result<Vec<(String, String)>, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager
+        .check_marketplaces_updates(claude_command)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 更新单个 marketplace（调用 Claude Code CLI）
+#[tauri::command]
+pub async fn update_marketplace(
+    state: State<'_, AppState>,
+    marketplace_name: String,
+    claude_command: Option<String>,
+) -> Result<MarketplaceUpdateResult, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager
+        .update_marketplace(&marketplace_name, claude_command)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 检测已安装 skills 中可升级为 Claude Code Plugin 的候选项
+#[tauri::command]
+pub async fn get_skill_plugin_upgrade_candidates(
+    state: State<'_, AppState>,
+    claude_command: Option<String>,
+) -> Result<Vec<SkillPluginUpgradeCandidate>, String> {
+    let manager = state.plugin_manager.lock().await;
+    manager
+        .get_skill_plugin_upgrade_candidates(claude_command)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 安全扫描所有已安装 plugins（读取 Claude CLI 提供的 installPath）
+///
+/// 返回：成功扫描的 plugin_id 列表（数据库 id）
+#[tauri::command]
+pub async fn scan_all_installed_plugins(
+    state: State<'_, AppState>,
+    locale: String,
+    claude_command: Option<String>,
+) -> Result<Vec<String>, String> {
+    let locale = validate_locale(&locale);
+
+    // 先同步 Claude CLI 的安装状态，确保 installPath 最新
+    {
+        let manager = state.plugin_manager.lock().await;
+        if let Err(e) = manager.sync_claude_installed_state(claude_command).await {
+            log::warn!("同步 Claude plugins 状态失败（将继续扫描 DB 记录）: {}", e);
+        }
+    }
+
+    let plugins = state.db.get_plugins().map_err(|e| e.to_string())?;
+    let installed_plugins: Vec<Plugin> = plugins.into_iter().filter(|p| p.installed).collect();
+
+    let scanner = SecurityScanner::new();
+    let mut scanned = Vec::new();
+
+    for mut plugin in installed_plugins {
+        let Some(install_path) = plugin.claude_install_path.clone() else { continue };
+        let path = PathBuf::from(&install_path);
+        if !path.exists() || !path.is_dir() {
+            log::warn!("Plugin directory does not exist: {:?}", path);
+            continue;
+        }
+
+        match scanner.scan_directory(path.to_str().unwrap_or(""), &plugin.id, &locale) {
+            Ok(report) => {
+                plugin.security_score = Some(report.score);
+                plugin.security_level = Some(report.level.as_str().to_string());
+                plugin.security_issues = Some(
+                    report
+                        .issues
+                        .iter()
+                        .map(|i| {
+                            let file_info = i
+                                .file_path
+                                .as_ref()
+                                .map(|f| format!("[{}] ", f))
+                                .unwrap_or_default();
+                            format!("{}{:?}: {}", file_info, i.severity, i.description)
+                        })
+                        .collect(),
+                );
+                plugin.scanned_at = Some(Utc::now());
+
+                if let Err(e) = state.db.save_plugin(&plugin) {
+                    log::warn!("Failed to save plugin {}: {}", plugin.name, e);
+                } else {
+                    scanned.push(plugin.id.clone());
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to scan plugin {}: {}", plugin.name, e);
+            }
+        }
+    }
+
+    Ok(scanned)
+}
+
+/// 安全扫描单个已安装 plugin（用于前端展示扫描进度）
+#[tauri::command]
+pub async fn scan_installed_plugin(
+    state: State<'_, AppState>,
+    plugin_id: String,
+    locale: String,
+    claude_command: Option<String>,
+) -> Result<String, String> {
+    let locale = validate_locale(&locale);
+
+    // 尝试同步 installPath（不强制成功）
+    {
+        let manager = state.plugin_manager.lock().await;
+        if let Err(e) = manager.sync_claude_installed_state(claude_command).await {
+            log::debug!("同步 Claude plugins 状态失败: {}", e);
+        }
+    }
+
+    let mut plugin = state
+        .db
+        .get_plugins()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find(|p| p.id == plugin_id)
+        .ok_or_else(|| "Plugin not found".to_string())?;
+
+    if !plugin.installed {
+        return Err("Plugin is not installed".to_string());
+    }
+
+    let Some(install_path) = plugin.claude_install_path.clone() else {
+        return Err("Plugin install path is not available".to_string());
+    };
+
+    let path = PathBuf::from(&install_path);
+    if !path.exists() || !path.is_dir() {
+        return Err(format!("Plugin directory does not exist: {}", install_path));
+    }
+
+    let scanner = SecurityScanner::new();
+    let report = scanner
+        .scan_directory(path.to_str().unwrap_or(""), &plugin.id, &locale)
+        .map_err(|e| e.to_string())?;
+
+    plugin.security_score = Some(report.score);
+    plugin.security_level = Some(report.level.as_str().to_string());
+    plugin.security_issues = Some(
+        report
+            .issues
+            .iter()
+            .map(|i| {
+                let file_info = i
+                    .file_path
+                    .as_ref()
+                    .map(|f| format!("[{}] ", f))
+                    .unwrap_or_default();
+                format!("{}{:?}: {}", file_info, i.severity, i.description)
+            })
+            .collect(),
+    );
+    plugin.scanned_at = Some(Utc::now());
+
+    state
+        .db
+        .save_plugin(&plugin)
+        .map_err(|e| format!("Failed to save plugin: {}", e))?;
+
+    Ok(plugin.id)
 }

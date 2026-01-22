@@ -4,7 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { Loader2, CheckCircle, Shield, X } from "lucide-react";
 import type { SkillScanResult } from "@/types/security";
-import type { Skill, Repository } from "@/types";
+import type { ClaudeMarketplace, Plugin, Skill, Repository } from "@/types";
 import { api } from "@/lib/api";
 import { StatisticsCards } from "./overview/StatisticsCards";
 import { ScanStatusCard } from "./overview/ScanStatusCard";
@@ -12,11 +12,17 @@ import { IssuesSummaryCard } from "./overview/IssuesSummaryCard";
 import { IssuesList } from "./overview/IssuesList";
 import { appToast } from "@/lib/toast";
 import { GroupCard, GroupCardItem } from "./ui/GroupCard";
+import type { SecurityIssue, SecurityReport } from "@/types/security";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 export function OverviewPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState<{ scanned: number; total: number }>({
+    scanned: 0,
+    total: 0,
+  });
   const [filterLevel, setFilterLevel] = useState<string | null>(null);
 
   const { data: installedSkills = [] } = useQuery<Skill[]>({
@@ -29,7 +35,17 @@ export function OverviewPage() {
     queryFn: api.getRepositories,
   });
 
-  const { data: scanResults = [], isLoading } = useQuery<SkillScanResult[]>({
+  const { data: plugins = [], isLoading: isPluginsLoading } = useQuery<Plugin[]>({
+    queryKey: ["plugins"],
+    queryFn: api.getPlugins,
+  });
+
+  const { data: marketplaces = [], isLoading: isMarketplacesLoading } = useQuery<ClaudeMarketplace[]>({
+    queryKey: ["claudeMarketplaces"],
+    queryFn: () => api.getClaudeMarketplaces(),
+  });
+
+  const { data: scanResults = [], isLoading: isScanResultsLoading } = useQuery<SkillScanResult[]>({
     queryKey: ["scanResults"],
     queryFn: async () => {
       return await invoke("get_scan_results");
@@ -56,10 +72,18 @@ export function OverviewPage() {
     mutationFn: async () => {
       setIsScanning(true);
       let localSkillsCount = 0;
+      let installedPluginsCount = 0;
+      let marketplaceCount = 0;
+      let scannedPluginsCount = 0;
+      let installedSkillsCount = 0;
+
+      setScanProgress({ scanned: 0, total: 0 });
 
       try {
         const localSkills = await api.scanLocalSkills();
         localSkillsCount = localSkills.length;
+        const installedSkillsNow = await api.getInstalledSkills();
+        installedSkillsCount = installedSkillsNow.length;
         await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
         await queryClient.refetchQueries({ queryKey: ["skills"] });
       } catch (error: any) {
@@ -69,20 +93,87 @@ export function OverviewPage() {
         });
       }
 
-      const results = await invoke<SkillScanResult[]>("scan_all_installed_skills", {
-        locale: i18n.language,
-      });
+      let installedPlugins: Plugin[] = [];
+      try {
+        const latestPlugins = await api.getPlugins();
+        installedPlugins = latestPlugins.filter((p) => p.installed);
+        installedPluginsCount = installedPlugins.length;
+        await queryClient.refetchQueries({ queryKey: ["plugins"] });
+      } catch (error: any) {
+        console.error("扫描本地插件失败:", error);
+      }
 
-      return { results, localSkillsCount };
+      let installedSkills: Skill[] = [];
+      try {
+        installedSkills = await api.getInstalledSkills();
+      } catch {
+        installedSkills = [];
+      }
+
+      const totalItems = installedSkillsCount + installedPluginsCount;
+      setScanProgress({ scanned: 0, total: totalItems });
+
+      try {
+        const latestMarketplaces = await api.getClaudeMarketplaces();
+        marketplaceCount = latestMarketplaces.length;
+        await queryClient.refetchQueries({ queryKey: ["claudeMarketplaces"] });
+      } catch (error: any) {
+        console.error("扫描 Marketplace 失败:", error);
+      }
+
+      try {
+        for (const plugin of installedPlugins) {
+          try {
+            await api.scanInstalledPlugin(plugin.id, i18n.language);
+            scannedPluginsCount += 1;
+          } catch (e) {
+            console.error("扫描插件失败:", plugin.name, e);
+          } finally {
+            setScanProgress((prev) => ({ total: prev.total, scanned: prev.scanned + 1 }));
+          }
+        }
+        await queryClient.refetchQueries({ queryKey: ["plugins"] });
+      } catch (error: any) {
+        console.error("安全扫描插件失败:", error);
+      }
+
+      const results: SkillScanResult[] = [];
+      try {
+        for (const skill of installedSkills) {
+          try {
+            const result = await api.scanInstalledSkill(skill.id, i18n.language);
+            results.push(result);
+          } catch (e) {
+            console.error("扫描技能失败:", skill.name, e);
+          } finally {
+            setScanProgress((prev) => ({ total: prev.total, scanned: prev.scanned + 1 }));
+          }
+        }
+      } catch (error: any) {
+        console.error("安全扫描技能失败:", error);
+      }
+
+      return {
+        results,
+        localSkillsCount,
+        installedPluginsCount,
+        marketplaceCount,
+        scannedPluginsCount,
+      };
     },
-    onSuccess: ({ results, localSkillsCount }) => {
+    onSuccess: ({ results, localSkillsCount, installedPluginsCount, marketplaceCount, scannedPluginsCount }) => {
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
+      queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
       appToast.success(
         t("overview.scan.allCompleted", {
           localCount: localSkillsCount,
           scannedCount: results.length,
+          pluginCount: installedPluginsCount,
+          marketplaceCount,
+          scannedPluginsCount,
         }),
         { duration: 4000 }
       );
@@ -98,11 +189,24 @@ export function OverviewPage() {
   const statistics = useMemo(
     () => ({
       installedCount: uniqueInstalledSkills.filter((s) => s.installed).length,
+      pluginCount: plugins.filter((p) => p.installed).length,
+      marketplaceCount: marketplaces.length,
       repositoryCount: repositories.length,
-      scannedCount: uniqueScanResults.length,
     }),
-    [repositories.length, uniqueInstalledSkills, uniqueScanResults]
+    [marketplaces.length, plugins, repositories.length, uniqueInstalledSkills]
   );
+
+  const scannedPluginsCount = useMemo(() => {
+    return plugins.filter((p) => p.installed && p.security_score != null).length;
+  }, [plugins]);
+
+  const totalItemsCount = useMemo(() => {
+    return statistics.installedCount + statistics.pluginCount;
+  }, [statistics.installedCount, statistics.pluginCount]);
+
+  const scannedItemsCount = useMemo(() => {
+    return uniqueScanResults.length + scannedPluginsCount;
+  }, [scannedPluginsCount, uniqueScanResults.length]);
 
   const issuesByLevel = useMemo(() => {
     const result: Record<string, number> = { Severe: 0, MidHigh: 0, Safe: 0 };
@@ -111,20 +215,69 @@ export function OverviewPage() {
       else if (r.level === "High" || r.level === "Medium") result.MidHigh++;
       else if (r.level === "Safe" || r.level === "Low") result.Safe++;
     });
+    plugins.forEach((p) => {
+      if (!p.installed || p.security_level == null) return;
+      if (p.security_level === "Critical") result.Severe++;
+      else if (p.security_level === "High" || p.security_level === "Medium") result.MidHigh++;
+      else if (p.security_level === "Safe" || p.security_level === "Low") result.Safe++;
+    });
     return result;
-  }, [uniqueScanResults]);
+  }, [plugins, uniqueScanResults]);
 
   const lastScanTime = useMemo(() => {
-    if (!uniqueScanResults.length) return null;
-    return new Date(Math.max(...uniqueScanResults.map((r) => new Date(r.scanned_at).getTime())));
-  }, [uniqueScanResults]);
+    const times: number[] = [];
+    uniqueScanResults.forEach((r) => times.push(new Date(r.scanned_at).getTime()));
+    plugins.forEach((p) => {
+      if (p.installed && p.scanned_at) times.push(new Date(p.scanned_at).getTime());
+    });
+    if (!times.length) return null;
+    return new Date(Math.max(...times));
+  }, [plugins, uniqueScanResults]);
 
   const issueCount = useMemo(() => {
-    return uniqueScanResults.filter((r) => r.level !== "Safe" && r.level !== "Low").length;
-  }, [uniqueScanResults]);
+    const skillIssues = uniqueScanResults.filter((r) => r.level !== "Safe" && r.level !== "Low").length;
+    const pluginIssues = plugins.filter((p) => {
+      if (!p.installed) return false;
+      const level = p.security_level;
+      if (!level) return false;
+      return level !== "Safe" && level !== "Low";
+    }).length;
+    return skillIssues + pluginIssues;
+  }, [plugins, uniqueScanResults]);
+
+  const combinedIssues = useMemo(() => {
+    const bySkillId = new Map<string, Skill>();
+    uniqueInstalledSkills.forEach((s) => bySkillId.set(s.id, s));
+
+    const items: Array<SkillScanResult & { kind: "skill" | "plugin"; local_path?: string }> = [];
+
+    uniqueScanResults.forEach((r) => {
+      items.push({
+        ...r,
+        kind: "skill",
+        local_path: bySkillId.get(r.skill_id)?.local_path,
+      });
+    });
+
+    plugins.forEach((p) => {
+      if (!p.installed || p.security_score == null || p.security_level == null) return;
+      items.push({
+        kind: "plugin",
+        local_path: p.claude_install_path,
+        skill_id: p.id,
+        skill_name: p.name,
+        score: p.security_score,
+        level: p.security_level,
+        scanned_at: p.scanned_at || new Date().toISOString(),
+        report: buildReportFromPlugin(p),
+      });
+    });
+
+    return items;
+  }, [plugins, uniqueInstalledSkills, uniqueScanResults]);
 
   const filteredIssues = useMemo(() => {
-    return uniqueScanResults
+    return combinedIssues
       .filter((result) => {
         if (!filterLevel) return result.level !== "Safe" && result.level !== "Low";
         if (filterLevel === "Severe") return result.level === "Critical";
@@ -139,22 +292,33 @@ export function OverviewPage() {
           (levelOrder[b.level as keyof typeof levelOrder] || 999)
         );
       });
-  }, [uniqueScanResults, filterLevel]);
+  }, [combinedIssues, filterLevel]);
 
-  const handleOpenDirectory = async (skillId: string) => {
+  const handleOpenDirectory = async (
+    item: SkillScanResult & { kind: "skill" | "plugin"; local_path?: string }
+  ) => {
     try {
-      const skill = uniqueInstalledSkills.find((s) => s.id === skillId);
-      if (skill?.local_path) {
-        await invoke("open_skill_directory", { localPath: skill.local_path });
+      if (item.kind === "skill") {
+        const skill = uniqueInstalledSkills.find((s) => s.id === item.skill_id);
+        if (skill?.local_path) {
+          await invoke("open_skill_directory", { localPath: skill.local_path });
+        } else {
+          appToast.error("无法找到技能路径", { duration: 4000 });
+        }
       } else {
-        appToast.error("无法找到技能路径", { duration: 4000 });
+        const path = item.local_path;
+        if (path) {
+          await openPath(path);
+        } else {
+          appToast.error("无法找到插件路径", { duration: 4000 });
+        }
       }
     } catch (error: any) {
       appToast.error(t("skills.folder.openFailed", { error: error.message }), { duration: 4000 });
     }
   };
 
-  if (isLoading) {
+  if (isScanResultsLoading || isPluginsLoading || isMarketplacesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -186,8 +350,9 @@ export function OverviewPage() {
       {/* 统计卡片 */}
       <StatisticsCards
         installedCount={statistics.installedCount}
+        pluginCount={statistics.pluginCount}
+        marketplaceCount={statistics.marketplaceCount}
         repositoryCount={statistics.repositoryCount}
-        scannedCount={statistics.scannedCount}
       />
 
       {/* 扫描状态 + 问题概览 */}
@@ -195,8 +360,8 @@ export function OverviewPage() {
         <div className="lg:col-span-7 h-full">
           <ScanStatusCard
             lastScanTime={lastScanTime}
-            scannedCount={statistics.scannedCount}
-            totalCount={statistics.installedCount}
+            scannedCount={isScanning ? scanProgress.scanned : scannedItemsCount}
+            totalCount={isScanning ? scanProgress.total : totalItemsCount}
             issueCount={issueCount}
             isScanning={isScanning}
           />
@@ -264,4 +429,61 @@ export function OverviewPage() {
       </GroupCard>
     </div>
   );
+}
+
+function buildReportFromPlugin(plugin: Plugin): SecurityReport {
+  const issues: SecurityIssue[] = (plugin.security_issues || [])
+    .map(parseStoredIssueString)
+    .filter((v): v is SecurityIssue => v !== null);
+
+  return {
+    skill_id: plugin.id,
+    score: plugin.security_score ?? 0,
+    level: plugin.security_level ?? "Unknown",
+    issues,
+    recommendations: [],
+    blocked: false,
+    hard_trigger_issues: [],
+    scanned_files: [],
+  };
+}
+
+function parseStoredIssueString(issue: string): SecurityIssue | null {
+  const raw = issue.trim();
+  if (!raw) return null;
+
+  // Format (Rust): "[path] Severity: description" or "Severity: description"
+  let file_path: string | undefined;
+  let remaining = raw;
+  if (remaining.startsWith("[")) {
+    const end = remaining.indexOf("]");
+    if (end > 1) {
+      file_path = remaining.slice(1, end).trim() || undefined;
+      remaining = remaining.slice(end + 1).trim();
+    }
+  }
+
+  const parts = remaining.split(":");
+  if (parts.length < 2) {
+    return {
+      severity: "Info",
+      category: "Other",
+      description: remaining,
+      file_path,
+    };
+  }
+
+  const severity = parts[0].trim();
+  const description = parts.slice(1).join(":").trim();
+  const normalized =
+    severity === "Critical" || severity === "Error" || severity === "Warning" || severity === "Info"
+      ? severity
+      : "Info";
+
+  return {
+    severity: normalized,
+    category: "Other",
+    description: description || remaining,
+    file_path,
+  };
 }

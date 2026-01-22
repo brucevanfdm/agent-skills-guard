@@ -1,7 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useInstalledSkills, useUninstallSkill, useUninstallSkillPath } from "../hooks/useSkills";
-import { usePlugins, useRemoveMarketplace, useUninstallPlugin } from "../hooks/usePlugins";
-import { Plugin, Skill } from "../types";
+import {
+  useClaudeMarketplaces,
+  usePlugins,
+  useRemoveMarketplace,
+  useUninstallPlugin,
+} from "../hooks/usePlugins";
+import { Plugin, Skill, SkillPluginUpgradeCandidate } from "../types";
 import { SecurityReport } from "../types/security";
 import {
   Trash2,
@@ -11,6 +16,8 @@ import {
   Search,
   SearchX,
   Download,
+  RefreshCw,
+  Plug,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -21,7 +28,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { formatRepositoryTag } from "../lib/utils";
 import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { appToast } from "../lib/toast";
 import { countIssuesBySeverity } from "@/lib/security-utils";
@@ -36,11 +43,14 @@ import {
 } from "./ui/alert-dialog";
 
 const AVAILABLE_UPDATES_KEY = "available_updates";
+const AVAILABLE_PLUGIN_UPDATES_KEY = "available_plugin_updates";
+const AVAILABLE_MARKETPLACE_UPDATES_KEY = "available_marketplace_updates";
 
 export function InstalledSkillsPage() {
   const { t, i18n } = useTranslation();
   const { data: installedSkills, isLoading: isSkillsLoading } = useInstalledSkills();
   const { data: allPlugins = [], isLoading: isPluginsLoading } = usePlugins();
+  const { data: claudeMarketplaces = [], isLoading: isMarketplacesLoading } = useClaudeMarketplaces();
   const uninstallMutation = useUninstallSkill();
   const uninstallPathMutation = useUninstallSkillPath();
   const uninstallPluginMutation = useUninstallPlugin();
@@ -82,6 +92,40 @@ export function InstalledSkillsPage() {
     report: SecurityReport;
     conflicts: string[];
   } | null>(null);
+  const [pendingSkillPluginUpgrade, setPendingSkillPluginUpgrade] =
+    useState<SkillPluginUpgradeCandidate | null>(null);
+
+  const [availablePluginUpdates, setAvailablePluginUpdates] = useState<Map<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(AVAILABLE_PLUGIN_UPDATES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return new Map(Object.entries(parsed));
+      }
+    } catch (error) {
+      console.error("[ERROR] 恢复插件更新状态失败:", error);
+    }
+    return new Map();
+  });
+  const [isCheckingPluginUpdates, setIsCheckingPluginUpdates] = useState(false);
+  const [updatingPluginId, setUpdatingPluginId] = useState<string | null>(null);
+
+  const [availableMarketplaceUpdates, setAvailableMarketplaceUpdates] = useState<
+    Map<string, string>
+  >(() => {
+    try {
+      const stored = localStorage.getItem(AVAILABLE_MARKETPLACE_UPDATES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return new Map(Object.entries(parsed));
+      }
+    } catch (error) {
+      console.error("[ERROR] 恢复 Marketplace 更新状态失败:", error);
+    }
+    return new Map();
+  });
+  const [isCheckingMarketplaceUpdates, setIsCheckingMarketplaceUpdates] = useState(false);
+  const [updatingMarketplaceName, setUpdatingMarketplaceName] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -95,6 +139,32 @@ export function InstalledSkillsPage() {
       console.error("[ERROR] 保存更新状态失败:", error);
     }
   }, [availableUpdates]);
+
+  useEffect(() => {
+    try {
+      if (availablePluginUpdates.size > 0) {
+        const obj = Object.fromEntries(availablePluginUpdates);
+        localStorage.setItem(AVAILABLE_PLUGIN_UPDATES_KEY, JSON.stringify(obj));
+      } else {
+        localStorage.removeItem(AVAILABLE_PLUGIN_UPDATES_KEY);
+      }
+    } catch (error) {
+      console.error("[ERROR] 保存插件更新状态失败:", error);
+    }
+  }, [availablePluginUpdates]);
+
+  useEffect(() => {
+    try {
+      if (availableMarketplaceUpdates.size > 0) {
+        const obj = Object.fromEntries(availableMarketplaceUpdates);
+        localStorage.setItem(AVAILABLE_MARKETPLACE_UPDATES_KEY, JSON.stringify(obj));
+      } else {
+        localStorage.removeItem(AVAILABLE_MARKETPLACE_UPDATES_KEY);
+      }
+    } catch (error) {
+      console.error("[ERROR] 保存 Marketplace 更新状态失败:", error);
+    }
+  }, [availableMarketplaceUpdates]);
 
   useEffect(() => {
     if (!installedSkills || availableUpdates.size === 0) return;
@@ -114,6 +184,44 @@ export function InstalledSkillsPage() {
       });
     }
   }, [installedSkills, availableUpdates]);
+
+  useEffect(() => {
+    if (!allPlugins || availablePluginUpdates.size === 0) return;
+    const installedPluginIds = new Set(allPlugins.filter((p) => p.installed).map((p) => p.id));
+    const needsCleanup = Array.from(availablePluginUpdates.keys()).some(
+      (pluginId) => !installedPluginIds.has(pluginId)
+    );
+    if (needsCleanup) {
+      setAvailablePluginUpdates((prev) => {
+        const newMap = new Map(prev);
+        for (const pluginId of newMap.keys()) {
+          if (!installedPluginIds.has(pluginId)) {
+            newMap.delete(pluginId);
+          }
+        }
+        return newMap;
+      });
+    }
+  }, [allPlugins, availablePluginUpdates]);
+
+  useEffect(() => {
+    if (!claudeMarketplaces || availableMarketplaceUpdates.size === 0) return;
+    const marketplaceNames = new Set(claudeMarketplaces.map((m) => m.name));
+    const needsCleanup = Array.from(availableMarketplaceUpdates.keys()).some(
+      (name) => !marketplaceNames.has(name)
+    );
+    if (needsCleanup) {
+      setAvailableMarketplaceUpdates((prev) => {
+        const newMap = new Map(prev);
+        for (const name of newMap.keys()) {
+          if (!marketplaceNames.has(name)) {
+            newMap.delete(name);
+          }
+        }
+        return newMap;
+      });
+    }
+  }, [claudeMarketplaces, availableMarketplaceUpdates]);
 
   const checkUpdatesWithRefresh = async () => {
     try {
@@ -148,6 +256,38 @@ export function InstalledSkillsPage() {
     }
   };
 
+  const checkPluginUpdates = async () => {
+    if (isCheckingPluginUpdates) return;
+    setIsCheckingPluginUpdates(true);
+    try {
+      const updates = await api.checkPluginsUpdates();
+      setAvailablePluginUpdates(new Map(updates));
+      await queryClient.invalidateQueries({ queryKey: ["plugins"] });
+      appToast.success(t("plugins.updates.checked", { count: updates.length }));
+    } catch (error: any) {
+      appToast.error(t("plugins.updates.checkFailed", { error: error.message || String(error) }));
+    } finally {
+      setIsCheckingPluginUpdates(false);
+    }
+  };
+
+  const checkMarketplaceUpdates = async () => {
+    if (isCheckingMarketplaceUpdates) return;
+    setIsCheckingMarketplaceUpdates(true);
+    try {
+      const updates = await api.checkMarketplacesUpdates();
+      setAvailableMarketplaceUpdates(new Map(updates));
+      await queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
+      appToast.success(t("plugins.marketplaces.updates.checked", { count: updates.length }));
+    } catch (error: any) {
+      appToast.error(
+        t("plugins.marketplaces.updates.checkFailed", { error: error.message || String(error) })
+      );
+    } finally {
+      setIsCheckingMarketplaceUpdates(false);
+    }
+  };
+
   const mergedSkills = useMemo(() => {
     if (!installedSkills) return [];
     const skillMap = new Map<string, Skill>();
@@ -175,15 +315,44 @@ export function InstalledSkillsPage() {
     return Array.from(skillMap.values());
   }, [installedSkills]);
 
+  const { data: skillPluginUpgradeCandidates = [] } = useQuery<SkillPluginUpgradeCandidate[]>({
+    queryKey: ["skillPluginUpgradeCandidates"],
+    queryFn: () => api.getSkillPluginUpgradeCandidates(),
+    enabled: activeTab === "skills",
+    staleTime: 60_000,
+  });
+
+  const skillPluginUpgradeByName = useMemo(() => {
+    const map = new Map<string, SkillPluginUpgradeCandidate>();
+    for (const candidate of skillPluginUpgradeCandidates) {
+      if (!candidate.skill_name) continue;
+      map.set(candidate.skill_name.toLowerCase(), candidate);
+    }
+    return map;
+  }, [skillPluginUpgradeCandidates]);
+
   const installedPlugins = useMemo(() => {
     return allPlugins.filter((plugin) => plugin.installed);
   }, [allPlugins]);
 
-  const isLoading = isSkillsLoading || isPluginsLoading;
+  const isLoading = isSkillsLoading || isPluginsLoading || isMarketplacesLoading;
 
   const installedMarketplaces = useMemo(() => {
     const byMarketplace = new Map<string, { name: string; repoUrl: string; plugins: Plugin[] }>();
 
+    // 先加载 Claude CLI 已配置的 marketplaces（包含非本程序添加的）
+    claudeMarketplaces.forEach((m) => {
+      const repoUrl =
+        m.repository_url ||
+        (m.repo ? (m.repo.startsWith("http") ? m.repo : `https://github.com/${m.repo}`) : "");
+      byMarketplace.set(m.name, {
+        name: m.name,
+        repoUrl,
+        plugins: [],
+      });
+    });
+
+    // 再合并 DB 里的插件信息与安装数量
     allPlugins.forEach((plugin) => {
       if (!plugin.marketplace_name) return;
       const key = plugin.marketplace_name;
@@ -209,9 +378,8 @@ export function InstalledSkillsPage() {
           totalCount: marketplace.plugins.length,
         };
       })
-      .filter((marketplace) => marketplace.installedCount > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allPlugins]);
+  }, [allPlugins, claudeMarketplaces]);
 
   const tabCounts = useMemo(
     () => ({
@@ -324,6 +492,18 @@ export function InstalledSkillsPage() {
     return items;
   }, [installedMarketplaces, searchQuery]);
 
+  const pluginUpgradeCommands = useMemo(() => {
+    if (!pendingSkillPluginUpgrade) return "";
+    const repoArg =
+      pendingSkillPluginUpgrade.marketplace_repo ||
+      pendingSkillPluginUpgrade.marketplace_repository_url ||
+      "";
+    const lines: string[] = [];
+    if (repoArg) lines.push(`claude plugin marketplace add ${repoArg}`);
+    lines.push(`claude plugin install ${pendingSkillPluginUpgrade.plugin_id}`);
+    return lines.join("\n");
+  }, [pendingSkillPluginUpgrade]);
+
   return (
     <div className="flex flex-col h-full">
       <div
@@ -425,6 +605,46 @@ export function InstalledSkillsPage() {
                   )}
                 </button>
               )}
+
+              {activeTab === "plugins" && (
+                <button
+                  onClick={checkPluginUpdates}
+                  disabled={isCheckingPluginUpdates || updatingPluginId !== null}
+                  className="apple-button-primary h-10 px-5 flex items-center gap-2"
+                >
+                  {isCheckingPluginUpdates ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("plugins.updates.checking")}
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      {t("plugins.updates.check")}
+                    </>
+                  )}
+                </button>
+              )}
+
+              {activeTab === "marketplaces" && (
+                <button
+                  onClick={checkMarketplaceUpdates}
+                  disabled={isCheckingMarketplaceUpdates || updatingMarketplaceName !== null}
+                  className="apple-button-primary h-10 px-5 flex items-center gap-2"
+                >
+                  {isCheckingMarketplaceUpdates ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("plugins.marketplaces.updates.checking")}
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      {t("plugins.marketplaces.updates.check")}
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -451,6 +671,11 @@ export function InstalledSkillsPage() {
                   key={skill.id}
                   skill={skill}
                   index={index}
+                  pluginUpgradeCandidate={skillPluginUpgradeByName.get(skill.name.toLowerCase())}
+                  onShowPluginUpgrade={() => {
+                    const candidate = skillPluginUpgradeByName.get(skill.name.toLowerCase());
+                    if (candidate) setPendingSkillPluginUpgrade(candidate);
+                  }}
                   onUninstall={() => {
                     setUninstallingSkillId(skill.id);
                     uninstallMutation.mutate(skill.id, {
@@ -515,6 +740,9 @@ export function InstalledSkillsPage() {
                 <InstalledPluginCard
                   key={plugin.id}
                   plugin={plugin}
+                  hasUpdate={availablePluginUpdates.has(plugin.id)}
+                  latestVersion={availablePluginUpdates.get(plugin.id)}
+                  isUpdating={updatingPluginId === plugin.id}
                   isUninstalling={uninstallingPluginId === plugin.id}
                   isAnyOperationPending={
                     uninstallMutation.isPending ||
@@ -522,8 +750,36 @@ export function InstalledSkillsPage() {
                     preparingUpdateSkillId !== null ||
                     confirmingUpdateSkillId !== null ||
                     uninstallingPluginId !== null ||
+                    updatingPluginId !== null ||
                     removingMarketplaceName !== null
                   }
+                  onUpdate={async () => {
+                    try {
+                      setUpdatingPluginId(plugin.id);
+                      const result = await api.updatePlugin(plugin.id);
+                      if (result.status === "updated") {
+                        appToast.success(t("plugins.updates.updated"));
+                      } else if (result.status === "already_latest") {
+                        appToast.success(t("plugins.updates.alreadyLatest"));
+                      } else {
+                        appToast.error(t("plugins.updates.updateFailed"));
+                      }
+                      setAvailablePluginUpdates((prev) => {
+                        const newMap = new Map(prev);
+                        newMap.delete(plugin.id);
+                        return newMap;
+                      });
+                      await queryClient.invalidateQueries({ queryKey: ["plugins"] });
+                    } catch (error: any) {
+                      appToast.error(
+                        t("plugins.updates.updateFailedWithError", {
+                          error: error.message || String(error),
+                        })
+                      );
+                    } finally {
+                      setUpdatingPluginId(null);
+                    }
+                  }}
                   onUninstall={async () => {
                     try {
                       setUninstallingPluginId(plugin.id);
@@ -553,13 +809,43 @@ export function InstalledSkillsPage() {
                   marketplaceRepo={marketplace.repoUrl}
                   installedCount={marketplace.installedCount}
                   totalCount={marketplace.totalCount}
+                  hasUpdate={availableMarketplaceUpdates.has(marketplace.name)}
+                  latestHead={availableMarketplaceUpdates.get(marketplace.name)}
+                  isUpdating={updatingMarketplaceName === marketplace.name}
                   isRemoving={removingMarketplaceName === marketplace.name}
                   isAnyOperationPending={
                     uninstallingPluginId !== null ||
                     uninstallMutation.isPending ||
                     uninstallPathMutation.isPending ||
-                    removingMarketplaceName !== null
+                    removingMarketplaceName !== null ||
+                    updatingMarketplaceName !== null
                   }
+                  onUpdate={async () => {
+                    try {
+                      setUpdatingMarketplaceName(marketplace.name);
+                      const result = await api.updateMarketplace(marketplace.name);
+                      if (result.success) {
+                        appToast.success(t("plugins.marketplaces.updates.updated"));
+                      } else {
+                        appToast.error(t("plugins.marketplaces.updates.updateFailed"));
+                      }
+                      setAvailableMarketplaceUpdates((prev) => {
+                        const newMap = new Map(prev);
+                        newMap.delete(marketplace.name);
+                        return newMap;
+                      });
+                      await queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
+                      await queryClient.invalidateQueries({ queryKey: ["plugins"] });
+                    } catch (error: any) {
+                      appToast.error(
+                        t("plugins.marketplaces.updates.updateFailedWithError", {
+                          error: error.message || String(error),
+                        })
+                      );
+                    } finally {
+                      setUpdatingMarketplaceName(null);
+                    }
+                  }}
                   onRemove={() => {
                     const installedPluginNames = marketplace.plugins
                       .filter((p) => p.installed)
@@ -648,6 +934,82 @@ export function InstalledSkillsPage() {
         conflicts={pendingUpdate?.conflicts || []}
         skillName={pendingUpdate?.skill.name || ""}
       />
+
+      <AlertDialog
+        open={pendingSkillPluginUpgrade !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSkillPluginUpgrade(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("skills.installedPage.upgradeDialog.title")}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pb-4">
+                <div className="text-sm text-muted-foreground">
+                  {t("skills.installedPage.upgradeDialog.description")}
+                </div>
+
+                {pendingSkillPluginUpgrade && (
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-blue-500 font-medium">
+                        {t("skills.installedPage.upgradeDialog.plugin")}
+                      </span>{" "}
+                      {pendingSkillPluginUpgrade.plugin_id}
+                      {pendingSkillPluginUpgrade.latest_version
+                        ? ` (${pendingSkillPluginUpgrade.latest_version})`
+                        : ""}
+                    </div>
+
+                    {pendingSkillPluginUpgrade.marketplace_repo && (
+                      <div>
+                        <span className="text-blue-500 font-medium">
+                          {t("skills.installedPage.upgradeDialog.marketplaceRepo")}
+                        </span>{" "}
+                        {pendingSkillPluginUpgrade.marketplace_repo}
+                      </div>
+                    )}
+
+                    <div className="mt-3">
+                      <div className="text-blue-500 font-medium mb-2">
+                        {t("skills.installedPage.upgradeDialog.commands")}
+                      </div>
+                      <div className="font-mono text-xs whitespace-pre-wrap p-3 bg-secondary/50 rounded-xl border border-border/60">
+                        {pluginUpgradeCommands}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingSkillPluginUpgrade(null)}>
+              {t("skills.marketplace.install.cancel")}
+            </AlertDialogCancel>
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(pluginUpgradeCommands);
+                  appToast.success(t("skills.installedPage.upgradeDialog.copied"));
+                } catch (error: any) {
+                  appToast.error(
+                    t("skills.installedPage.upgradeDialog.copyFailed", {
+                      error: error?.message || String(error),
+                    })
+                  );
+                }
+              }}
+              disabled={!pluginUpgradeCommands}
+              className="macos-button-primary disabled:opacity-50"
+            >
+              {t("skills.installedPage.upgradeDialog.copy")}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={pendingMarketplaceRemove !== null}
@@ -763,16 +1125,24 @@ function InstalledMarketplaceCard({
   marketplaceRepo,
   installedCount,
   totalCount,
+  hasUpdate,
+  latestHead,
+  isUpdating,
   isRemoving,
   isAnyOperationPending,
+  onUpdate,
   onRemove,
 }: {
   marketplaceName: string;
   marketplaceRepo: string;
   installedCount: number;
   totalCount: number;
+  hasUpdate: boolean;
+  latestHead?: string;
+  isUpdating: boolean;
   isRemoving: boolean;
   isAnyOperationPending: boolean;
+  onUpdate: () => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -786,10 +1156,32 @@ function InstalledMarketplaceCard({
             <span className="text-xs px-2.5 py-1 rounded-full font-medium text-purple-600 bg-purple-500/10">
               Marketplace
             </span>
+            {hasUpdate && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-medium text-warning bg-warning/10">
+                {t("plugins.marketplaces.updates.available", { version: latestHead || "" })}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex gap-2 ml-4">
+          <button
+            onClick={onUpdate}
+            disabled={isAnyOperationPending}
+            className="apple-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {isUpdating ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {t("plugins.marketplaces.updates.updating")}
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-3.5 h-3.5" />
+                {t("plugins.marketplaces.updates.update")}
+              </>
+            )}
+          </button>
           <button
             onClick={onRemove}
             disabled={isAnyOperationPending}
@@ -839,6 +1231,8 @@ function InstalledMarketplaceCard({
 interface SkillCardProps {
   skill: Skill;
   index: number;
+  pluginUpgradeCandidate?: SkillPluginUpgradeCandidate;
+  onShowPluginUpgrade: () => void;
   onUninstall: () => void;
   onUninstallPath: (path: string) => void;
   onUpdate: () => void;
@@ -852,6 +1246,8 @@ interface SkillCardProps {
 
 function SkillCard({
   skill,
+  pluginUpgradeCandidate,
+  onShowPluginUpgrade,
   onUninstall,
   onUninstallPath,
   onUpdate,
@@ -896,10 +1292,25 @@ function SkillCard({
             >
               {formatRepositoryTag(skill)}
             </span>
+            {pluginUpgradeCandidate && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-medium text-warning bg-warning/10">
+                {t("skills.installedPage.upgradeBadge")}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex gap-2 ml-4">
+          {pluginUpgradeCandidate && (
+            <button
+              onClick={onShowPluginUpgrade}
+              disabled={isAnyOperationPending}
+              className="apple-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Plug className="w-3.5 h-3.5" />
+              {t("skills.installedPage.upgradeToPlugin")}
+            </button>
+          )}
           {hasUpdate && !skill.repository_owner?.includes("local") && (
             <button
               onClick={onUpdate}
@@ -1022,15 +1433,23 @@ function SkillCard({
 
 interface InstalledPluginCardProps {
   plugin: Plugin;
+  hasUpdate: boolean;
+  latestVersion?: string;
+  isUpdating: boolean;
   isUninstalling: boolean;
   isAnyOperationPending: boolean;
+  onUpdate: () => void;
   onUninstall: () => void;
 }
 
 function InstalledPluginCard({
   plugin,
+  hasUpdate,
+  latestVersion,
+  isUpdating,
   isUninstalling,
   isAnyOperationPending,
+  onUpdate,
   onUninstall,
 }: InstalledPluginCardProps) {
   const { t } = useTranslation();
@@ -1054,6 +1473,11 @@ function InstalledPluginCard({
             >
               {formatRepositoryTag(plugin)}
             </span>
+            {hasUpdate && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-medium text-warning bg-warning/10">
+                {t("plugins.updates.available", { version: latestVersion || "" })}
+              </span>
+            )}
           </div>
           {plugin.marketplace_name && (
             <div className="text-xs text-muted-foreground">
@@ -1063,6 +1487,23 @@ function InstalledPluginCard({
         </div>
 
         <div className="flex gap-2 ml-4">
+          <button
+            onClick={onUpdate}
+            disabled={isAnyOperationPending}
+            className="apple-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {isUpdating ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {t("plugins.updates.updating")}
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-3.5 h-3.5" />
+                {t("plugins.updates.update")}
+              </>
+            )}
+          </button>
           <button
             onClick={onUninstall}
             disabled={isAnyOperationPending}
@@ -1099,9 +1540,19 @@ function InstalledPluginCard({
         </a>
       </div>
 
-      {plugin.version && (
-        <div className="text-xs text-muted-foreground mb-3">
-          <span className="text-blue-500 font-medium">{t("plugins.version")}</span> {plugin.version}
+      {(plugin.installed_version || plugin.version) && (
+        <div className="text-xs text-muted-foreground mb-3 space-y-1">
+          {plugin.installed_version && (
+            <div>
+              <span className="text-blue-500 font-medium">{t("plugins.installedVersion")}</span>{" "}
+              {plugin.installed_version}
+            </div>
+          )}
+          {plugin.version && (
+            <div>
+              <span className="text-blue-500 font-medium">{t("plugins.version")}</span> {plugin.version}
+            </div>
+          )}
         </div>
       )}
 
