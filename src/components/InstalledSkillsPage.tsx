@@ -340,16 +340,28 @@ export function InstalledSkillsPage() {
   const installedMarketplaces = useMemo(() => {
     const byMarketplace = new Map<string, { name: string; repoUrl: string; plugins: Plugin[] }>();
 
-    // 先加载 Claude CLI 已配置的 marketplaces（包含非本程序添加的）
+    const upsertMarketplace = (name: string, repoUrl: string) => {
+      const existing = byMarketplace.get(name);
+      if (existing) {
+        if (!existing.repoUrl && repoUrl) existing.repoUrl = repoUrl;
+        return;
+      }
+      byMarketplace.set(name, { name, repoUrl, plugins: [] });
+    };
+
+    // 只展示“已安装/已配置”的 marketplaces：
+    // 1) Claude CLI 已配置的 marketplaces（包含非本程序添加的）
     claudeMarketplaces.forEach((m) => {
       const repoUrl =
         m.repository_url ||
         (m.repo ? (m.repo.startsWith("http") ? m.repo : `https://github.com/${m.repo}`) : "");
-      byMarketplace.set(m.name, {
-        name: m.name,
-        repoUrl,
-        plugins: [],
-      });
+      upsertMarketplace(m.name, repoUrl);
+    });
+
+    // 2) 回退：若 CLI 列表缺失，也至少展示已安装插件所属的 marketplace
+    installedPlugins.forEach((plugin) => {
+      if (!plugin.marketplace_name) return;
+      upsertMarketplace(plugin.marketplace_name, plugin.repository_url || "");
     });
 
     // 再合并 DB 里的插件信息与安装数量
@@ -357,16 +369,9 @@ export function InstalledSkillsPage() {
       if (!plugin.marketplace_name) return;
       const key = plugin.marketplace_name;
       const existing = byMarketplace.get(key);
-      if (existing) {
-        existing.plugins.push(plugin);
-        if (!existing.repoUrl && plugin.repository_url) existing.repoUrl = plugin.repository_url;
-      } else {
-        byMarketplace.set(key, {
-          name: key,
-          repoUrl: plugin.repository_url,
-          plugins: [plugin],
-        });
-      }
+      if (!existing) return;
+      existing.plugins.push(plugin);
+      if (!existing.repoUrl && plugin.repository_url) existing.repoUrl = plugin.repository_url;
     });
 
     return Array.from(byMarketplace.values())
@@ -379,7 +384,7 @@ export function InstalledSkillsPage() {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allPlugins, claudeMarketplaces]);
+  }, [allPlugins, claudeMarketplaces, installedPlugins]);
 
   const tabCounts = useMemo(
     () => ({

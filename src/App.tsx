@@ -11,16 +11,33 @@ import { UpdateBadge } from "./components/UpdateBadge";
 import { Toaster } from "sonner";
 import { getPlatform, type Platform } from "./lib/platform";
 import { api } from "./lib/api";
+import { appToast } from "./lib/toast";
 import appIconUrl from "../app-icon.png";
+import { useTranslation } from "react-i18next";
+import { Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "./components/ui/alert-dialog";
 
 const reactQueryClient = new QueryClient();
 
 type TabType = "overview" | "marketplace" | "installed" | "repositories" | "settings";
 
+const ONBOARDING_IMPORT_FEATURED_KEY = "asguard.onboarding.importFeatured.v1";
+
 function AppContent() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<TabType>("overview");
   const [platform, setPlatform] = useState<Platform | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [isImportingFeatured, setIsImportingFeatured] = useState(false);
 
   useEffect(() => {
     getPlatform().then(setPlatform);
@@ -70,12 +87,138 @@ function AppContent() {
     return () => clearTimeout(timer);
   }, [queryClient]);
 
+  // 首次进入程序时提示是否导入精选仓库（官方推荐 + 社区精选）
+  useEffect(() => {
+    let cancelled = false;
+
+    const hasDecision = () => {
+      try {
+        return localStorage.getItem(ONBOARDING_IMPORT_FEATURED_KEY) !== null;
+      } catch {
+        return false;
+      }
+    };
+
+    if (hasDecision()) return;
+
+    (async () => {
+      try {
+        const repos = await api.getRepositories();
+        if (cancelled) return;
+        if (repos.length === 0) setImportDialogOpen(true);
+      } catch (error) {
+        console.debug("Failed to check repositories for onboarding:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismissImportDialog = () => {
+    if (isImportingFeatured) return;
+    try {
+      localStorage.setItem(ONBOARDING_IMPORT_FEATURED_KEY, "skipped");
+    } catch {
+      // ignore
+    }
+    setImportDialogOpen(false);
+  };
+
+  const confirmImportFeatured = async () => {
+    if (isImportingFeatured) return;
+    setIsImportingFeatured(true);
+
+    try {
+      const result = await api.importFeaturedRepositories(["official", "community"]);
+
+      try {
+        localStorage.setItem(ONBOARDING_IMPORT_FEATURED_KEY, "imported");
+      } catch {
+        // ignore
+      }
+
+      setImportDialogOpen(false);
+      setCurrentTab("marketplace");
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+
+      if (result.added_count > 0) {
+        appToast.success(
+          t("onboarding.importFeatured.toast.added", {
+            added: result.added_count,
+            total: result.total_count,
+            skipped: result.skipped_count,
+          })
+        );
+      } else {
+        appToast.info(t("onboarding.importFeatured.toast.nothingToAdd"));
+      }
+
+      try {
+        appToast.info(t("onboarding.importFeatured.toast.scanning"));
+        const scannedRepos = await api.autoScanUnscannedRepositories();
+        if (scannedRepos.length > 0) {
+          queryClient.invalidateQueries({ queryKey: ["skills"] });
+          queryClient.invalidateQueries({ queryKey: ["plugins"] });
+          queryClient.invalidateQueries({ queryKey: ["repositories"] });
+        }
+      } catch (error) {
+        console.debug("Auto scan after importing featured repositories failed:", error);
+      }
+    } catch (error: any) {
+      appToast.error(
+        t("onboarding.importFeatured.toast.failed", {
+          error: error?.message || String(error),
+        })
+      );
+    } finally {
+      setIsImportingFeatured(false);
+    }
+  };
+
   return (
     <div
       className={`h-screen flex flex-col overflow-hidden bg-background ${
         platform === "macos" ? "macos-window-frame" : ""
       }`}
     >
+      <AlertDialog
+        open={importDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) dismissImportDialog();
+        }}
+      >
+        <AlertDialogContent className="max-w-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("onboarding.importFeatured.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("onboarding.importFeatured.description")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isImportingFeatured} onClick={dismissImportDialog}>
+              {t("onboarding.importFeatured.cancel")}
+            </AlertDialogCancel>
+            <button
+              onClick={confirmImportFeatured}
+              disabled={isImportingFeatured}
+              className="apple-button-primary h-10 px-4 flex items-center gap-2 disabled:opacity-50"
+            >
+              {isImportingFeatured ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("onboarding.importFeatured.importing")}
+                </>
+              ) : (
+                t("onboarding.importFeatured.confirm")
+              )}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Title Bar - Apple 风格：极简、透明感 */}
       <header
         data-tauri-drag-region

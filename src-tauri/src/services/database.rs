@@ -50,9 +50,6 @@ impl Database {
         // 尽量释放空间（不影响正确性）
         let _ = conn.execute_batch("VACUUM;");
 
-        drop(conn);
-        let _ = self.initialize_default_repositories()?;
-
         Ok(())
     }
 
@@ -147,9 +144,6 @@ impl Database {
         self.migrate_add_local_paths()?;
         self.migrate_add_installed_commit_sha()?;
         self.migrate_add_plugin_claude_fields()?;
-
-        // 初始化默认仓库（忽略返回值，因为在这个阶段我们只是初始化数据库）
-        let _ = self.initialize_default_repositories()?;
 
         Ok(())
     }
@@ -653,77 +647,6 @@ impl Database {
         }).optional()?;
 
         Ok(repo)
-    }
-
-    /// 初始化默认仓库
-    /// 返回是否添加了新仓库（用于判断是否需要自动扫描）
-    fn initialize_default_repositories(&self) -> Result<bool> {
-        let conn = self.conn.lock().unwrap();
-
-        // 检查是否已有仓库
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM repositories",
-            [],
-            |row| row.get(0),
-        )?;
-
-        // 如果已有仓库，跳过初始化
-        if count > 0 {
-            return Ok(false);
-        }
-
-        // 添加默认仓库
-        let default_repos = vec![
-            (
-                "https://github.com/anthropics/skills".to_string(),
-                "anthropics".to_string(),
-            ),
-            (
-                "https://github.com/obra/superpowers".to_string(),
-                "obra".to_string(),
-            ),
-        ];
-
-        // 释放之前的锁，重新获取锁用于插入操作
-        drop(conn);
-        let conn = self.conn.lock().unwrap();
-
-        let mut added = false;
-        for (url, name) in default_repos {
-            let repo = Repository::new(url, name);
-            // 使用 INSERT OR IGNORE 避免重复
-            match conn.execute(
-                "INSERT OR IGNORE INTO repositories
-                (id, url, name, description, enabled, scan_subdirs, added_at, last_scanned, cache_path, cached_at, cached_commit_sha)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-                params![
-                    repo.id,
-                    repo.url,
-                    repo.name,
-                    repo.description,
-                    repo.enabled as i32,
-                    repo.scan_subdirs as i32,
-                    repo.added_at.to_rfc3339(),
-                    repo.last_scanned.as_ref().map(|d| d.to_rfc3339()),
-                    repo.cache_path,
-                    repo.cached_at.as_ref().map(|d| d.to_rfc3339()),
-                    repo.cached_commit_sha,
-                ],
-            ) {
-                Ok(rows_affected) => {
-                    if rows_affected > 0 {
-                        log::info!("成功添加默认仓库: {}", repo.name);
-                        added = true;
-                    }
-                }
-                Err(e) => {
-                    log::warn!("添加默认仓库 {} 失败: {}", repo.name, e);
-                    // 继续添加下一个仓库，不中断流程
-                }
-            }
-        }
-
-        Ok(added)
     }
 
     /// 获取所有未扫描的仓库ID列表

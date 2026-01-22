@@ -13,6 +13,12 @@ export interface Repository {
   cached_commit_sha?: string;
 }
 
+export interface ImportFeaturedRepositoriesResult {
+  total_count: number;
+  added_count: number;
+  skipped_count: number;
+}
+
 export interface Skill {
   id: string;
   name: string;

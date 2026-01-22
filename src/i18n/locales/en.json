@@ -524,6 +524,21 @@
     "failed": "Update failed, please try again later",
     "checkFailed": "Failed to check for updates"
   },
+  "onboarding": {
+    "importFeatured": {
+      "title": "Import recommended repositories?",
+      "description": "For a better first run experience, import all repositories from Official + Community picks and scan them to populate the Marketplace. You can also add them later in Repositories.",
+      "cancel": "Not now",
+      "confirm": "Import & scan",
+      "importing": "Importing...",
+      "toast": {
+        "added": "Added {{added}}/{{total}} recommended repositories ({{skipped}} already existed)",
+        "nothingToAdd": "Recommended repositories already exist",
+        "scanning": "Scanning repositories in background. Browse them in Marketplace soon.",
+        "failed": "Import failed: {{error}}"
+      }
+    }
+  },
   "settings": {
     "title": "APPLICATION_SETTINGS",
     "language": {

@@ -141,7 +141,7 @@ struct ClaudeMarketplaceListEntry {
     #[allow(dead_code)]
     source: Option<String>,
     repo: Option<String>,
-    #[serde(rename = "installLocation")]
+    #[serde(rename = "installLocation", alias = "install_location")]
     install_location: Option<String>,
 }
 
@@ -151,27 +151,29 @@ struct ClaudeInstalledPluginEntry {
     version: Option<String>,
     scope: Option<String>,
     enabled: Option<bool>,
-    #[serde(rename = "installPath")]
+    #[serde(rename = "installPath", alias = "install_path")]
     install_path: Option<String>,
-    #[serde(rename = "installedAt")]
+    #[serde(rename = "installedAt", alias = "installed_at")]
     installed_at: Option<String>,
-    #[serde(rename = "lastUpdated")]
+    #[serde(rename = "lastUpdated", alias = "last_updated")]
     last_updated: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct ClaudeAvailablePluginEntry {
-    #[serde(rename = "pluginId")]
+    #[serde(rename = "pluginId", alias = "plugin_id")]
     plugin_id: String,
     name: Option<String>,
-    #[serde(rename = "marketplaceName")]
+    #[serde(rename = "marketplaceName", alias = "marketplace_name", alias = "marketplace")]
     marketplace_name: Option<String>,
     version: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct ClaudePluginListWithAvailable {
+    #[serde(default, alias = "installedPlugins")]
     installed: Vec<ClaudeInstalledPluginEntry>,
+    #[serde(default, alias = "availablePlugins")]
     available: Vec<ClaudeAvailablePluginEntry>,
 }
 
@@ -1206,6 +1208,17 @@ fn parse_datetime(value: &Option<String>) -> Option<DateTime<Utc>> {
 
 fn parse_json_output<T: for<'de> Deserialize<'de>>(output: &str) -> Result<T> {
     let cleaned = strip_terminal_escapes(output);
+    // 1) 优先直接解析（输出本身就是纯 JSON 的情况）
+    if let Ok(value) = serde_json::from_str::<T>(&cleaned) {
+        return Ok(value);
+    }
+
+    // 2) 兼容：输出前后混有提示符/日志/ANSI 等，尝试提取一个完整 JSON 值并解析
+    if let Ok(value) = parse_first_json_value::<T>(&cleaned) {
+        return Ok(value);
+    }
+
+    // 3) 兜底：旧逻辑（按首尾括号截取），有助于处理一些更“干净但带前缀”的输出
     let payload = extract_json_payload(&cleaned).unwrap_or(cleaned.as_str());
     serde_json::from_str(payload).context("JSON 解析失败")
 }
@@ -1217,6 +1230,36 @@ fn extract_json_payload(output: &str) -> Option<&str> {
         return None;
     }
     Some(&output[start..=end])
+}
+
+fn parse_first_json_value<T: for<'de> Deserialize<'de>>(output: &str) -> Result<T> {
+    // 通过 serde_json 的流式反序列化能力，从任意位置尝试解析出“第一个完整 JSON 值”
+    // 这样可以兼容 PowerShell/Terminal 的提示符、以及 CLI 可能输出的非 JSON 文本。
+    for (idx, ch) in output.char_indices() {
+        if ch != '{' && ch != '[' {
+            continue;
+        }
+
+        let slice = &output[idx..];
+        let mut stream = serde_json::Deserializer::from_str(slice).into_iter::<serde_json::Value>();
+        let value = match stream.next() {
+            Some(Ok(v)) => v,
+            _ => continue,
+        };
+
+        let end = stream.byte_offset();
+        if end == 0 || end > slice.len() {
+            continue;
+        }
+
+        // 只取 JSON 值本体，忽略后续的任何噪声输出
+        let payload = &slice[..end];
+        return serde_json::from_str::<T>(payload)
+            .or_else(|_| serde_json::from_value::<T>(value))
+            .context("JSON 解析失败");
+    }
+
+    anyhow::bail!("JSON 解析失败");
 }
 
 fn strip_terminal_escapes(input: &str) -> String {
@@ -1275,6 +1318,87 @@ fn strip_terminal_escapes(input: &str) -> String {
     }
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_claude_plugin_list_with_available_from_powershell_output() {
+        let output = r#"PS C:\Users\Bruce> claude plugin list --json --available
+{
+  "installed": [
+    {
+      "id": "superpowers@superpowers-marketplace",
+      "version": "4.0.3",
+      "scope": "user",
+      "enabled": false,
+      "installPath": "C:\\Users\\Bruce\\.claude\\plugins\\cache\\superpowers-marketplace\\superpowers\\4.0.3",
+      "installedAt": "2025-12-26T01:58:19.521Z",
+      "lastUpdated": "2026-01-14T01:51:11.830Z"
+    }
+  ],
+  "available": [
+    {
+      "pluginId": "superpowers@claude-plugins-official",
+      "name": "superpowers",
+      "marketplaceName": "claude-plugins-official",
+      "version": "4.0.4",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/superpowers.git"
+      },
+      "installCount": 123
+    }
+  ]
+}
+PS C:\Users\Bruce> "#;
+
+        let payload: ClaudePluginListWithAvailable = parse_json_output(output).unwrap();
+        assert_eq!(payload.installed.len(), 1);
+        assert_eq!(payload.installed[0].id, "superpowers@superpowers-marketplace");
+        assert_eq!(payload.available.len(), 1);
+        assert_eq!(payload.available[0].plugin_id, "superpowers@claude-plugins-official");
+        assert_eq!(
+            payload.available[0].marketplace_name.as_deref(),
+            Some("claude-plugins-official")
+        );
+        assert_eq!(payload.available[0].version.as_deref(), Some("4.0.4"));
+    }
+
+    #[test]
+    fn parse_claude_plugin_list_with_available_accepts_snake_case_fields() {
+        let output = r#"
+noise before json...
+{
+  "installed": [
+    {
+      "id": "foo@bar",
+      "version": "1.0.0",
+      "install_path": "/Users/a/.claude/plugins/cache/bar/foo/1.0.0",
+      "installed_at": "2026-01-01T00:00:00Z",
+      "last_updated": "2026-01-02T00:00:00Z"
+    }
+  ],
+  "available": [
+    {
+      "plugin_id": "foo@bar",
+      "marketplace_name": "bar",
+      "version": "1.0.1"
+    }
+  ]
+}
+noise after json..."#;
+
+        let payload: ClaudePluginListWithAvailable = parse_json_output(output).unwrap();
+        assert_eq!(payload.installed.len(), 1);
+        assert_eq!(payload.installed[0].install_path.as_deref(), Some("/Users/a/.claude/plugins/cache/bar/foo/1.0.0"));
+        assert_eq!(payload.available.len(), 1);
+        assert_eq!(payload.available[0].plugin_id, "foo@bar");
+        assert_eq!(payload.available[0].marketplace_name.as_deref(), Some("bar"));
+        assert_eq!(payload.available[0].version.as_deref(), Some("1.0.1"));
+    }
 }
 
 fn parse_marketplace_list_text(output: &str) -> Vec<ClaudeMarketplace> {

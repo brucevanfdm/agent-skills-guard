@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Repository,
+  ImportFeaturedRepositoriesResult,
   Skill,
   Plugin,
   ClaudeMarketplace,
@@ -94,6 +95,10 @@ export const api = {
 
   async refreshFeaturedRepositories(): Promise<FeaturedRepositoriesConfig> {
     return invoke("refresh_featured_repositories");
+  },
+
+  async importFeaturedRepositories(categoryIds?: string[]): Promise<ImportFeaturedRepositoriesResult> {
+    return invoke("import_featured_repositories", { categoryIds: categoryIds || null });
   },
 
   async isRepositoryAdded(url: string): Promise<boolean> {

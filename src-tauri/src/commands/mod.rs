@@ -698,12 +698,70 @@ pub async fn refresh_featured_repositories(
     Ok(config)
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ImportFeaturedRepositoriesResult {
+    pub total_count: usize,
+    pub added_count: usize,
+    pub skipped_count: usize,
+}
+
+/// 导入精选仓库到「我的仓库」
+///
+/// - 默认导入 `official` + `community`
+/// - 会跳过已存在的仓库 URL，避免覆盖已有记录/扫描状态
+#[tauri::command]
+pub async fn import_featured_repositories(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    category_ids: Option<Vec<String>>,
+) -> Result<ImportFeaturedRepositoriesResult, String> {
+    let category_ids = category_ids.unwrap_or_else(|| vec!["official".to_string(), "community".to_string()]);
+
+    let config = get_featured_repositories(app).await?;
+    let mut existing_urls: std::collections::HashSet<String> = state
+        .db
+        .get_repositories()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|r| r.url)
+        .collect();
+
+    let mut total_count = 0usize;
+    let mut added_count = 0usize;
+    let mut skipped_count = 0usize;
+
+    for category in config.categories.into_iter().filter(|c| category_ids.contains(&c.id)) {
+        for repo in category.repositories {
+            total_count += 1;
+
+            if existing_urls.contains(&repo.url) {
+                skipped_count += 1;
+                continue;
+            }
+
+            let new_repo = Repository::new(repo.url.clone(), repo.name);
+            state
+                .db
+                .add_repository(&new_repo)
+                .map_err(|e| e.to_string())?;
+            existing_urls.insert(repo.url);
+            added_count += 1;
+        }
+    }
+
+    Ok(ImportFeaturedRepositoriesResult {
+        total_count,
+        added_count,
+        skipped_count,
+    })
+}
+
 /// 重置应用的本地数据（数据库 + 缓存 + 配置文件）
 ///
 /// 注意：不会删除用户自定义的技能安装目录中的文件，只会清空应用自身的索引/缓存。
 #[tauri::command]
 pub async fn reset_app_data(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    // 1) 清空数据库内容（保留表结构与默认仓库）
+    // 1) 清空数据库内容（保留表结构与迁移）
     state
         .db
         .reset_all_data()
