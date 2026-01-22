@@ -117,6 +117,7 @@
     "moreIssues": "更多问题",
     "installWarning": "安装此技能可能会危及系统安全。请在继续之前验证源的真实性。",
     "abort": "中止",
+    "cancel": "取消",
     "proceedAnyway": "仍然继续",
     "marketplace": {
       "found": "找到 {{count}} 个技能",

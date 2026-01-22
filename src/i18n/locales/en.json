@@ -117,6 +117,7 @@
     "moreIssues": "MORE_ISSUES",
     "installWarning": "Installing this skill may compromise system security. Verify source authenticity before proceeding.",
     "abort": "ABORT",
+    "cancel": "Cancel",
     "proceedAnyway": "PROCEED_ANYWAY",
     "marketplace": {
       "found": "FOUND_{{count}}_SKILLS",
