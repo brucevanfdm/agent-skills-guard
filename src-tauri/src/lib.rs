@@ -262,6 +262,8 @@ pub fn run() {
             commands::get_featured_repositories,
             commands::refresh_featured_repositories,
             commands::import_featured_repositories,
+            commands::featured_marketplaces::get_featured_marketplaces,
+            commands::featured_marketplaces::refresh_featured_marketplaces,
             commands::reset_app_data,
             commands::is_repository_added,
             commands::check_skills_updates,

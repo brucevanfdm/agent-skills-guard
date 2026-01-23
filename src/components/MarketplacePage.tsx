@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSkills, useInstallSkill } from "../hooks/useSkills";
 import { usePlugins } from "../hooks/usePlugins";
 import type { Plugin, PluginInstallResult, Skill } from "../types";
-import { SecurityReport, SecurityIssue } from "../types/security";
+import { SecurityIssue, SecurityReport } from "../types/security";
 import {
   Download,
   AlertTriangle,
@@ -61,13 +61,8 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     skill: Skill;
     report: SecurityReport;
   } | null>(null);
-  const [pendingPluginInstall, setPendingPluginInstall] = useState<{
-    plugin: Plugin;
-    report: SecurityReport;
-  } | null>(null);
   const [preparingSkillId, setPreparingSkillId] = useState<string | null>(null);
   const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
-  const [preparingPluginId, setPreparingPluginId] = useState<string | null>(null);
   const [installingPluginId, setInstallingPluginId] = useState<string | null>(null);
   const [logPlugin, setLogPlugin] = useState<Plugin | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
@@ -80,8 +75,8 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
       .filter((skill) => skill.repository_owner !== "local")
       .map((skill) => ({ kind: "skill", item: skill }) as MarketplaceItem);
     const pluginItems = plugins
-      // 排除仅通过 Claude CLI 同步出来的“已安装”插件，避免污染 Marketplace 浏览列表
-      .filter((plugin) => plugin.discovery_source !== "claude_cli")
+      // 仅展示精选清单中的插件，避免仓库扫描或 CLI 同步污染列表
+      .filter((plugin) => plugin.discovery_source === "featured_marketplace")
       .map((plugin) => ({ kind: "plugin", item: plugin }) as MarketplaceItem);
     return [...skillItems, ...pluginItems];
   }, [allSkills, plugins]);
@@ -315,7 +310,6 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
                       installMutation.isPending ||
                       preparingSkillId !== null ||
                       installingSkillId !== null ||
-                      preparingPluginId !== null ||
                       installingPluginId !== null
                     }
                     t={t}
@@ -324,36 +318,40 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
                   <PluginCard
                     key={entry.item.id}
                     plugin={entry.item}
-                    isPreparing={preparingPluginId === entry.item.id}
                     isInstalling={installingPluginId === entry.item.id}
                     isAnyOperationPending={
                       installMutation.isPending ||
                       preparingSkillId !== null ||
                       installingSkillId !== null ||
-                      preparingPluginId !== null ||
                       installingPluginId !== null
                     }
                     onViewLog={() => setLogPlugin(entry.item)}
                     onInstall={async () => {
-                      if (
-                        entry.item.install_status === "unsupported" ||
-                        entry.item.install_status === "blocked"
-                      ) {
+                      if (entry.item.install_status === "unsupported") {
                         return;
                       }
                       try {
-                        setPreparingPluginId(entry.item.id);
-                        const report = await invoke<SecurityReport>("prepare_plugin_installation", {
+                        setInstallingPluginId(entry.item.id);
+                        const result = await invoke<PluginInstallResult>("confirm_plugin_installation", {
                           pluginId: entry.item.id,
-                          locale: i18n.language,
+                          claudeCommand: null,
                         });
-                        setPendingPluginInstall({ plugin: entry.item, report });
+                        await queryClient.refetchQueries({ queryKey: ["plugins"] });
+                        const hasFailed =
+                          result.marketplace_status === "failed" ||
+                          result.plugin_statuses.some((status) => status.status === "failed");
+                        if (hasFailed) {
+                          appToast.error(t("plugins.toast.installFailed"));
+                        } else {
+                          appToast.success(t("plugins.toast.installed"));
+                          appToast.info(t("plugins.toast.scanHint"));
+                        }
                       } catch (error: any) {
                         appToast.error(
-                          `${t("plugins.toast.scanFailed")}: ${error.message || error}`
+                          `${t("plugins.toast.installFailed")}: ${error.message || error}`
                         );
                       } finally {
-                        setPreparingPluginId(null);
+                        setInstallingPluginId(null);
                       }
                     }}
                   />
@@ -452,58 +450,6 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
         }}
         report={pendingInstall?.report || null}
         skillName={pendingInstall?.skill.name || ""}
-      />
-
-      <PluginInstallConfirmDialog
-        open={pendingPluginInstall !== null}
-        report={pendingPluginInstall?.report || null}
-        pluginName={pendingPluginInstall?.plugin.name || ""}
-        onClose={() => {
-          const pluginId = pendingPluginInstall?.plugin.id;
-          const shouldCancel = pluginId && installingPluginId !== pluginId;
-          setPendingPluginInstall(null);
-          if (!shouldCancel) return;
-          void invoke("cancel_plugin_installation", { pluginId }).catch((error: any) => {
-            console.error("[ERROR] 取消插件安装失败:", error);
-          });
-        }}
-        onConfirm={async () => {
-          if (!pendingPluginInstall) return;
-          const pluginSnapshot = pendingPluginInstall.plugin;
-          const pluginId = pluginSnapshot.id;
-          setInstallingPluginId(pluginId);
-          setPendingPluginInstall(null);
-          try {
-            const result = await invoke<PluginInstallResult>("confirm_plugin_installation", {
-              pluginId,
-              claudeCommand: null,
-            });
-            await queryClient.refetchQueries({ queryKey: ["plugins"] });
-            const hasFailed =
-              result.marketplace_status === "failed" ||
-              result.plugin_statuses.some((status) => status.status === "failed");
-
-            const updatedPlugins = queryClient.getQueryData<Plugin[]>(["plugins"]);
-            const updatedPlugin = updatedPlugins?.find((item) => item.id === pluginId) ?? null;
-
-            if (hasFailed) {
-              appToast.error(t("plugins.toast.installFailed"));
-              setLogPlugin(
-                updatedPlugin ?? {
-                  ...pluginSnapshot,
-                  install_log: result.raw_log,
-                  install_status: "failed",
-                }
-              );
-            } else {
-              appToast.success(t("plugins.toast.installed"));
-            }
-          } catch (error: any) {
-            appToast.error(`${t("plugins.toast.installFailed")}: ${error.message || error}`);
-          } finally {
-            setInstallingPluginId(null);
-          }
-        }}
       />
 
       <PluginLogDialog
@@ -676,7 +622,6 @@ function SkillCard({
 
 interface PluginCardProps {
   plugin: Plugin;
-  isPreparing: boolean;
   isInstalling: boolean;
   isAnyOperationPending: boolean;
   onViewLog: () => void;
@@ -685,7 +630,6 @@ interface PluginCardProps {
 
 function PluginCard({
   plugin,
-  isPreparing,
   isInstalling,
   isAnyOperationPending,
   onViewLog,
@@ -741,7 +685,7 @@ function PluginCard({
         <div className="flex gap-2">
           <button
             onClick={onInstall}
-            disabled={isAnyOperationPending || plugin.installed || isUnsupported || isBlocked}
+            disabled={isAnyOperationPending || plugin.installed || isUnsupported}
             className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
           >
             {plugin.installed ? (
@@ -749,11 +693,11 @@ function PluginCard({
                 <CheckCircle className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{t("market.installed")}</span>
               </>
-            ) : isPreparing || isInstalling ? (
+            ) : isInstalling ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span className="hidden sm:inline">
-                  {isPreparing ? t("plugins.scanning") : t("plugins.installing")}
+                  {t("plugins.installing")}
                 </span>
               </>
             ) : (
@@ -808,148 +752,6 @@ function PluginCard({
   );
 }
 
-interface PluginInstallConfirmDialogProps {
-  open: boolean;
-  report: SecurityReport | null;
-  pluginName: string;
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-function PluginInstallConfirmDialog({
-  open,
-  report,
-  pluginName,
-  onClose,
-  onConfirm,
-}: PluginInstallConfirmDialogProps) {
-  const { t } = useTranslation();
-  const isMediumRisk = report ? report.score >= 50 && report.score < 70 : false;
-  const isHighRisk = report ? report.score < 50 || report.blocked : false;
-
-  const issueCounts = useMemo(
-    () => (report ? countIssuesBySeverity(report.issues) : { critical: 0, error: 0, warning: 0 }),
-    [report]
-  );
-
-  if (!report) return null;
-
-  return (
-    <AlertDialog open={open} onOpenChange={onClose}>
-      <AlertDialogContent className="max-w-2xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            {isHighRisk ? (
-              <XCircle className="w-5 h-5 text-destructive" />
-            ) : isMediumRisk ? (
-              <AlertTriangle className="w-5 h-5 text-warning" />
-            ) : (
-              <CheckCircle className="w-5 h-5 text-success" />
-            )}
-            {t("plugins.installDialog.scanResult")}
-          </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-4 pb-4">
-              <div>
-                {t("plugins.installDialog.preparingInstall")}:{" "}
-                <span className="font-semibold">{pluginName}</span>
-              </div>
-
-              {report.issues.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">
-                    {t("plugins.installDialog.issuesDetected")}:
-                  </div>
-                  <div className="flex gap-4 text-sm">
-                    {issueCounts.critical > 0 && (
-                      <span className="text-destructive">
-                        {t("plugins.installDialog.critical")}: {issueCounts.critical}
-                      </span>
-                    )}
-                    {issueCounts.error > 0 && (
-                      <span className="text-warning">
-                        {t("plugins.installDialog.highRisk")}: {issueCounts.error}
-                      </span>
-                    )}
-                    {issueCounts.warning > 0 && (
-                      <span className="text-warning">
-                        {t("plugins.installDialog.mediumRisk")}: {issueCounts.warning}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {report.issues.length > 0 && (
-                <div
-                  className={`p-3 rounded-lg ${
-                    isHighRisk
-                      ? "bg-destructive/10 border border-destructive/30"
-                      : isMediumRisk
-                        ? "bg-warning/10 border border-warning/30"
-                        : "bg-success/10 border border-success/30"
-                  }`}
-                >
-                  <ul className="space-y-1 text-sm">
-                    {sortIssuesBySeverity(report.issues)
-                      .slice(0, 3)
-                      .map((issue, idx) => (
-                        <li key={idx} className="text-xs">
-                          {issue.file_path && (
-                            <span className="text-primary mr-1.5">[{issue.file_path}]</span>
-                          )}
-                          {issue.description}
-                          {issue.line_number && (
-                            <span className="text-muted-foreground ml-2">
-                              (行 {issue.line_number})
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              )}
-
-              {isHighRisk && (
-                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="block mb-1">
-                        {t("plugins.installDialog.warningTitle")}
-                      </strong>
-                      {t("plugins.installDialog.warningMessage")}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>
-            {t("plugins.installDialog.cancel")}
-          </AlertDialogCancel>
-          <button
-            onClick={onConfirm}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isHighRisk
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : isMediumRisk
-                  ? "bg-warning text-white hover:bg-warning/90"
-                  : "bg-success text-white hover:bg-success/90"
-            }`}
-          >
-            {isHighRisk
-              ? t("plugins.installDialog.installAnyway")
-              : t("plugins.installDialog.confirmInstall")}
-          </button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
 
 interface PluginLogDialogProps {
   open: boolean;

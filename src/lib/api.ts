@@ -13,6 +13,7 @@ import type {
   SkillPluginUpgradeCandidate,
   CacheStats,
   FeaturedRepositoriesConfig,
+  FeaturedMarketplacesConfig,
   ClearAllCachesResult,
 } from "../types";
 import type { SecurityReport } from "../types/security";
@@ -97,6 +98,14 @@ export const api = {
     return invoke("refresh_featured_repositories");
   },
 
+  async getFeaturedMarketplaces(): Promise<FeaturedMarketplacesConfig> {
+    return invoke("get_featured_marketplaces");
+  },
+
+  async refreshFeaturedMarketplaces(): Promise<FeaturedMarketplacesConfig> {
+    return invoke("refresh_featured_marketplaces");
+  },
+
   async importFeaturedRepositories(categoryIds?: string[]): Promise<ImportFeaturedRepositoriesResult> {
     return invoke("import_featured_repositories", { categoryIds: categoryIds || null });
   },
@@ -128,8 +137,8 @@ export const api = {
   },
 
   // Plugin APIs
-  async getPlugins(): Promise<Plugin[]> {
-    return invoke("get_plugins");
+  async getPlugins(locale?: string): Promise<Plugin[]> {
+    return invoke("get_plugins", { locale: locale || null });
   },
 
   async preparePluginInstallation(pluginId: string, locale: string): Promise<SecurityReport> {

@@ -51,6 +51,8 @@ export interface Plugin {
   marketplace_name: string;
   source: string;
   discovery_source?: string;
+  marketplace_add_command?: string;
+  plugin_install_command?: string;
   installed: boolean;
   installed_at?: string;
   claude_scope?: string;
@@ -143,6 +145,14 @@ export type {
   FeaturedRepository,
   FeaturedRepositoryCategory,
 } from "./featured";
+export type {
+  FeaturedMarketplacesConfig,
+  FeaturedMarketplace,
+  FeaturedMarketplaceCategory,
+  FeaturedMarketplacePlugin,
+  FeaturedMarketplaceOwner,
+  LocalizedText,
+} from "./featured-marketplace";
 
 export interface InstallPathSelection {
   type: "user" | "recent" | "custom";

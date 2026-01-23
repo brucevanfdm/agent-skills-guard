@@ -300,6 +300,7 @@
     "confirmRemoveMessage": "确定要移除市场 \"{{name}}\" 吗？已安装的插件将被卸载（共 {{count}} 个）。",
     "toast": {
       "installed": "插件安装成功",
+      "scanHint": "安装完成，可在「概览」页进行安全扫描",
       "installFailed": "插件安装失败",
       "scanFailed": "扫描失败",
       "uninstalled": "插件卸载成功",
@@ -311,13 +312,14 @@
   "repositories": {
     "title": "仓库",
     "tabs": {
-      "featured": "精选推荐",
+      "featuredMarketplaces": "精选市场",
+      "featured": "精选仓库",
       "my": "我的仓库 ({{count}})"
     },
     "preview": {
       "title": "已添加仓库：{{name}}",
       "foundTitle": "发现以下内容：",
-      "foundSummary": "技能 {{skills}}，插件 {{plugins}}",
+      "foundSummary": "技能 {{skills}}",
       "goToMarket": "前往市场查看全部",
       "close": "关闭",
       "loadFailed": "加载预览失败: {{error}}"
@@ -384,6 +386,17 @@
       "refreshing": "刷新中",
       "refreshed": "精选仓库已更新",
       "refreshFailed": "刷新失败: {{error}}"
+    },
+    "featuredMarketplaces": {
+      "title": "精选插件市场",
+      "refresh": "刷新推荐",
+      "refreshing": "刷新中",
+      "refreshed": "精选插件市场已更新",
+      "refreshFailed": "刷新失败: {{error}}",
+      "loading": "加载中...",
+      "empty": "暂无精选插件市场",
+      "pluginsCount": "插件数量：{{count}}",
+      "viewMarketplace": "前往市场"
     }
   },
   "language": {

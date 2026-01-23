@@ -300,6 +300,7 @@
     "confirmRemoveMessage": "Remove Marketplace \"{{name}}\"? Installed plugins will be uninstalled ({{count}}).",
     "toast": {
       "installed": "[SUCCESS] PLUGIN_INSTALLED",
+      "scanHint": "[INFO] Run a security scan from Overview after installation",
       "installFailed": "[ERROR] INSTALL_FAILED",
       "scanFailed": "[ERROR] SCAN_FAILED",
       "uninstalled": "[SUCCESS] PLUGIN_UNINSTALLED",
@@ -311,13 +312,14 @@
   "repositories": {
     "title": "REPOSITORIES",
     "tabs": {
-      "featured": "FEATURED",
+      "featuredMarketplaces": "FEATURED_MARKETPLACES",
+      "featured": "FEATURED_REPOSITORIES",
       "my": "MY_REPOS ({{count}})"
     },
     "preview": {
       "title": "Repository Added: {{name}}",
       "foundTitle": "Discovered:",
-      "foundSummary": "Skills {{skills}}, Plugins {{plugins}}",
+      "foundSummary": "Skills {{skills}}",
       "goToMarket": "GO_TO_MARKET",
       "close": "CLOSE",
       "loadFailed": "Failed to load preview: {{error}}"
@@ -384,6 +386,17 @@
       "refreshing": "REFRESHING",
       "refreshed": "FEATURED_REPOSITORIES_UPDATED",
       "refreshFailed": "REFRESH_FAILED: {{error}}"
+    },
+    "featuredMarketplaces": {
+      "title": "FEATURED_MARKETPLACES",
+      "refresh": "REFRESH",
+      "refreshing": "REFRESHING",
+      "refreshed": "FEATURED_MARKETPLACES_UPDATED",
+      "refreshFailed": "REFRESH_FAILED: {{error}}",
+      "loading": "LOADING",
+      "empty": "NO_FEATURED_MARKETPLACES",
+      "pluginsCount": "PLUGINS: {{count}}",
+      "viewMarketplace": "GO_TO_MARKETPLACE"
     }
   },
   "language": {

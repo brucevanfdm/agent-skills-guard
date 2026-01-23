@@ -1,4 +1,14 @@
-use crate::models::{Plugin, Repository, SecurityLevel, SecurityReport, Skill};
+use crate::models::{
+    FeaturedMarketplacesConfig,
+    FeaturedMarketplaceOwner,
+    LocalizedText,
+    Plugin,
+    Repository,
+    SecurityLevel,
+    SecurityReport,
+    Skill,
+};
+use crate::i18n::validate_locale;
 use crate::security::SecurityScanner;
 use crate::services::claude_cli::{ClaudeCli, ClaudeCommand};
 use crate::services::{Database, GitHubService};
@@ -249,6 +259,8 @@ impl PluginManager {
             // 不再要求 plugin.json 存在，marketplace.json 里的 plugins 条目足够 Claude Code CLI 安装
 
             if let Some(existing) = existing_map.get(&plugin.id) {
+                plugin.marketplace_add_command = existing.marketplace_add_command.clone();
+                plugin.plugin_install_command = existing.plugin_install_command.clone();
                 plugin.installed = existing.installed;
                 plugin.installed_at = existing.installed_at;
                 plugin.installed_version = existing.installed_version.clone();
@@ -794,6 +806,98 @@ impl PluginManager {
         Ok(candidates)
     }
 
+    /// 同步精选 Marketplace 插件清单到数据库（仅用于展示/安装入口）
+    pub fn sync_featured_marketplaces(
+        &self,
+        config: &FeaturedMarketplacesConfig,
+        locale: &str,
+    ) -> Result<()> {
+        let locale = validate_locale(locale);
+        let existing_plugins = self.db.get_plugins().unwrap_or_default();
+        let existing_map: HashMap<String, Plugin> = existing_plugins
+            .iter()
+            .cloned()
+            .map(|plugin| (plugin.id.clone(), plugin))
+            .collect();
+
+        let mut featured_ids: HashSet<String> = HashSet::new();
+
+        for category in &config.categories {
+            for marketplace in &category.marketplaces {
+                let repo_url = marketplace.repository_url.clone().unwrap_or_else(|| {
+                    format!("https://github.com/{}", marketplace.marketplace_repo)
+                });
+                let marketplace_name = marketplace.marketplace_name.clone();
+
+                for entry in &marketplace.plugins {
+                    let source = entry.source.clone().unwrap_or_else(|| ".".to_string());
+                    let mut plugin = Plugin::new(
+                        entry.name.clone(),
+                        repo_url.clone(),
+                        marketplace_name.clone(),
+                        source,
+                    );
+
+                    plugin.discovery_source = Some("featured_marketplace".to_string());
+                    plugin.description = Some(localized_text(&entry.description, &locale));
+                    plugin.version = entry.version.clone();
+                    plugin.author = entry
+                        .author
+                        .as_ref()
+                        .and_then(author_to_display)
+                        .or_else(|| marketplace.owner.as_ref().and_then(author_to_display));
+                    plugin.marketplace_add_command = marketplace.marketplace_add_command.clone();
+                    plugin.plugin_install_command = entry.install_command.clone();
+
+                    if let Some(existing) = existing_map.get(&plugin.id) {
+                        if plugin.marketplace_add_command.is_none() {
+                            plugin.marketplace_add_command = existing.marketplace_add_command.clone();
+                        }
+                        if plugin.plugin_install_command.is_none() {
+                            plugin.plugin_install_command = existing.plugin_install_command.clone();
+                        }
+                        plugin.installed = existing.installed;
+                        plugin.installed_at = existing.installed_at;
+                        plugin.installed_version = existing.installed_version.clone();
+                        plugin.claude_id = existing.claude_id.clone().or(plugin.claude_id);
+                        plugin.claude_scope = existing.claude_scope.clone();
+                        plugin.claude_enabled = existing.claude_enabled;
+                        plugin.claude_install_path = existing.claude_install_path.clone();
+                        plugin.claude_last_updated = existing.claude_last_updated;
+                        plugin.security_score = existing.security_score;
+                        plugin.security_level = existing.security_level.clone();
+                        plugin.security_issues = existing.security_issues.clone();
+                        plugin.scanned_at = existing.scanned_at;
+                        plugin.staging_path = existing.staging_path.clone();
+                        plugin.install_log = existing.install_log.clone();
+                        plugin.install_status = match existing.install_status.as_deref() {
+                            Some("unsupported") => None,
+                            _ => existing.install_status.clone(),
+                        };
+                    }
+
+                    self.db.save_plugin(&plugin)?;
+                    featured_ids.insert(plugin.id.clone());
+                }
+            }
+        }
+
+        for existing in existing_plugins {
+            if existing.discovery_source.as_deref() != Some("featured_marketplace") {
+                continue;
+            }
+            if existing.installed {
+                continue;
+            }
+            if featured_ids.contains(&existing.id) {
+                continue;
+            }
+            let _ = self.db.delete_plugin(&existing.id);
+        }
+
+        Ok(())
+    }
+
     pub async fn prepare_plugin_installation(&self, plugin_id: &str, locale: &str) -> Result<SecurityReport> {
         let plugin = self.db.get_plugins()?
             .into_iter()
@@ -913,23 +1017,16 @@ impl PluginManager {
             .find(|p| p.id == plugin_id)
             .context("未找到该插件")?;
 
-        if plugin.install_status.as_deref() == Some("blocked") {
-            anyhow::bail!("安全扫描未通过，已阻止插件安装");
-        }
-
-        if plugin.staging_path.is_none() {
-            anyhow::bail!("插件尚未准备，请先进行安装前扫描");
-        }
-
-        if let Some(staging_path) = &plugin.staging_path {
-            let staging_path_buf = PathBuf::from(staging_path);
-            if !staging_path_buf.exists() {
-                anyhow::bail!("安装缓存已失效，请重新进行安装前扫描");
-            }
-        }
-
-        let (owner, repo_name) = Repository::from_github_url(&plugin.repository_url)?;
-        let marketplace_repo = format!("{}/{}", owner, repo_name);
+        let marketplace_repo = plugin
+            .marketplace_add_command
+            .as_deref()
+            .and_then(extract_marketplace_repo_from_command)
+            .or_else(|| {
+                Repository::from_github_url(&plugin.repository_url)
+                    .ok()
+                    .map(|(owner, repo_name)| format!("{}/{}", owner, repo_name))
+            })
+            .context("无法解析 marketplace repo")?;
         let marketplace_name = plugin.marketplace_name.clone();
 
         let cli_command = claude_command.unwrap_or_else(|| "claude".to_string());
@@ -947,23 +1044,39 @@ impl PluginManager {
 
         // 构建命令：1. marketplace add，2. 只安装选中的单个 plugin
         let mut commands = Vec::new();
+        let add_args = plugin
+            .marketplace_add_command
+            .as_deref()
+            .and_then(parse_slash_command_args)
+            .unwrap_or_else(|| {
+                vec![
+                    "plugin".to_string(),
+                    "marketplace".to_string(),
+                    "add".to_string(),
+                    marketplace_repo.clone(),
+                ]
+            });
+
         commands.push(ClaudeCommand {
-            args: vec![
-                "plugin".to_string(),
-                "marketplace".to_string(),
-                "add".to_string(),
-                marketplace_repo.clone(),
-            ],
+            args: add_args,
             timeout: Duration::from_secs(60),
         });
 
+        let install_args = plugin
+            .plugin_install_command
+            .as_deref()
+            .and_then(parse_slash_command_args)
+            .unwrap_or_else(|| {
+                vec![
+                    "plugin".to_string(),
+                    "install".to_string(),
+                    plugin.plugin_spec(),
+                ]
+            });
+
         // 只安装选中的单个 plugin
         commands.push(ClaudeCommand {
-            args: vec![
-                "plugin".to_string(),
-                "install".to_string(),
-                plugin.plugin_spec(),
-            ],
+            args: install_args,
             timeout: Duration::from_secs(180),
         });
 
@@ -1186,6 +1299,31 @@ fn parse_claude_plugin_id(id: &str) -> Option<(String, String)> {
         return None;
     }
     Some((name.to_string(), marketplace.to_string()))
+}
+
+fn parse_slash_command_args(command: &str) -> Option<Vec<String>> {
+    let trimmed = command.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let trimmed = trimmed.strip_prefix('/').unwrap_or(trimmed);
+    let parts: Vec<String> = trimmed.split_whitespace().map(|s| s.to_string()).collect();
+    if parts.first().map(|s| s.as_str()) != Some("plugin") {
+        return None;
+    }
+    Some(parts)
+}
+
+fn extract_marketplace_repo_from_command(command: &str) -> Option<String> {
+    let parts = parse_slash_command_args(command)?;
+    if parts.len() >= 4
+        && parts[0] == "plugin"
+        && parts[1] == "marketplace"
+        && parts[2] == "add"
+    {
+        return Some(parts[3].clone());
+    }
+    None
 }
 
 fn marketplace_repo_url(entry: &ClaudeMarketplaceListEntry) -> Option<String> {
@@ -1816,5 +1954,22 @@ fn merge_reports(reports: &[(Plugin, SecurityReport)], marketplace_name: &str) -
         blocked,
         hard_trigger_issues: hard_triggers,
         scanned_files,
+    }
+}
+
+fn localized_text(text: &LocalizedText, locale: &str) -> String {
+    if locale.starts_with("zh") {
+        text.zh.clone()
+    } else {
+        text.en.clone()
+    }
+}
+
+fn author_to_display(author: &FeaturedMarketplaceOwner) -> Option<String> {
+    match (&author.name, &author.email) {
+        (Some(name), Some(email)) => Some(format!("{} <{}>", name, email)),
+        (Some(name), None) => Some(name.clone()),
+        (None, Some(email)) => Some(email.clone()),
+        (None, None) => None,
     }
 }

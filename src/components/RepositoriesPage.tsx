@@ -12,6 +12,7 @@ import {
   GitBranch,
   Loader2,
   Database,
+  ShoppingCart,
   X,
   RefreshCw,
   Download,
@@ -24,7 +25,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { appToast } from "../lib/toast";
 import { FeaturedRepositories } from "./FeaturedRepositories";
-import type { Plugin, PluginInstallResult, Skill } from "../types";
+import type { Skill } from "../types";
 import type { SecurityReport } from "../types/security";
 import { invoke } from "@tauri-apps/api/core";
 import { InstallPathSelector } from "./InstallPathSelector";
@@ -73,7 +74,9 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
   const deleteMutation = useDeleteRepository();
   const scanMutation = useScanRepository();
 
-  const [activeTab, setActiveTab] = useState<"featured" | "my">("featured");
+  const [activeTab, setActiveTab] = useState<
+    "featuredMarketplaces" | "featured" | "my"
+  >("featuredMarketplaces");
 
   const [isAddingFeatured, setIsAddingFeatured] = useState(false);
   const [addingFeaturedUrl, setAddingFeaturedUrl] = useState<string | null>(null);
@@ -91,7 +94,6 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
     repoName: string;
     repoUrl: string;
     skills: Skill[];
-    plugins: Plugin[];
   } | null>(null);
 
   const [pendingSkillInstall, setPendingSkillInstall] = useState<{
@@ -100,12 +102,6 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
   } | null>(null);
   const [preparingSkillId, setPreparingSkillId] = useState<string | null>(null);
   const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
-  const [pendingPluginInstall, setPendingPluginInstall] = useState<{
-    plugin: Plugin;
-    report: SecurityReport;
-  } | null>(null);
-  const [preparingPluginId, setPreparingPluginId] = useState<string | null>(null);
-  const [installingPluginId, setInstallingPluginId] = useState<string | null>(null);
 
   const { data: cacheStats } = useQuery({
     queryKey: ["cache-stats"],
@@ -122,6 +118,28 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
     onError: (error: any) => {
       appToast.error(
         t("repositories.featured.refreshFailed", {
+          error: error?.message || String(error),
+        })
+      );
+    },
+  });
+
+  const { data: featuredMarketplaces, isLoading: isFeaturedMarketplacesLoading } = useQuery({
+    queryKey: ["featured-marketplaces"],
+    queryFn: api.getFeaturedMarketplaces,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const refreshFeaturedMarketplacesMutation = useMutation({
+    mutationFn: api.refreshFeaturedMarketplaces,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["featured-marketplaces"], data);
+      appToast.success(t("repositories.featuredMarketplaces.refreshed"));
+    },
+    onError: (error: any) => {
+      appToast.error(
+        t("repositories.featuredMarketplaces.refreshFailed", {
           error: error?.message || String(error),
         })
       );
@@ -181,14 +199,17 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
     }
   };
 
+  const getLocalizedText = (text: { en: string; zh: string }) => {
+    return i18n.language === "zh" ? text.zh : text.en;
+  };
+
   const openRepositoryPreview = async (repoUrl: string, repoName: string) => {
     try {
-      const [skills, plugins] = await Promise.all([api.getSkills(), api.getPlugins()]);
+      const [skills] = await Promise.all([api.getSkills()]);
       const repoSkills = skills.filter(
         (skill) => skill.repository_url === repoUrl && skill.repository_owner !== "local"
       );
-      const repoPlugins = plugins.filter((plugin) => plugin.repository_url === repoUrl);
-      setPreview({ repoName, repoUrl, skills: repoSkills, plugins: repoPlugins });
+      setPreview({ repoName, repoUrl, skills: repoSkills });
     } catch (error: any) {
       appToast.error(
         t("repositories.preview.loadFailed", { error: error?.message || String(error) })
@@ -209,24 +230,6 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
       appToast.error(`${t("skills.toast.installFailed")}: ${error.message || error}`);
     } finally {
       setPreparingSkillId(null);
-    }
-  };
-
-  const preparePluginInstall = async (plugin: Plugin) => {
-    if (preparingPluginId || installingPluginId) return;
-    if (plugin.install_status === "unsupported" || plugin.install_status === "blocked") return;
-
-    try {
-      setPreparingPluginId(plugin.id);
-      const report = await invoke<SecurityReport>("prepare_plugin_installation", {
-        pluginId: plugin.id,
-        locale: i18n.language,
-      });
-      setPendingPluginInstall({ plugin, report });
-    } catch (error: any) {
-      appToast.error(`${t("plugins.toast.scanFailed")}: ${error.message || error}`);
-    } finally {
-      setPreparingPluginId(null);
     }
   };
 
@@ -296,6 +299,24 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
               </>
             )}
           </button>
+        ) : activeTab === "featuredMarketplaces" ? (
+          <button
+            onClick={() => refreshFeaturedMarketplacesMutation.mutate()}
+            disabled={refreshFeaturedMarketplacesMutation.isPending}
+            className="flex items-center gap-2 apple-button-primary disabled:opacity-50"
+          >
+            {refreshFeaturedMarketplacesMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t("repositories.featuredMarketplaces.refreshing")}
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                {t("repositories.featuredMarketplaces.refresh")}
+              </>
+            )}
+          </button>
         ) : (
           <button
             onClick={() => refreshFeaturedMutation.mutate()}
@@ -319,6 +340,14 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
 
       <div className="flex items-center gap-2">
         <RepositoriesTabButton
+          active={activeTab === "featuredMarketplaces"}
+          onClick={() => {
+            setActiveTab("featuredMarketplaces");
+            setShowAddForm(false);
+          }}
+          label={t("repositories.tabs.featuredMarketplaces")}
+        />
+        <RepositoriesTabButton
           active={activeTab === "featured"}
           onClick={() => {
             setActiveTab("featured");
@@ -333,40 +362,131 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
         />
       </div>
 
+      {activeTab === "featuredMarketplaces" && (
+        <div className="space-y-6">
+          <div className="apple-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <ShoppingCart className="w-5 h-5 text-warning" />
+              <h3 className="font-medium">{t("repositories.featuredMarketplaces.title")}</h3>
+            </div>
+
+            {isFeaturedMarketplacesLoading ? (
+              <div className="text-sm text-muted-foreground">
+                {t("repositories.featuredMarketplaces.loading")}
+              </div>
+            ) : !featuredMarketplaces || featuredMarketplaces.categories.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                {t("repositories.featuredMarketplaces.empty")}
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {featuredMarketplaces.categories.map((category) => (
+                  <div key={category.id} className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-foreground">
+                        {getLocalizedText(category.name)}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {getLocalizedText(category.description)}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {category.marketplaces.map((marketplace) => (
+                        <div
+                          key={marketplace.marketplace_name}
+                          className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-3 bg-card rounded-lg border border-border hover:border-primary/30 transition-all"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h5 className="text-sm font-medium text-primary">
+                                {marketplace.marketplace_name}
+                              </h5>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2 overflow-hidden [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical]">
+                              {getLocalizedText(marketplace.description)}
+                            </p>
+                            {marketplace.repository_url && (
+                              <a
+                                href={marketplace.repository_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-500 hover:text-blue-600 hover:underline break-all transition-colors"
+                              >
+                                {marketplace.repository_url}
+                              </a>
+                            )}
+                            <div className="text-xs text-muted-foreground mt-2">
+                              {t("repositories.featuredMarketplaces.pluginsCount", {
+                                count: marketplace.plugins.length,
+                              })}
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {marketplace.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => onNavigateToMarket?.()}
+                            disabled={!onNavigateToMarket}
+                            className="self-end sm:self-auto sm:ml-4 text-xs flex items-center gap-1.5 disabled:opacity-50 macos-button-primary"
+                          >
+                            {t("repositories.featuredMarketplaces.viewMarketplace")}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === "featured" && (
-        <FeaturedRepositories
-          variant="page"
-          layout="expanded"
-          showHeader={false}
-          categoryIds={["official", "community"]}
-          onAdd={async (url, name) => {
-            if (isAddingFeatured) return;
+        <div className="space-y-6">
+          <FeaturedRepositories
+            variant="page"
+            layout="expanded"
+            showHeader={false}
+            categoryIds={["official", "community"]}
+            onAdd={async (url, name) => {
+              if (isAddingFeatured) return;
 
-            setIsAddingFeatured(true);
-            setAddingFeaturedUrl(url);
-
-            try {
-              const repoId = await addMutation.mutateAsync({ url, name });
-              appToast.success(t("repositories.toast.added"));
+              setIsAddingFeatured(true);
+              setAddingFeaturedUrl(url);
 
               try {
-                const skills = await scanMutation.mutateAsync(repoId);
-                appToast.success(t("repositories.toast.foundSkills", { count: skills.length }));
-              } catch (error: any) {
-                appToast.error(`${t("repositories.toast.scanError")}${error.message || error}`);
-              }
+                const repoId = await addMutation.mutateAsync({ url, name });
+                appToast.success(t("repositories.toast.added"));
 
-              void openRepositoryPreview(url, name);
-            } catch (error: any) {
-              appToast.error(`${t("repositories.toast.error")}${error.message || error}`);
-            } finally {
-              setIsAddingFeatured(false);
-              setAddingFeaturedUrl(null);
-            }
-          }}
-          isAdding={isAddingFeatured}
-          addingUrl={addingFeaturedUrl}
-        />
+                try {
+                  const skills = await scanMutation.mutateAsync(repoId);
+                  appToast.success(t("repositories.toast.foundSkills", { count: skills.length }));
+                } catch (error: any) {
+                  appToast.error(`${t("repositories.toast.scanError")}${error.message || error}`);
+                }
+
+                void openRepositoryPreview(url, name);
+              } catch (error: any) {
+                appToast.error(`${t("repositories.toast.error")}${error.message || error}`);
+              } finally {
+                setIsAddingFeatured(false);
+                setAddingFeaturedUrl(null);
+              }
+            }}
+            isAdding={isAddingFeatured}
+            addingUrl={addingFeaturedUrl}
+          />
+        </div>
       )}
 
       {/* Cache Statistics */}
@@ -688,7 +808,6 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
                   <div className="text-sm text-muted-foreground">
                     {t("repositories.preview.foundSummary", {
                       skills: preview?.skills.length || 0,
-                      plugins: preview?.plugins.length || 0,
                     })}
                   </div>
                 </div>
@@ -716,9 +835,7 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
                         disabled={
                           skill.installed ||
                           preparingSkillId !== null ||
-                          installingSkillId !== null ||
-                          preparingPluginId !== null ||
-                          installingPluginId !== null
+                          installingSkillId !== null
                         }
                         className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50 flex-shrink-0"
                       >
@@ -739,54 +856,6 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
                     </div>
                   ))}
 
-                  {(preview?.plugins || []).map((plugin) => (
-                    <div
-                      key={plugin.id}
-                      className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border/60"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600">
-                            {t("plugins.badge")}
-                          </span>
-                          <span className="font-medium text-foreground truncate">
-                            {plugin.name}
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
-                          {plugin.description || t("plugins.noDescription")}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => preparePluginInstall(plugin)}
-                        disabled={
-                          plugin.installed ||
-                          plugin.install_status === "unsupported" ||
-                          plugin.install_status === "blocked" ||
-                          preparingSkillId !== null ||
-                          installingSkillId !== null ||
-                          preparingPluginId !== null ||
-                          installingPluginId !== null
-                        }
-                        className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50 flex-shrink-0"
-                      >
-                        {plugin.installed ? (
-                          t("market.installed")
-                        ) : preparingPluginId === plugin.id ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            {t("plugins.scanning")}
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-3.5 h-3.5" />
-                            {t("plugins.install")}
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  ))}
                 </div>
               </div>
             </AlertDialogDescription>
@@ -838,39 +907,6 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
             appToast.error(`${t("skills.toast.installFailed")}: ${error.message || error}`);
           } finally {
             setInstallingSkillId(null);
-          }
-        }}
-      />
-
-      <PluginInstallConfirmDialog
-        open={pendingPluginInstall !== null}
-        report={pendingPluginInstall?.report || null}
-        pluginName={pendingPluginInstall?.plugin.name || ""}
-        onClose={() => {
-          const pluginId = pendingPluginInstall?.plugin.id;
-          const shouldCancel = pluginId && installingPluginId !== pluginId;
-          setPendingPluginInstall(null);
-          if (!shouldCancel) return;
-          void invoke("cancel_plugin_installation", { pluginId }).catch((error: any) => {
-            console.error("[ERROR] 取消插件安装失败:", error);
-          });
-        }}
-        onConfirm={async () => {
-          if (!pendingPluginInstall) return;
-          const pluginId = pendingPluginInstall.plugin.id;
-          setInstallingPluginId(pluginId);
-          setPendingPluginInstall(null);
-          try {
-            await invoke<PluginInstallResult>("confirm_plugin_installation", {
-              pluginId,
-              claudeCommand: null,
-            });
-            await queryClient.refetchQueries({ queryKey: ["plugins"] });
-            appToast.success(t("plugins.toast.installed"));
-          } catch (error: any) {
-            appToast.error(`${t("plugins.toast.installFailed")}: ${error.message || error}`);
-          } finally {
-            setInstallingPluginId(null);
           }
         }}
       />
@@ -1062,147 +1098,6 @@ function SkillInstallConfirmDialog({
             {isHighRisk
               ? t("skills.marketplace.install.installAnyway")
               : t("skills.marketplace.install.confirmInstall")}
-          </button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function PluginInstallConfirmDialog({
-  open,
-  report,
-  pluginName,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  report: SecurityReport | null;
-  pluginName: string;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  const { t } = useTranslation();
-
-  const isMediumRisk = report ? report.score >= 50 && report.score < 70 : false;
-  const isHighRisk = report ? report.score < 50 || report.blocked : false;
-
-  const issueCounts = useMemo(
-    () => (report ? countIssuesBySeverity(report.issues) : { critical: 0, error: 0, warning: 0 }),
-    [report]
-  );
-
-  if (!report) return null;
-
-  return (
-    <AlertDialog open={open} onOpenChange={onClose}>
-      <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t("plugins.installDialog.scanResult")}</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-4 pb-4">
-              <div>
-                {t("plugins.installDialog.preparingInstall")}:{" "}
-                <span className="font-semibold">{pluginName}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <span className="text-sm">{t("plugins.installDialog.securityScore")}:</span>
-                <span
-                  className={`text-3xl font-bold ${
-                    report.score >= 90
-                      ? "text-success"
-                      : report.score >= 70
-                        ? "text-success"
-                        : report.score >= 50
-                          ? "text-warning"
-                          : "text-destructive"
-                  }`}
-                >
-                  {report.score}
-                </span>
-              </div>
-
-              {report.issues.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">
-                    {t("plugins.installDialog.issuesDetected")}:
-                  </div>
-                  <div className="flex gap-4 text-sm">
-                    {issueCounts.critical > 0 && (
-                      <span className="text-destructive">
-                        {t("plugins.installDialog.critical")}: {issueCounts.critical}
-                      </span>
-                    )}
-                    {issueCounts.error > 0 && (
-                      <span className="text-warning">
-                        {t("plugins.installDialog.highRisk")}: {issueCounts.error}
-                      </span>
-                    )}
-                    {issueCounts.warning > 0 && (
-                      <span className="text-warning">
-                        {t("plugins.installDialog.mediumRisk")}: {issueCounts.warning}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {report.issues.length > 0 && (
-                <div
-                  className={`p-3 rounded-lg ${
-                    isHighRisk
-                      ? "bg-destructive/10 border border-destructive/30"
-                      : isMediumRisk
-                        ? "bg-warning/10 border border-warning/30"
-                        : "bg-success/10 border border-success/30"
-                  }`}
-                >
-                  <ul className="space-y-1 text-sm">
-                    {report.issues.slice(0, 3).map((issue, idx) => (
-                      <li key={idx} className="text-xs">
-                        {issue.file_path && (
-                          <span className="text-primary mr-1.5">[{issue.file_path}]</span>
-                        )}
-                        {issue.description}
-                        {issue.line_number && (
-                          <span className="text-muted-foreground ml-2">
-                            (行 {issue.line_number})
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {isHighRisk && (
-                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm">
-                  <strong className="block mb-1">{t("plugins.installDialog.warningTitle")}</strong>
-                  {t("plugins.installDialog.warningMessage")}
-                </div>
-              )}
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>
-            {t("plugins.installDialog.cancel")}
-          </AlertDialogCancel>
-          <button
-            onClick={onConfirm}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isHighRisk
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : isMediumRisk
-                  ? "bg-warning text-white hover:bg-warning/90"
-                  : "bg-success text-white hover:bg-success/90"
-            }`}
-          >
-            {isHighRisk
-              ? t("plugins.installDialog.installAnyway")
-              : t("plugins.installDialog.confirmInstall")}
           </button>
         </AlertDialogFooter>
       </AlertDialogContent>

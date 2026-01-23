@@ -19,6 +19,8 @@ pub struct Plugin {
     pub source: String,
     /// 记录该 plugin 是从哪里发现的：`repository_scan` / `claude_cli`
     pub discovery_source: Option<String>,
+    pub marketplace_add_command: Option<String>,
+    pub plugin_install_command: Option<String>,
     pub installed: bool,
     pub installed_at: Option<DateTime<Utc>>,
     /// Claude Code 的安装信息（来自 `claude plugin list --json`）
@@ -59,6 +61,8 @@ impl Plugin {
             marketplace_name,
             source,
             discovery_source: Some("repository_scan".to_string()),
+            marketplace_add_command: None,
+            plugin_install_command: None,
             installed: false,
             installed_at: None,
             claude_scope: None,

@@ -9,6 +9,7 @@ use crate::services::plugin_manager::{
     PluginUpdateResult,
     SkillPluginUpgradeCandidate,
 };
+use crate::commands::featured_marketplaces;
 use crate::security::SecurityScanner;
 use crate::i18n::validate_locale;
 use chrono::Utc;
@@ -19,15 +20,30 @@ use tauri::State;
 #[tauri::command]
 pub async fn get_plugins(
     state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    locale: Option<String>,
 ) -> Result<Vec<Plugin>, String> {
+    let locale = validate_locale(locale.as_deref().unwrap_or("en"));
+    let featured_config = featured_marketplaces::get_featured_marketplaces(app).await.ok();
+
     // 通过 Claude CLI 同步本地安装状态（包含非本程序安装的 plugins/marketplaces）
     // 同步失败不阻塞 UI：回退到 DB 缓存
     if let Ok(manager) = state.plugin_manager.try_lock() {
+        if let Some(config) = &featured_config {
+            if let Err(e) = manager.sync_featured_marketplaces(config, &locale) {
+                log::warn!("同步精选插件清单失败: {}", e);
+            }
+        }
         if let Err(e) = manager.sync_claude_installed_state(None).await {
             log::warn!("同步 Claude plugins 状态失败: {}", e);
         }
     } else {
         let manager = state.plugin_manager.lock().await;
+        if let Some(config) = &featured_config {
+            if let Err(e) = manager.sync_featured_marketplaces(config, &locale) {
+                log::warn!("同步精选插件清单失败: {}", e);
+            }
+        }
         if let Err(e) = manager.sync_claude_installed_state(None).await {
             log::warn!("同步 Claude plugins 状态失败: {}", e);
         }

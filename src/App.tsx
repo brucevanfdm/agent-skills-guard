@@ -69,6 +69,20 @@ function AppContent() {
     updateFeaturedRepos();
   }, [queryClient]);
 
+  // 启动时自动更新精选插件市场
+  useEffect(() => {
+    const updateFeaturedMarketplaces = async () => {
+      try {
+        const data = await api.refreshFeaturedMarketplaces();
+        queryClient.setQueryData(["featured-marketplaces"], data);
+        queryClient.invalidateQueries({ queryKey: ["plugins"] });
+      } catch (error) {
+        console.debug("Failed to auto-update featured marketplaces:", error);
+      }
+    };
+    updateFeaturedMarketplaces();
+  }, [queryClient]);
+
   // 首次启动时自动扫描未扫描的仓库
   useEffect(() => {
     const autoScanRepositories = async () => {

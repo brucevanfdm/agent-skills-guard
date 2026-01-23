@@ -105,6 +105,8 @@ impl Database {
                 marketplace_name TEXT NOT NULL,
                 source TEXT NOT NULL,
                 discovery_source TEXT,
+                marketplace_add_command TEXT,
+                plugin_install_command TEXT,
                 installed INTEGER NOT NULL DEFAULT 0,
                 installed_at TEXT,
                 claude_scope TEXT,
@@ -144,6 +146,7 @@ impl Database {
         self.migrate_add_local_paths()?;
         self.migrate_add_installed_commit_sha()?;
         self.migrate_add_plugin_claude_fields()?;
+        self.migrate_add_plugin_install_commands()?;
 
         Ok(())
     }
@@ -158,10 +161,10 @@ impl Database {
         conn.execute(
             "INSERT OR REPLACE INTO plugins
             (id, claude_id, name, description, version, installed_version, author, repository_url, repository_owner,
-             marketplace_name, source, discovery_source, installed, installed_at, claude_scope, claude_enabled,
-             claude_install_path, claude_last_updated, security_score, security_issues, security_level, scanned_at,
-             staging_path, install_log, install_status)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25)",
+             marketplace_name, source, discovery_source, marketplace_add_command, plugin_install_command, installed,
+             installed_at, claude_scope, claude_enabled, claude_install_path, claude_last_updated, security_score,
+             security_issues, security_level, scanned_at, staging_path, install_log, install_status)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)",
             params![
                 plugin.id,
                 plugin.claude_id,
@@ -175,6 +178,8 @@ impl Database {
                 plugin.marketplace_name,
                 plugin.source,
                 plugin.discovery_source,
+                plugin.marketplace_add_command,
+                plugin.plugin_install_command,
                 plugin.installed as i32,
                 plugin.installed_at.as_ref().map(|d| d.to_rfc3339()),
                 plugin.claude_scope,
@@ -378,14 +383,14 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, claude_id, name, description, version, installed_version, author, repository_url, repository_owner,
-                    marketplace_name, source, discovery_source, installed, installed_at, claude_scope, claude_enabled,
-                    claude_install_path, claude_last_updated, security_score, security_issues, security_level, scanned_at,
-                    staging_path, install_log, install_status
+                    marketplace_name, source, discovery_source, marketplace_add_command, plugin_install_command,
+                    installed, installed_at, claude_scope, claude_enabled, claude_install_path, claude_last_updated,
+                    security_score, security_issues, security_level, scanned_at, staging_path, install_log, install_status
              FROM plugins"
         )?;
 
         let plugins = stmt.query_map([], |row| {
-            let security_issues: Option<String> = row.get(19)?;
+            let security_issues: Option<String> = row.get(21)?;
             let security_issues = security_issues
                 .and_then(|s| serde_json::from_str(&s).ok());
 
@@ -402,22 +407,24 @@ impl Database {
                 marketplace_name: row.get(9)?,
                 source: row.get(10)?,
                 discovery_source: row.get(11)?,
-                installed: row.get::<_, i32>(12)? != 0,
-                installed_at: row.get::<_, Option<String>>(13)?
+                marketplace_add_command: row.get(12)?,
+                plugin_install_command: row.get(13)?,
+                installed: row.get::<_, i32>(14)? != 0,
+                installed_at: row.get::<_, Option<String>>(15)?
                     .and_then(|s| s.parse().ok()),
-                claude_scope: row.get(14)?,
-                claude_enabled: row.get::<_, Option<i32>>(15)?.map(|v| v != 0),
-                claude_install_path: row.get(16)?,
-                claude_last_updated: row.get::<_, Option<String>>(17)?
+                claude_scope: row.get(16)?,
+                claude_enabled: row.get::<_, Option<i32>>(17)?.map(|v| v != 0),
+                claude_install_path: row.get(18)?,
+                claude_last_updated: row.get::<_, Option<String>>(19)?
                     .and_then(|s| s.parse().ok()),
-                security_score: row.get(18)?,
+                security_score: row.get(20)?,
                 security_issues,
-                security_level: row.get(20)?,
-                scanned_at: row.get::<_, Option<String>>(21)?
+                security_level: row.get(22)?,
+                scanned_at: row.get::<_, Option<String>>(23)?
                     .and_then(|s| s.parse().ok()),
-                staging_path: row.get(22)?,
-                install_log: row.get(23)?,
-                install_status: row.get(24)?,
+                staging_path: row.get(24)?,
+                install_log: row.get(25)?,
+                install_status: row.get(26)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -613,6 +620,16 @@ impl Database {
              WHERE discovery_source IS NULL",
             [],
         );
+
+        Ok(())
+    }
+
+    /// 数据库迁移：为 plugins 增加 marketplace/plugin 安装指令字段
+    fn migrate_add_plugin_install_commands(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN marketplace_add_command TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN plugin_install_command TEXT", []);
 
         Ok(())
     }

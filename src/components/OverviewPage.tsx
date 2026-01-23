@@ -36,8 +36,8 @@ export function OverviewPage() {
   });
 
   const { data: plugins = [], isLoading: isPluginsLoading } = useQuery<Plugin[]>({
-    queryKey: ["plugins"],
-    queryFn: api.getPlugins,
+    queryKey: ["plugins", i18n.language],
+    queryFn: () => api.getPlugins(i18n.language),
   });
 
   const { data: marketplaces = [], isLoading: isMarketplacesLoading } = useQuery<ClaudeMarketplace[]>({
@@ -95,7 +95,7 @@ export function OverviewPage() {
 
       let installedPlugins: Plugin[] = [];
       try {
-        const latestPlugins = await api.getPlugins();
+        const latestPlugins = await api.getPlugins(i18n.language);
         installedPlugins = latestPlugins.filter((p) => p.installed);
         installedPluginsCount = installedPlugins.length;
         await queryClient.refetchQueries({ queryKey: ["plugins"] });

@@ -1,0 +1,52 @@
+# Featured marketplaces configuration
+# 精选插件市场配置
+#
+# This file contains curated marketplaces and plugins recommended for Agent Skills Guard users.
+# 本文件包含为 Agent Skills Guard 用户推荐的精选 Marketplace 与插件。
+
+version: "1.0"
+last_updated: "2026-01-23"
+
+categories:
+  - id: "official"
+    name:
+      en: "Official"
+      zh: "官方推荐"
+    description:
+      en: "Official and verified marketplaces"
+      zh: "官方认证的 Marketplace"
+    marketplaces:
+      - marketplace_name: "superpowers-marketplace"
+        marketplace_repo: "obra/superpowers-marketplace"
+        repository_url: "https://github.com/obra/superpowers-marketplace"
+        marketplace_add_command: "/plugin marketplace add obra/superpowers-marketplace"
+        description:
+          en: "Marketplace for Superpowers plugins"
+          zh: "Superpowers 插件市场"
+        owner:
+          name: "Jesse Vincent"
+          email: "jesse@fsck.com"
+        tags: ["official", "verified", "superpowers"]
+        featured: true
+        plugins:
+          - name: "superpowers"
+            install_command: "/plugin install superpowers@superpowers-marketplace"
+            description:
+              en: "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques"
+              zh: "Claude Code 核心技能库：TDD、调试与协作模式等工程实践"
+            version: "4.0.3"
+            author:
+              name: "Jesse Vincent"
+              email: "jesse@fsck.com"
+            source: "./"
+            tags: ["tdd", "workflow", "debugging"]
+            featured: true
+
+  - id: "community"
+    name:
+      en: "Community"
+      zh: "社区精选"
+    description:
+      en: "High-quality community-contributed marketplaces"
+      zh: "社区贡献的高质量 Marketplace"
+    marketplaces: []

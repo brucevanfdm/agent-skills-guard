@@ -839,8 +839,8 @@ export function InstalledSkillsPage() {
                         newMap.delete(marketplace.name);
                         return newMap;
                       });
-                      await queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
-                      await queryClient.invalidateQueries({ queryKey: ["plugins"] });
+                      void queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
+                      void queryClient.invalidateQueries({ queryKey: ["plugins"] });
                     } catch (error: any) {
                       appToast.error(
                         t("plugins.marketplaces.updates.updateFailedWithError", {

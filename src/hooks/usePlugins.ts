@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 
 export function usePlugins() {
+  const { i18n } = useTranslation();
   return useQuery({
-    queryKey: ["plugins"],
-    queryFn: () => api.getPlugins(),
+    queryKey: ["plugins", i18n.language],
+    queryFn: () => api.getPlugins(i18n.language),
   });
 }
 

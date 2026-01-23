@@ -1,9 +1,10 @@
 pub mod security;
 pub mod plugins;
+pub mod featured_marketplaces;
 
 use crate::models::{Repository, Skill, FeaturedRepositoriesConfig};
 use crate::services::{Database, GitHubService, PluginManager, SkillManager};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::Manager;
 use tauri::State;
@@ -150,56 +151,6 @@ pub async fn scan_repository(
 
         extract_dir
     };
-
-    let repo_root = find_repo_root(&cache_path_for_scan)?;
-    // anthropics/skills: 仓库根目录的 marketplace.json 只是示例；真正 skills 位于 /skills 子目录
-    // 这里做单独兼容处理：即使存在 marketplace.json，也优先按 skills 仓库扫描。
-    let is_anthropics_skills = owner == "anthropics" && repo_name == "skills";
-
-    if !is_anthropics_skills && is_marketplace_repo(&repo_root) {
-        let manager = state.plugin_manager.lock().await;
-        match manager.scan_cached_repository_plugins(&cache_path_for_scan, &repo.url) {
-            Ok(plugins) => {
-                // 只有当确实扫描出插件时，才将其视为 marketplace 仓库并跳过 skills 扫描。
-                // 兼容：某些仓库可能包含示例 marketplace.json（如 anthropics/skills）。
-                if !plugins.is_empty() {
-                    log::info!(
-                        "仓库 {} 识别为 marketplace 插件仓库，发现 {} 个插件",
-                        repo.name,
-                        plugins.len()
-                    );
-
-                    for plugin in plugins {
-                        if let Err(e) = state.db.save_plugin(&plugin) {
-                            log::warn!("保存插件失败: {} ({})", plugin.name, e);
-                        }
-                    }
-
-                    let deleted_skills_count = state
-                        .db
-                        .delete_uninstalled_skills_by_repository_url(&repo.url)
-                        .map_err(|e| e.to_string())?;
-                    if deleted_skills_count > 0 {
-                        log::info!("清理仓库 {} 的 {} 个未安装技能", repo.name, deleted_skills_count);
-                    }
-
-                    return Ok(Vec::new());
-                }
-
-                log::info!(
-                    "仓库 {} 包含 marketplace.json，但未发现有效插件，按 skills 仓库继续扫描",
-                    repo.name
-                );
-            }
-            Err(e) => {
-                log::warn!(
-                    "仓库 {} marketplace 扫描失败（将按 skills 仓库继续扫描）: {}",
-                    repo.name,
-                    e
-                );
-            }
-        }
-    }
 
     let skills = state.github
         .scan_cached_repository(&cache_path_for_scan, &repo.url, repo.scan_subdirs)
@@ -523,28 +474,6 @@ fn dir_size(path: &std::path::Path) -> Result<u64, std::io::Error> {
     }
 
     Ok(size)
-}
-
-fn find_repo_root(cache_path: &Path) -> Result<PathBuf, String> {
-    for entry in std::fs::read_dir(cache_path).map_err(|e| format!("无法读取解压目录: {}", e))? {
-        let entry = entry.map_err(|e| format!("无法读取目录条目: {}", e))?;
-        if entry
-            .file_type()
-            .map_err(|e| format!("无法读取目录类型: {}", e))?
-            .is_dir()
-        {
-            return Ok(entry.path());
-        }
-    }
-
-    Err("未找到仓库根目录".to_string())
-}
-
-fn is_marketplace_repo(repo_root: &Path) -> bool {
-    repo_root
-        .join(".claude-plugin")
-        .join("marketplace.json")
-        .is_file()
 }
 
 /// 缓存统计信息
