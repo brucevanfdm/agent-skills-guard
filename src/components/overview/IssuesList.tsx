@@ -84,6 +84,20 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
     },
   });
 
+  const uninstallPluginMutation = useMutation({
+    mutationFn: async (pluginId: string) => api.uninstallPlugin(pluginId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
+      queryClient.invalidateQueries({ queryKey: ["scanResults"] });
+      appToast.success(t("plugins.toast.uninstalled"), { duration: 3000 });
+    },
+    onError: (error: Error) => {
+      appToast.error(t("plugins.toast.uninstallFailed") + `: ${error.message}`, {
+        duration: 4000,
+      });
+    },
+  });
+
   if (issues.length === 0) return null;
 
   return (
@@ -156,16 +170,18 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
                   <FolderOpen className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t("overview.issues.openDirectory")}</span>
                 </button>
-                {issue.kind === "skill" && (
-                  <button
-                    onClick={() => uninstallMutation.mutate(issue.skill_id)}
-                    disabled={uninstallMutation.isPending}
-                    className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{t("overview.issues.uninstall")}</span>
-                  </button>
-                )}
+                <button
+                  onClick={() =>
+                    issue.kind === "skill"
+                      ? uninstallMutation.mutate(issue.skill_id)
+                      : uninstallPluginMutation.mutate(issue.skill_id)
+                  }
+                  disabled={uninstallMutation.isPending || uninstallPluginMutation.isPending}
+                  className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("overview.issues.uninstall")}</span>
+                </button>
               </div>
             </div>
 

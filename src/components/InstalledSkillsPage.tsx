@@ -16,7 +16,6 @@ import {
   Search,
   SearchX,
   Download,
-  RefreshCw,
   Plug,
   AlertTriangle,
   CheckCircle,
@@ -51,6 +50,12 @@ export function InstalledSkillsPage() {
   const { data: installedSkills, isLoading: isSkillsLoading } = useInstalledSkills();
   const { data: allPlugins = [], isLoading: isPluginsLoading } = usePlugins();
   const { data: claudeMarketplaces = [], isLoading: isMarketplacesLoading } = useClaudeMarketplaces();
+  const { data: featuredMarketplaces } = useQuery({
+    queryKey: ["featured-marketplaces"],
+    queryFn: api.getFeaturedMarketplaces,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
   const uninstallMutation = useUninstallSkill();
   const uninstallPathMutation = useUninstallSkillPath();
   const uninstallPluginMutation = useUninstallPlugin();
@@ -108,7 +113,6 @@ export function InstalledSkillsPage() {
     return new Map();
   });
   const [isCheckingPluginUpdates, setIsCheckingPluginUpdates] = useState(false);
-  const [updatingPluginId, setUpdatingPluginId] = useState<string | null>(null);
 
   const [availableMarketplaceUpdates, setAvailableMarketplaceUpdates] = useState<
     Map<string, string>
@@ -125,7 +129,25 @@ export function InstalledSkillsPage() {
     return new Map();
   });
   const [isCheckingMarketplaceUpdates, setIsCheckingMarketplaceUpdates] = useState(false);
-  const [updatingMarketplaceName, setUpdatingMarketplaceName] = useState<string | null>(null);
+
+  const getLocalizedText = (text?: { en: string; zh: string }) => {
+    if (!text) return "";
+    return i18n.language === "zh" ? text.zh : text.en;
+  };
+
+  const marketplaceDescriptions = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!featuredMarketplaces?.categories) return map;
+    featuredMarketplaces.categories.forEach((category) => {
+      category.marketplaces.forEach((marketplace) => {
+        const description = getLocalizedText(marketplace.description);
+        if (description) {
+          map.set(marketplace.marketplace_name, description);
+        }
+      });
+    });
+    return map;
+  }, [featuredMarketplaces, i18n.language]);
 
   useEffect(() => {
     try {
@@ -614,7 +636,7 @@ export function InstalledSkillsPage() {
               {activeTab === "plugins" && (
                 <button
                   onClick={checkPluginUpdates}
-                  disabled={isCheckingPluginUpdates || updatingPluginId !== null}
+                  disabled={isCheckingPluginUpdates}
                   className="apple-button-primary h-10 px-5 flex items-center gap-2"
                 >
                   {isCheckingPluginUpdates ? (
@@ -634,7 +656,7 @@ export function InstalledSkillsPage() {
               {activeTab === "marketplaces" && (
                 <button
                   onClick={checkMarketplaceUpdates}
-                  disabled={isCheckingMarketplaceUpdates || updatingMarketplaceName !== null}
+                  disabled={isCheckingMarketplaceUpdates}
                   className="apple-button-primary h-10 px-5 flex items-center gap-2"
                 >
                   {isCheckingMarketplaceUpdates ? (
@@ -747,7 +769,6 @@ export function InstalledSkillsPage() {
                   plugin={plugin}
                   hasUpdate={availablePluginUpdates.has(plugin.id)}
                   latestVersion={availablePluginUpdates.get(plugin.id)}
-                  isUpdating={updatingPluginId === plugin.id}
                   isUninstalling={uninstallingPluginId === plugin.id}
                   isAnyOperationPending={
                     uninstallMutation.isPending ||
@@ -755,36 +776,8 @@ export function InstalledSkillsPage() {
                     preparingUpdateSkillId !== null ||
                     confirmingUpdateSkillId !== null ||
                     uninstallingPluginId !== null ||
-                    updatingPluginId !== null ||
                     removingMarketplaceName !== null
                   }
-                  onUpdate={async () => {
-                    try {
-                      setUpdatingPluginId(plugin.id);
-                      const result = await api.updatePlugin(plugin.id);
-                      if (result.status === "updated") {
-                        appToast.success(t("plugins.updates.updated"));
-                      } else if (result.status === "already_latest") {
-                        appToast.success(t("plugins.updates.alreadyLatest"));
-                      } else {
-                        appToast.error(t("plugins.updates.updateFailed"));
-                      }
-                      setAvailablePluginUpdates((prev) => {
-                        const newMap = new Map(prev);
-                        newMap.delete(plugin.id);
-                        return newMap;
-                      });
-                      await queryClient.invalidateQueries({ queryKey: ["plugins"] });
-                    } catch (error: any) {
-                      appToast.error(
-                        t("plugins.updates.updateFailedWithError", {
-                          error: error.message || String(error),
-                        })
-                      );
-                    } finally {
-                      setUpdatingPluginId(null);
-                    }
-                  }}
                   onUninstall={async () => {
                     try {
                       setUninstallingPluginId(plugin.id);
@@ -812,45 +805,18 @@ export function InstalledSkillsPage() {
                   key={marketplace.name}
                   marketplaceName={marketplace.name}
                   marketplaceRepo={marketplace.repoUrl}
+                  description={marketplaceDescriptions.get(marketplace.name)}
                   installedCount={marketplace.installedCount}
                   totalCount={marketplace.totalCount}
                   hasUpdate={availableMarketplaceUpdates.has(marketplace.name)}
                   latestHead={availableMarketplaceUpdates.get(marketplace.name)}
-                  isUpdating={updatingMarketplaceName === marketplace.name}
                   isRemoving={removingMarketplaceName === marketplace.name}
                   isAnyOperationPending={
                     uninstallingPluginId !== null ||
                     uninstallMutation.isPending ||
                     uninstallPathMutation.isPending ||
-                    removingMarketplaceName !== null ||
-                    updatingMarketplaceName !== null
+                    removingMarketplaceName !== null
                   }
-                  onUpdate={async () => {
-                    try {
-                      setUpdatingMarketplaceName(marketplace.name);
-                      const result = await api.updateMarketplace(marketplace.name);
-                      if (result.success) {
-                        appToast.success(t("plugins.marketplaces.updates.updated"));
-                      } else {
-                        appToast.error(t("plugins.marketplaces.updates.updateFailed"));
-                      }
-                      setAvailableMarketplaceUpdates((prev) => {
-                        const newMap = new Map(prev);
-                        newMap.delete(marketplace.name);
-                        return newMap;
-                      });
-                      void queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
-                      void queryClient.invalidateQueries({ queryKey: ["plugins"] });
-                    } catch (error: any) {
-                      appToast.error(
-                        t("plugins.marketplaces.updates.updateFailedWithError", {
-                          error: error.message || String(error),
-                        })
-                      );
-                    } finally {
-                      setUpdatingMarketplaceName(null);
-                    }
-                  }}
                   onRemove={() => {
                     const installedPluginNames = marketplace.plugins
                       .filter((p) => p.installed)
@@ -1128,26 +1094,24 @@ function InstalledTabButton({
 function InstalledMarketplaceCard({
   marketplaceName,
   marketplaceRepo,
+  description,
   installedCount,
   totalCount,
   hasUpdate,
   latestHead,
-  isUpdating,
   isRemoving,
   isAnyOperationPending,
-  onUpdate,
   onRemove,
 }: {
   marketplaceName: string;
   marketplaceRepo: string;
+  description?: string;
   installedCount: number;
   totalCount: number;
   hasUpdate: boolean;
   latestHead?: string;
-  isUpdating: boolean;
   isRemoving: boolean;
   isAnyOperationPending: boolean;
-  onUpdate: () => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -1171,23 +1135,6 @@ function InstalledMarketplaceCard({
 
         <div className="flex gap-2 ml-4">
           <button
-            onClick={onUpdate}
-            disabled={isAnyOperationPending}
-            className="apple-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
-          >
-            {isUpdating ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                {t("plugins.marketplaces.updates.updating")}
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3.5 h-3.5" />
-                {t("plugins.marketplaces.updates.update")}
-              </>
-            )}
-          </button>
-          <button
             onClick={onRemove}
             disabled={isAnyOperationPending}
             className="apple-button-destructive h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
@@ -1207,7 +1154,20 @@ function InstalledMarketplaceCard({
         </div>
       </div>
 
-      <div className="text-sm text-muted-foreground mb-4">
+      {description && (
+        <p className="text-sm text-muted-foreground mb-4 leading-5 overflow-hidden [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical]">
+          {description}
+        </p>
+      )}
+
+      <div className="text-sm text-muted-foreground mt-auto">
+        <span className="text-blue-500 font-medium">
+          {t("installed.marketplaces.pluginsCount")}
+        </span>{" "}
+        {installedCount} / {totalCount}
+      </div>
+
+      <div className="text-sm text-muted-foreground mt-2">
         <span className="text-blue-500 font-medium">{t("installed.marketplaces.source")}</span>{" "}
         {marketplaceRepo ? (
           <a
@@ -1221,13 +1181,6 @@ function InstalledMarketplaceCard({
         ) : (
           <span>{t("skills.empty")}</span>
         )}
-      </div>
-
-      <div className="text-sm text-muted-foreground mt-auto">
-        <span className="text-blue-500 font-medium">
-          {t("installed.marketplaces.pluginsCount")}
-        </span>{" "}
-        {installedCount} / {totalCount}
       </div>
     </div>
   );
@@ -1247,6 +1200,21 @@ interface SkillCardProps {
   isApplyingUpdate: boolean;
   isAnyOperationPending: boolean;
   t: (key: string, options?: any) => string;
+}
+
+function CardCornerBadge({ kind, label }: { kind: "skill" | "plugin"; label: string }) {
+  const className = kind === "skill" ? "bg-blue-600" : "bg-purple-600";
+
+  return (
+    <div
+      style={{
+        clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%)",
+      }}
+      className={`pointer-events-none absolute left-5 top-0 z-10 select-none px-2 pt-1 pb-3 text-xs font-semibold leading-none text-white shadow-md ${className}`}
+    >
+      {label}
+    </div>
+  );
 }
 
 function SkillCard({
@@ -1283,7 +1251,8 @@ function SkillCard({
   }, [skill.description]);
 
   return (
-    <div className="apple-card p-6 group flex flex-col h-full">
+    <div className="apple-card p-6 pt-10 group flex flex-col h-full relative">
+      <CardCornerBadge kind="skill" label={t("skills.badge")} />
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2.5 mb-1 flex-wrap">
@@ -1440,10 +1409,8 @@ interface InstalledPluginCardProps {
   plugin: Plugin;
   hasUpdate: boolean;
   latestVersion?: string;
-  isUpdating: boolean;
   isUninstalling: boolean;
   isAnyOperationPending: boolean;
-  onUpdate: () => void;
   onUninstall: () => void;
 }
 
@@ -1451,24 +1418,21 @@ function InstalledPluginCard({
   plugin,
   hasUpdate,
   latestVersion,
-  isUpdating,
   isUninstalling,
   isAnyOperationPending,
-  onUpdate,
   onUninstall,
 }: InstalledPluginCardProps) {
   const { t } = useTranslation();
   const installedAt = plugin.installed_at ? new Date(plugin.installed_at) : null;
+  const installPath = plugin.claude_install_path?.trim();
 
   return (
-    <div className="apple-card p-6 group flex flex-col h-full">
+    <div className="apple-card p-6 pt-10 group flex flex-col h-full relative">
+      <CardCornerBadge kind="plugin" label={t("plugins.badge")} />
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2.5 mb-1 flex-wrap">
             <h3 className="font-semibold text-foreground">{plugin.name}</h3>
-            <span className="text-xs px-2.5 py-1 rounded-full font-medium text-purple-600 bg-purple-500/10">
-              {t("plugins.badge")}
-            </span>
             <span
               className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                 plugin.repository_owner === "local"
@@ -1492,23 +1456,6 @@ function InstalledPluginCard({
         </div>
 
         <div className="flex gap-2 ml-4">
-          <button
-            onClick={onUpdate}
-            disabled={isAnyOperationPending}
-            className="apple-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50"
-          >
-            {isUpdating ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                {t("plugins.updates.updating")}
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3.5 h-3.5" />
-                {t("plugins.updates.update")}
-              </>
-            )}
-          </button>
           <button
             onClick={onUninstall}
             disabled={isAnyOperationPending}
@@ -1550,6 +1497,41 @@ function InstalledPluginCard({
           <div>
             <span className="text-blue-500 font-medium">{t("plugins.version")}</span>{" "}
             {plugin.version}
+          </div>
+        </div>
+      )}
+
+      {installPath && (
+        <div className="pt-4 border-t border-border/60">
+          <div className="text-xs font-medium text-blue-500 mb-3">
+            {t("skills.installedPaths")} (1)
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl">
+              <button
+                onClick={async () => {
+                  try {
+                    try {
+                      await invoke("open_skill_directory", { localPath: installPath });
+                    } catch {
+                      await openPath(installPath);
+                    }
+                    appToast.success(t("skills.folder.opened"), { duration: 5000 });
+                  } catch (error: any) {
+                    appToast.error(
+                      t("skills.folder.openFailed", { error: error?.message || String(error) }),
+                      { duration: 5000 }
+                    );
+                  }
+                }}
+                className="text-blue-500 hover:text-blue-600 transition-colors"
+              >
+                <FolderOpen className="w-4 h-4" />
+              </button>
+              <span className="text-sm text-muted-foreground truncate" title={installPath}>
+                {installPath}
+              </span>
+            </div>
           </div>
         </div>
       )}

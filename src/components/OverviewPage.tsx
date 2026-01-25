@@ -308,7 +308,11 @@ export function OverviewPage() {
       } else {
         const path = item.local_path;
         if (path) {
-          await openPath(path);
+          try {
+            await invoke("open_skill_directory", { localPath: path });
+          } catch {
+            await openPath(path);
+          }
         } else {
           appToast.error("无法找到插件路径", { duration: 4000 });
         }

@@ -39,7 +39,7 @@
     "marketplaces": {
       "search": "搜索市场...",
       "empty": "暂无已安装市场",
-      "source": "来源仓库：",
+      "source": "仓库：",
       "pluginsCount": "插件数量（已安装/总数）：",
       "dependentPlugins": "将同时卸载以下插件：",
       "andMore": "... 还有 {{count}} 个"
@@ -294,7 +294,7 @@
     "logTitle": "安装日志：{{name}}",
     "noLog": "暂无日志",
     "close": "关闭",
-    "removeMarketplace": "移除市场",
+    "removeMarketplace": "移除",
     "removingMarketplace": "移除中",
     "confirmRemoveTitle": "确认移除市场",
     "confirmRemoveMessage": "确定要移除市场 \"{{name}}\" 吗？已安装的插件将被卸载（共 {{count}} 个）。",
