@@ -16,6 +16,41 @@ categories:
       en: "Official and verified marketplaces"
       zh: "官方认证的 Marketplace"
     marketplaces:
+      - marketplace_name: "anthropic-agent-skills"
+        marketplace_repo: "anthropics/skills"
+        repository_url: "https://github.com/anthropics/skills"
+        marketplace_add_command: "/plugin marketplace add anthropics/skills"
+        description:
+          en: "Official Anthropic skills marketplace for Claude Code"
+          zh: "Anthropic 官方 Claude Code 技能市场"
+        owner:
+          name: "Keith Lazuka"
+          email: "klazuka@anthropic.com"
+        tags: ["official", "verified", "anthropic", "claude-code", "skills"]
+        featured: true
+        plugins:
+          - name: "document-skills"
+            install_command: "/plugin install document-skills@anthropic-agent-skills"
+            description:
+              en: "Document processing suite covering Excel, Word, PowerPoint, and PDF capabilities"
+              zh: "文档处理技能合集，涵盖 Excel、Word、PowerPoint 与 PDF 能力"
+            author:
+              name: "Keith Lazuka"
+              email: "klazuka@anthropic.com"
+            source: "./"
+            tags: ["documents", "office", "pdf", "spreadsheets", "slides"]
+            featured: true
+          - name: "example-skills"
+            install_command: "/plugin install example-skills@anthropic-agent-skills"
+            description:
+              en: "Example skills spanning creation workflows, MCP building, design, testing, and more"
+              zh: "示例技能合集，覆盖技能创建、MCP 构建、设计、测试等场景"
+            author:
+              name: "Keith Lazuka"
+              email: "klazuka@anthropic.com"
+            source: "./"
+            tags: ["examples", "creative", "design", "testing", "mcp"]
+            featured: true
       - marketplace_name: "superpowers-marketplace"
         marketplace_repo: "obra/superpowers-marketplace"
         repository_url: "https://github.com/obra/superpowers-marketplace"
@@ -49,4 +84,143 @@ categories:
     description:
       en: "High-quality community-contributed marketplaces"
       zh: "社区贡献的高质量 Marketplace"
-    marketplaces: []
+    marketplaces:
+      - marketplace_name: "baoyu-skills"
+        marketplace_repo: "JimLiu/baoyu-skills"
+        repository_url: "https://github.com/JimLiu/baoyu-skills"
+        marketplace_add_command: "/plugin marketplace add JimLiu/baoyu-skills"
+        description:
+          en: "Skills shared by Baoyu for improving daily work efficiency"
+          zh: "宝玉分享的提升日常工作效率的技能合集"
+        owner:
+          name: "Jim Liu (宝玉)"
+          email: "junminliu@gmail.com"
+        tags: ["community", "claude-code", "productivity", "collection"]
+        featured: true
+        plugins:
+          - name: "content-skills"
+            install_command: "/plugin install content-skills@baoyu-skills"
+            description:
+              en: "Content generation and publishing skills"
+              zh: "内容生成与发布相关技能"
+            author:
+              name: "Jim Liu (宝玉)"
+              email: "junminliu@gmail.com"
+            source: "./"
+            tags: ["content", "publishing", "social", "media"]
+            featured: true
+          - name: "ai-generation-skills"
+            install_command: "/plugin install ai-generation-skills@baoyu-skills"
+            description:
+              en: "AI-powered generation backends"
+              zh: "AI 生成能力相关后端技能"
+            author:
+              name: "Jim Liu (宝玉)"
+              email: "junminliu@gmail.com"
+            source: "./"
+            tags: ["ai", "generation", "backend"]
+            featured: true
+          - name: "utility-skills"
+            install_command: "/plugin install utility-skills@baoyu-skills"
+            description:
+              en: "Utility tools for content processing"
+              zh: "内容处理相关的实用工具技能"
+            author:
+              name: "Jim Liu (宝玉)"
+              email: "junminliu@gmail.com"
+            source: "./"
+            tags: ["utility", "content", "processing"]
+            featured: true
+      - marketplace_name: "ui-ux-pro-max-skill"
+        marketplace_repo: "nextlevelbuilder/ui-ux-pro-max-skill"
+        repository_url: "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill"
+        marketplace_add_command: "/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill"
+        description:
+          en: "UI/UX design intelligence skill with extensive style, palette, typography, and chart references"
+          zh: "提供丰富样式、配色、字体与图表参考的 UI/UX 设计智能技能"
+        owner:
+          name: "nextlevelbuilder"
+        tags: ["community", "ui-ux", "design", "frontend"]
+        featured: true
+        plugins:
+          - name: "ui-ux-pro-max"
+            install_command: "/plugin install ui-ux-pro-max@ui-ux-pro-max-skill"
+            description:
+              en: "Professional UI/UX design intelligence across multiple stacks and frameworks"
+              zh: "覆盖多技术栈与框架的专业 UI/UX 设计智能"
+            version: "2.0.1"
+            author:
+              name: "nextlevelbuilder"
+            source: "./"
+            tags: ["ui", "ux", "design", "styles", "typography", "color-palette", "accessibility", "charts"]
+            featured: true
+      - marketplace_name: "n8n-mcp-skills"
+        marketplace_repo: "czlonkowski/n8n-skills"
+        repository_url: "https://github.com/czlonkowski/n8n-skills"
+        marketplace_add_command: "/plugin marketplace add czlonkowski/n8n-skills"
+        description:
+          en: "Expert skills for building n8n workflows"
+          zh: "用于构建高质量 n8n 工作流的专家级技能"
+        owner:
+          name: "Romuald Członkowski"
+        tags: ["community", "n8n", "workflow-automation", "mcp", "claude-code"]
+        featured: true
+        plugins:
+          - name: "n8n-mcp-skills"
+            install_command: "/plugin install n8n-mcp-skills@n8n-mcp-skills"
+            description:
+              en: "Complete bundle of expert skills for n8n workflows with MCP tooling"
+              zh: "面向 n8n 工作流与 MCP 工具的专家技能合集"
+            version: "1.0.0"
+            author:
+              name: "Romuald Członkowski"
+            source: "./"
+            tags: ["n8n", "workflow", "mcp", "automation", "validation", "expressions", "javascript", "python"]
+            featured: true
+      - marketplace_name: "obsidian-skills"
+        marketplace_repo: "kepano/obsidian-skills"
+        repository_url: "https://github.com/kepano/obsidian-skills"
+        marketplace_add_command: "/plugin marketplace add kepano/obsidian-skills"
+        description:
+          en: "Claude skills for working with Obsidian"
+          zh: "面向 Obsidian 使用场景的 Claude 技能"
+        owner:
+          name: "Steph Ango"
+        tags: ["community", "obsidian", "markdown", "productivity", "note-taking"]
+        featured: true
+        plugins:
+          - name: "obsidian"
+            install_command: "/plugin install obsidian@obsidian-skills"
+            description:
+              en: "Claude skills for Obsidian"
+              zh: "Obsidian 相关 Claude 技能"
+            version: "1.0.0"
+            author:
+              name: "Steph Ango"
+            source: "./"
+            tags: ["obsidian", "markdown", "notes", "productivity"]
+            featured: true
+      - marketplace_name: "axton-obsidian-visual-skills"
+        marketplace_repo: "axtonliu/axton-obsidian-visual-skills"
+        repository_url: "https://github.com/axtonliu/axton-obsidian-visual-skills"
+        marketplace_add_command: "/plugin marketplace add axtonliu/axton-obsidian-visual-skills"
+        description:
+          en: "Visual skills pack for Obsidian: generate Canvas, Excalidraw, and Mermaid from text"
+          zh: "Obsidian 可视化技能包：从文本生成 Canvas、Excalidraw 与 Mermaid"
+        owner:
+          name: "Axton Liu"
+          email: "hey@axtonliu.com"
+        tags: ["community", "obsidian", "visualization", "diagram", "excalidraw", "mermaid", "canvas"]
+        featured: true
+        plugins:
+          - name: "obsidian-visual-skills"
+            install_command: "/plugin install obsidian-visual-skills@axton-obsidian-visual-skills"
+            description:
+              en: "Generate Canvas, Excalidraw, and Mermaid diagrams in Obsidian"
+              zh: "在 Obsidian 中生成 Canvas、Excalidraw 与 Mermaid 图表"
+            author:
+              name: "Axton Liu"
+              email: "hey@axtonliu.com"
+            source: "./"
+            tags: ["obsidian", "visualization", "diagram", "excalidraw", "mermaid", "canvas"]
+            featured: true

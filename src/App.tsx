@@ -320,6 +320,8 @@ function App() {
       <AppContent />
       <Toaster
         position="top-right"
+        expand
+        gap={12}
         offset={{ top: 64, right: 16 }}
         mobileOffset={{ top: 12, right: 12 }}
         toastOptions={{
