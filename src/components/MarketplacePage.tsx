@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSkills, useInstallSkill } from "../hooks/useSkills";
 import { usePlugins } from "../hooks/usePlugins";
@@ -81,11 +81,21 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     return [...skillItems, ...pluginItems];
   }, [allSkills, plugins]);
 
+  const repositoryItems = useMemo(() => {
+    if (activeTypeTab === "skills") {
+      return marketplaceItems.filter((entry) => entry.kind === "skill");
+    }
+    if (activeTypeTab === "plugins") {
+      return marketplaceItems.filter((entry) => entry.kind === "plugin");
+    }
+    return marketplaceItems;
+  }, [activeTypeTab, marketplaceItems]);
+
   const repositories = useMemo(() => {
-    if (!marketplaceItems.length) return [];
+    if (!repositoryItems.length) return [];
     const ownerMap = new Map<string, number>();
 
-    marketplaceItems.forEach((entry) => {
+    repositoryItems.forEach((entry) => {
       const owner = entry.item.repository_owner || parseRepositoryOwner(entry.item.repository_url);
       ownerMap.set(owner, (ownerMap.get(owner) || 0) + 1);
     });
@@ -101,19 +111,30 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
     return [
       {
         owner: "all",
-        count: marketplaceItems.length,
+        count: repositoryItems.length,
         displayName: t("skills.marketplace.allSources"),
       },
       ...repos,
     ];
-  }, [marketplaceItems, i18n.language, t]);
+  }, [repositoryItems, i18n.language, t]);
 
   const repositoryOptions: CyberSelectOption[] = useMemo(() => {
+    if (!repositoryItems.length) {
+      return [{ value: "all", label: `${t("skills.marketplace.allSources")} (0)` }];
+    }
     return repositories.map((repo) => ({
       value: repo.owner,
       label: `${repo.displayName} (${repo.count})`,
     }));
-  }, [repositories]);
+  }, [repositories, repositoryItems.length, t]);
+
+  useEffect(() => {
+    if (selectedRepository === "all") return;
+    const hasOption = repositoryOptions.some((option) => option.value === selectedRepository);
+    if (!hasOption) {
+      setSelectedRepository("all");
+    }
+  }, [repositoryOptions, selectedRepository]);
 
   const baseFilteredItems = useMemo(() => {
     if (!marketplaceItems.length) return [];
@@ -226,7 +247,13 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder={t("market.search")}
+                  placeholder={
+                    activeTypeTab === "plugins"
+                      ? t("plugins.search")
+                      : activeTypeTab === "skills"
+                        ? t("skills.marketplace.search")
+                        : t("market.search")
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="apple-input w-full h-10 pl-10 pr-4"

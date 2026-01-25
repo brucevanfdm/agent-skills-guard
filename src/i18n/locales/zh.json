@@ -320,7 +320,7 @@
       "title": "已添加仓库：{{name}}",
       "foundTitle": "发现以下内容：",
       "foundSummary": "技能 {{skills}}",
-      "goToMarket": "前往市场查看全部",
+      "goToMarket": "查看全部",
       "close": "关闭",
       "loadFailed": "加载预览失败: {{error}}"
     },
@@ -396,7 +396,7 @@
       "loading": "加载中...",
       "empty": "暂无精选插件市场",
       "pluginsCount": "插件数量：{{count}}",
-      "viewMarketplace": "前往市场"
+      "viewMarketplace": "前往"
     }
   },
   "language": {
