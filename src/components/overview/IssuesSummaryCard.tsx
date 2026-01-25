@@ -39,7 +39,7 @@ export function IssuesSummaryCard({
   const { t } = useTranslation();
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-3 grid-rows-1 gap-4 h-full">
       {Object.entries(levelConfig).map(([level, config]) => {
         const Icon = config.icon;
         const count = issuesByLevel[level] || 0;
@@ -49,7 +49,7 @@ export function IssuesSummaryCard({
           <button
             key={level}
             onClick={() => onFilterChange(isSelected ? null : level)}
-            className={`apple-card p-5 text-left transition-all duration-200 ${
+            className={`apple-card p-5 text-left transition-all duration-200 h-full ${
               isSelected
                 ? `${config.selectedBg} ring-2 ${config.selectedRing}`
                 : "hover:scale-[1.02]"

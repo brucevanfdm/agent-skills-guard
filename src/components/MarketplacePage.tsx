@@ -493,7 +493,7 @@ function TypeBookmark({ kind, label }: { kind: "skill" | "plugin"; label: string
       style={{
         clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%)",
       }}
-      className={`pointer-events-none absolute left-5 top-0 z-10 select-none px-2 pt-1 pb-3 text-xs font-semibold leading-none text-white shadow-md ${className}`}
+      className={`pointer-events-none absolute left-5 top-0 z-10 select-none px-1 pt-1 pb-3 text-xs font-semibold leading-none text-white shadow-md ${className}`}
     >
       {label}
     </div>
