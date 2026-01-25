@@ -1545,19 +1545,12 @@ function InstalledPluginCard({
         </a>
       </div>
 
-      {(plugin.installed_version || plugin.version) && (
+      {plugin.version && (
         <div className="text-xs text-muted-foreground mb-3 space-y-1">
-          {plugin.installed_version && (
-            <div>
-              <span className="text-blue-500 font-medium">{t("plugins.installedVersion")}</span>{" "}
-              {plugin.installed_version}
-            </div>
-          )}
-          {plugin.version && (
-            <div>
-              <span className="text-blue-500 font-medium">{t("plugins.version")}</span> {plugin.version}
-            </div>
-          )}
+          <div>
+            <span className="text-blue-500 font-medium">{t("plugins.version")}</span>{" "}
+            {plugin.version}
+          </div>
         </div>
       )}
 

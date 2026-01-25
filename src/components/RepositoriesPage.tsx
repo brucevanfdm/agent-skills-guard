@@ -63,7 +63,7 @@ function formatDate(dateStr: string, t: (key: string, options?: any) => string):
 }
 
 interface RepositoriesPageProps {
-  onNavigateToMarket?: () => void;
+  onNavigateToMarket?: (options?: { marketplaceName?: string }) => void;
 }
 
 export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) {
@@ -434,7 +434,11 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
                           </div>
 
                           <button
-                            onClick={() => onNavigateToMarket?.()}
+                            onClick={() =>
+                              onNavigateToMarket?.({
+                                marketplaceName: marketplace.marketplace_name,
+                              })
+                            }
                             disabled={!onNavigateToMarket}
                             className="self-end sm:self-auto sm:ml-4 text-xs flex items-center gap-1.5 disabled:opacity-50 macos-button-primary"
                           >

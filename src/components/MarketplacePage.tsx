@@ -34,6 +34,10 @@ import {
 
 interface MarketplacePageProps {
   onNavigateToRepositories?: () => void;
+  presetFilter?: {
+    marketplaceName?: string;
+  };
+  onPresetApplied?: () => void;
 }
 
 type MarketplaceItem = { kind: "skill"; item: Skill } | { kind: "plugin"; item: Plugin };
@@ -46,7 +50,11 @@ function stripAnsi(input: string): string {
   return input.replace(OSC_ESCAPE_REGEX, "").replace(ANSI_ESCAPE_REGEX, "");
 }
 
-export function MarketplacePage({ onNavigateToRepositories }: MarketplacePageProps = {}) {
+export function MarketplacePage({
+  onNavigateToRepositories,
+  presetFilter,
+  onPresetApplied,
+}: MarketplacePageProps = {}) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { data: allSkills = [], isLoading: isSkillsLoading } = useSkills();
@@ -69,6 +77,17 @@ export function MarketplacePage({ onNavigateToRepositories }: MarketplacePagePro
   const listContainerRef = useRef<HTMLDivElement | null>(null);
 
   const isLoading = isSkillsLoading || isPluginsLoading;
+
+  useEffect(() => {
+    if (!presetFilter) return;
+    const marketplaceName = presetFilter.marketplaceName?.trim();
+    if (marketplaceName) {
+      setActiveTypeTab("plugins");
+      setSearchQuery(marketplaceName);
+      setSelectedRepository("all");
+    }
+    onPresetApplied?.();
+  }, [presetFilter, onPresetApplied]);
 
   const marketplaceItems = useMemo<MarketplaceItem[]>(() => {
     const skillItems = allSkills
@@ -665,7 +684,6 @@ function PluginCard({
   const { t } = useTranslation();
   const isUnsupported = plugin.install_status === "unsupported";
   const isBlocked = plugin.install_status === "blocked";
-  const statusLabel = getPluginStatusLabel(plugin.install_status, t);
   const canViewLog =
     plugin.install_log != null ||
     ["installed", "already_installed", "failed", "uninstalled", "uninstall_failed"].includes(
@@ -688,11 +706,6 @@ function PluginCard({
             >
               {formatRepositoryTag(plugin)}
             </span>
-            {plugin.installed && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-600">
-                {t("plugins.installed")}
-              </span>
-            )}
             {isUnsupported && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-700">
                 {t("plugins.unsupported")}
@@ -753,28 +766,16 @@ function PluginCard({
             {plugin.repository_url}
           </a>
         </div>
-        {plugin.version && (
-          <div>
-            <span className="text-blue-500 font-medium">{t("plugins.version")}</span>{" "}
-            {plugin.version}
-          </div>
-        )}
-        {statusLabel && (
-          <div>
-            <span className="text-blue-500 font-medium">{t("plugins.status.label")}</span>{" "}
-            {statusLabel}
-          </div>
-        )}
       </div>
 
-      {canViewLog && (
+      {/* {canViewLog && (
         <button
           onClick={onViewLog}
           className="mt-3 text-xs text-blue-500 hover:text-blue-600 transition-colors self-start"
         >
           {t("plugins.viewLog")}
         </button>
-      )}
+      )} */}
     </div>
   );
 }

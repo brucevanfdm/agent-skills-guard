@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { InstalledSkillsPage } from "./components/InstalledSkillsPage";
 import { MarketplacePage } from "./components/MarketplacePage";
@@ -28,6 +28,7 @@ import {
 const reactQueryClient = new QueryClient();
 
 type TabType = "overview" | "marketplace" | "installed" | "repositories" | "settings";
+type MarketplacePreset = { marketplaceName?: string } | null;
 
 const ONBOARDING_IMPORT_FEATURED_KEY = "asguard.onboarding.importFeatured.v1";
 
@@ -35,9 +36,14 @@ function AppContent() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<TabType>("overview");
+  const [marketplacePreset, setMarketplacePreset] = useState<MarketplacePreset>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [isImportingFeatured, setIsImportingFeatured] = useState(false);
+
+  const clearMarketplacePreset = useCallback(() => {
+    setMarketplacePreset(null);
+  }, []);
 
   useEffect(() => {
     getPlatform().then(setPlatform);
@@ -287,14 +293,27 @@ function AppContent() {
           )}
           {currentTab === "marketplace" && (
             <div className="h-full overflow-hidden">
-              <MarketplacePage onNavigateToRepositories={() => setCurrentTab("repositories")} />
+              <MarketplacePage
+                onNavigateToRepositories={() => setCurrentTab("repositories")}
+                presetFilter={marketplacePreset ?? undefined}
+                onPresetApplied={clearMarketplacePreset}
+              />
             </div>
           )}
           {currentTab === "repositories" && (
             <div className="h-full overflow-y-auto">
               <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
                 <div className="max-w-6xl mx-auto">
-                  <RepositoriesPage onNavigateToMarket={() => setCurrentTab("marketplace")} />
+                  <RepositoriesPage
+                    onNavigateToMarket={(options) => {
+                      setMarketplacePreset(
+                        options?.marketplaceName
+                          ? { marketplaceName: options.marketplaceName }
+                          : null
+                      );
+                      setCurrentTab("marketplace");
+                    }}
+                  />
                 </div>
               </div>
             </div>
