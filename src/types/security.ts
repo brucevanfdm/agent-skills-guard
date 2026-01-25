@@ -16,6 +16,8 @@ export interface SecurityReport {
   blocked: boolean;
   hard_trigger_issues: string[];
   scanned_files: string[]; // 已扫描的文件列表
+  partial_scan: boolean; // 是否存在未完整扫描
+  skipped_files: string[]; // 跳过扫描的文件列表
 }
 
 export interface SkillScanResult {

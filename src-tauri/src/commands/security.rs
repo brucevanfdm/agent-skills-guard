@@ -1,7 +1,7 @@
 use crate::commands::AppState;
 use crate::models::security::{SecurityReport, SkillScanResult, SecurityLevel};
 use crate::models::Skill;
-use crate::security::SecurityScanner;
+use crate::security::{ScanOptions, SecurityScanner};
 use crate::i18n::validate_locale;
 use anyhow::Result;
 use rust_i18n::t;
@@ -34,10 +34,11 @@ pub async fn scan_all_installed_skills(
                 continue;
             }
 
-            match scanner.scan_directory(
+            match scanner.scan_directory_with_options(
                 path.to_str().unwrap_or(""),
                 &skill.id,
-                &locale
+                &locale,
+                ScanOptions { skip_readme: true },
             ) {
                 Ok(report) => {
                     // 更新 skill 的安全信息
@@ -107,7 +108,12 @@ pub async fn scan_installed_skill(
 
     let scanner = SecurityScanner::new();
     let report = scanner
-        .scan_directory(path.to_str().unwrap_or(""), &skill.id, &locale)
+        .scan_directory_with_options(
+            path.to_str().unwrap_or(""),
+            &skill.id,
+            &locale,
+            ScanOptions { skip_readme: true },
+        )
         .map_err(|e| e.to_string())?;
 
     skill.security_score = Some(report.score);
@@ -228,6 +234,8 @@ pub async fn get_scan_results(
                 blocked: false,
                 hard_trigger_issues: vec![],
                 scanned_files: vec![], // 缓存结果中没有扫描文件列表
+                partial_scan: false,
+                skipped_files: vec![],
             };
 
             SkillScanResult {

@@ -17,6 +17,27 @@ interface SecurityDetailDialogProps {
   onClose: () => void;
 }
 
+const severityOrder: Record<string, number> = {
+  Critical: 0,
+  Error: 1,
+  Warning: 2,
+  Info: 3,
+};
+
+function sortIssuesBySeverity(issues: SecurityIssue[]): SecurityIssue[] {
+  return [...issues].sort((a, b) => {
+    const orderA = severityOrder[a.severity] ?? 4;
+    const orderB = severityOrder[b.severity] ?? 4;
+    if (orderA !== orderB) return orderA - orderB;
+    const fileA = a.file_path ?? "";
+    const fileB = b.file_path ?? "";
+    if (fileA !== fileB) return fileA.localeCompare(fileB);
+    const lineA = a.line_number ?? 0;
+    const lineB = b.line_number ?? 0;
+    return lineA - lineB;
+  });
+}
+
 export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDialogProps) {
   const { t } = useTranslation();
 
@@ -31,17 +52,21 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
     }
 
     const { report } = result;
+    const sortedIssues = sortIssuesBySeverity(report.issues);
     return {
-      criticalIssues: report.issues.filter((i) => i.severity === "Critical"),
-      highIssues: report.issues.filter((i) => i.severity === "Error"),
-      mediumIssues: report.issues.filter((i) => i.severity === "Warning"),
-      lowIssues: report.issues.filter((i) => i.severity === "Info"),
+      criticalIssues: sortedIssues.filter((i) => i.severity === "Critical"),
+      highIssues: sortedIssues.filter((i) => i.severity === "Error"),
+      mediumIssues: sortedIssues.filter((i) => i.severity === "Warning"),
+      lowIssues: sortedIssues.filter((i) => i.severity === "Info"),
     };
   }, [result]);
 
   if (!result) return null;
 
   const { report } = result;
+  const skippedCount = report.skipped_files?.length ?? 0;
+  const skippedPreview = skippedCount > 0 ? report.skipped_files.slice(0, 3).join(", ") : "";
+  const showPartial = report.partial_scan || skippedCount > 0;
 
   return (
     <AlertDialog open={open} onOpenChange={onClose}>
@@ -96,6 +121,22 @@ export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDi
             </span>
           </div>
         </div>
+
+        {showPartial && (
+          <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg text-sm">
+            <div className="font-medium">{t("security.detail.partialScan")}</div>
+            {skippedCount > 0 && (
+              <div className="text-muted-foreground mt-1">
+                {t("security.detail.skippedFiles", { count: skippedCount })}
+                {skippedPreview && (
+                  <div className="mt-1">
+                    {t("security.detail.skippedExamples", { files: skippedPreview })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 问题列表 */}
         <div className="space-y-4">

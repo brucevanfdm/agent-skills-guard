@@ -443,6 +443,9 @@
     "detail": {
       "scanTime": "扫描时间",
       "securityScore": "安全评分",
+      "partialScan": "扫描未完整",
+      "skippedFiles": "跳过 {{count}} 个文件",
+      "skippedExamples": "示例：{{files}}",
       "close": "关闭",
       "recommendations": "建议",
       "lineNumber": "行号",

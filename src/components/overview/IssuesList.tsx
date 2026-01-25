@@ -44,8 +44,9 @@ const levelConfig = {
 };
 
 const mapSeverityTo3Levels = (severity: string): keyof typeof levelConfig => {
-  if (severity === "Critical" || severity === "High") return "Critical";
-  if (severity === "Medium" || severity === "Low") return "Medium";
+  if (severity === "Critical" || severity === "High" || severity === "Error") return "Critical";
+  if (severity === "Medium" || severity === "Low" || severity === "Warning") return "Medium";
+  if (severity === "Info") return "Safe";
   return "Safe";
 };
 
@@ -111,11 +112,17 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
         );
         const topIssues = uniqueIssues
           .sort((a, b) => {
-            const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3, Safe: 4 };
-            return (
-              (severityOrder[a.severity as keyof typeof severityOrder] || 999) -
-              (severityOrder[b.severity as keyof typeof severityOrder] || 999)
-            );
+            const severityOrder: Record<string, number> = {
+              Critical: 0,
+              Error: 1,
+              Warning: 2,
+              Info: 3,
+              High: 1,
+              Medium: 2,
+              Low: 3,
+              Safe: 4,
+            };
+            return (severityOrder[a.severity] ?? 999) - (severityOrder[b.severity] ?? 999);
           })
           .slice(0, 3);
 

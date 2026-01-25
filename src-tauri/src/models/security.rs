@@ -11,6 +11,8 @@ pub struct SecurityReport {
     pub blocked: bool,  // 是否被硬触发规则阻止安装
     pub hard_trigger_issues: Vec<String>,  // 触发的硬阻止规则列表
     pub scanned_files: Vec<String>,  // 已扫描的文件列表
+    pub partial_scan: bool,  // 是否存在未完整扫描
+    pub skipped_files: Vec<String>,  // 跳过扫描的文件列表
 }
 
 /// 安全等级

@@ -445,6 +445,8 @@ function buildReportFromPlugin(plugin: Plugin): SecurityReport {
     blocked: false,
     hard_trigger_issues: [],
     scanned_files: [],
+    partial_scan: false,
+    skipped_files: [],
   };
 }
 

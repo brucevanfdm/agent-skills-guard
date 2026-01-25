@@ -443,6 +443,9 @@
     "detail": {
       "scanTime": "Scan Time",
       "securityScore": "Security Score",
+      "partialScan": "Partial scan",
+      "skippedFiles": "Skipped {{count}} files",
+      "skippedExamples": "Examples: {{files}}",
       "close": "Close",
       "recommendations": "Recommendations",
       "lineNumber": "Line",

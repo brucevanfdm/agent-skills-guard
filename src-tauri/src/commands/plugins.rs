@@ -10,7 +10,7 @@ use crate::services::plugin_manager::{
     SkillPluginUpgradeCandidate,
 };
 use crate::commands::featured_marketplaces;
-use crate::security::SecurityScanner;
+use crate::security::{ScanOptions, SecurityScanner};
 use crate::i18n::validate_locale;
 use chrono::Utc;
 use std::path::PathBuf;
@@ -227,7 +227,12 @@ pub async fn scan_all_installed_plugins(
             continue;
         }
 
-        match scanner.scan_directory(path.to_str().unwrap_or(""), &plugin.id, &locale) {
+        match scanner.scan_directory_with_options(
+            path.to_str().unwrap_or(""),
+            &plugin.id,
+            &locale,
+            ScanOptions { skip_readme: true },
+        ) {
             Ok(report) => {
                 plugin.security_score = Some(report.score);
                 plugin.security_level = Some(report.level.as_str().to_string());
@@ -303,7 +308,12 @@ pub async fn scan_installed_plugin(
 
     let scanner = SecurityScanner::new();
     let report = scanner
-        .scan_directory(path.to_str().unwrap_or(""), &plugin.id, &locale)
+        .scan_directory_with_options(
+            path.to_str().unwrap_or(""),
+            &plugin.id,
+            &locale,
+            ScanOptions { skip_readme: true },
+        )
         .map_err(|e| e.to_string())?;
 
     plugin.security_score = Some(report.score);

@@ -9,7 +9,7 @@ use crate::models::{
     Skill,
 };
 use crate::i18n::validate_locale;
-use crate::security::SecurityScanner;
+use crate::security::{ScanOptions, SecurityScanner};
 use crate::services::claude_cli::{ClaudeCli, ClaudeCommand};
 use crate::services::{Database, GitHubService};
 use anyhow::{Context, Result};
@@ -961,10 +961,11 @@ impl PluginManager {
 
         let mut reports = Vec::new();
         for resolved in &resolved_plugins {
-            let report = self.scanner.scan_directory(
+            let report = self.scanner.scan_directory_with_options(
                 resolved.source_path.to_str().context("插件目录路径无效")?,
                 &resolved.plugin.id,
                 locale,
+                ScanOptions { skip_readme: true },
             )?;
             reports.push((resolved.plugin.clone(), report));
         }
@@ -1911,9 +1912,11 @@ fn merge_reports(reports: &[(Plugin, SecurityReport)], marketplace_name: &str) -
     let mut issues = Vec::new();
     let mut hard_triggers = Vec::new();
     let mut scanned_files = Vec::new();
+    let mut skipped_files = Vec::new();
     let mut recommendations = HashSet::new();
     let mut score = 100;
     let mut blocked = false;
+    let mut partial_scan = false;
 
     for (plugin, report) in reports {
         if report.score < score {
@@ -1922,6 +1925,9 @@ fn merge_reports(reports: &[(Plugin, SecurityReport)], marketplace_name: &str) -
 
         if report.blocked {
             blocked = true;
+        }
+        if report.partial_scan {
+            partial_scan = true;
         }
 
         for issue in &report.issues {
@@ -1934,6 +1940,9 @@ fn merge_reports(reports: &[(Plugin, SecurityReport)], marketplace_name: &str) -
 
         for file in &report.scanned_files {
             scanned_files.push(format!("{}/{}", plugin.name, file));
+        }
+        for file in &report.skipped_files {
+            skipped_files.push(format!("{}/{}", plugin.name, file));
         }
 
         for item in &report.hard_trigger_issues {
@@ -1954,6 +1963,8 @@ fn merge_reports(reports: &[(Plugin, SecurityReport)], marketplace_name: &str) -
         blocked,
         hard_trigger_issues: hard_triggers,
         scanned_files,
+        partial_scan: partial_scan || !skipped_files.is_empty(),
+        skipped_files,
     }
 }
 
