@@ -495,7 +495,7 @@
       "localSkillsFailed": "扫描本地技能失败：{{error}}",
       "completed": "安全扫描完成，已扫描 {{count}} 个技能",
       "failed": "安全扫描失败：{{error}}",
-      "allCompleted": "扫描完成：发现 {{localCount}} 个技能，插件 {{pluginCount}} 个，市场 {{marketplaceCount}} 个，安全扫描 {{scannedCount}} 个技能，插件安全扫描 {{scannedPluginsCount}} 个"
+      "allCompleted": "扫描完成：发现 {{localCount}} 个技能，插件 {{pluginCount}} 个，市场 {{marketplaceCount}} 个，安全扫描 {{scannedCount}} 个技能， {{scannedPluginsCount}} 个插件"
     },
     "riskLevels": {
       "critical": "严重",
