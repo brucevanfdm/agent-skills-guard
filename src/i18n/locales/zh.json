@@ -29,10 +29,12 @@
   },
   "installed": {
     "tabs": {
+      "all": "全部 ({{count}})",
       "skills": "技能 ({{count}})",
       "plugins": "插件 ({{count}})",
       "marketplaces": "市场 ({{count}})"
     },
+    "search": "搜索已安装的技能/插件/市场...",
     "plugins": {
       "empty": "暂无已安装插件"
     },
@@ -45,6 +47,7 @@
       "andMore": "... 还有 {{count}} 个"
     },
     "empty": {
+      "all": "暂无已安装内容",
       "noResults": "没有找到包含\"{{query}}\"的内容",
       "clearFilters": "清除筛选"
     }

@@ -29,10 +29,12 @@
   },
   "installed": {
     "tabs": {
+      "all": "ALL ({{count}})",
       "skills": "SKILLS ({{count}})",
       "plugins": "PLUGINS ({{count}})",
       "marketplaces": "MARKETPLACES ({{count}})"
     },
+    "search": "SEARCH_INSTALLED_ITEMS...",
     "plugins": {
       "empty": "NO_INSTALLED_PLUGINS"
     },
@@ -45,6 +47,7 @@
       "andMore": "... and {{count}} more"
     },
     "empty": {
+      "all": "NO_INSTALLED_ITEMS",
       "noResults": "No items found containing \"{{query}}\"",
       "clearFilters": "CLEAR_FILTERS"
     }
