@@ -511,7 +511,7 @@ impl PluginManager {
 
         let cli_result = claude_cli.run(&commands)?;
         let output = cli_result.outputs.first().map(|o| o.output.as_str()).unwrap_or_default();
-        let payload: ClaudePluginListWithAvailable = parse_json_output(output)
+        let payload = parse_claude_plugin_list_with_available(output)
             .context("解析 `claude plugin list --json --available` 输出失败")?;
 
         let mut available_versions: HashMap<String, String> = HashMap::new();
@@ -731,7 +731,7 @@ impl PluginManager {
             timeout: Duration::from_secs(30),
         }])?;
         let available_text = available_output.outputs.first().map(|o| o.output.as_str()).unwrap_or_default();
-        let payload: ClaudePluginListWithAvailable = parse_json_output(available_text)
+        let payload = parse_claude_plugin_list_with_available(available_text)
             .context("解析 `claude plugin list --json --available` 输出失败")?;
 
         // 选择每个 name 的“最优 marketplace”作为推荐目标（优先官方 marketplace）
@@ -1345,6 +1345,24 @@ fn parse_datetime(value: &Option<String>) -> Option<DateTime<Utc>> {
     value.as_ref().and_then(|s| s.parse().ok())
 }
 
+fn parse_claude_plugin_list_with_available(
+    output: &str,
+) -> Result<ClaudePluginListWithAvailable> {
+    let cleaned = strip_terminal_escapes(output);
+
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&cleaned) {
+        if json_has_plugin_list_fields(&value) {
+            return serde_json::from_value(value).context("JSON 解析失败");
+        }
+    }
+
+    if let Some(value) = find_json_value_with_predicate(&cleaned, json_has_plugin_list_fields) {
+        return serde_json::from_value(value).context("JSON 解析失败");
+    }
+
+    parse_json_output(&cleaned).context("JSON 解析失败")
+}
+
 fn parse_json_output<T: for<'de> Deserialize<'de>>(output: &str) -> Result<T> {
     let cleaned = strip_terminal_escapes(output);
     // 1) 优先直接解析（输出本身就是纯 JSON 的情况）
@@ -1372,33 +1390,97 @@ fn extract_json_payload(output: &str) -> Option<&str> {
 }
 
 fn parse_first_json_value<T: for<'de> Deserialize<'de>>(output: &str) -> Result<T> {
-    // 通过 serde_json 的流式反序列化能力，从任意位置尝试解析出“第一个完整 JSON 值”
-    // 这样可以兼容 PowerShell/Terminal 的提示符、以及 CLI 可能输出的非 JSON 文本。
-    for (idx, ch) in output.char_indices() {
-        if ch != '{' && ch != '[' {
-            continue;
-        }
+    // 通过 serde_json 的流式反序列化能力，从任意位置尝试解析出“第一个匹配的 JSON 值”
+    // 这样可以兼容 PowerShell/Terminal 的提示符、以及 CLI 可能输出的非 JSON 文本或日志。
+    let bytes = output.as_bytes();
+    let mut pos = 0;
 
-        let slice = &output[idx..];
+    while pos < bytes.len() {
+        let offset = match bytes[pos..].iter().position(|b| *b == b'{' || *b == b'[') {
+            Some(value) => value,
+            None => break,
+        };
+        let start = pos + offset;
+        let slice = &output[start..];
         let mut stream = serde_json::Deserializer::from_str(slice).into_iter::<serde_json::Value>();
         let value = match stream.next() {
             Some(Ok(v)) => v,
-            _ => continue,
+            _ => {
+                pos = start + 1;
+                continue;
+            }
         };
 
         let end = stream.byte_offset();
         if end == 0 || end > slice.len() {
+            pos = start + 1;
             continue;
         }
 
         // 只取 JSON 值本体，忽略后续的任何噪声输出
         let payload = &slice[..end];
-        return serde_json::from_str::<T>(payload)
+        match serde_json::from_str::<T>(payload)
             .or_else(|_| serde_json::from_value::<T>(value))
-            .context("JSON 解析失败");
+        {
+            Ok(parsed) => return Ok(parsed),
+            Err(_) => {
+                pos = start + end;
+                continue;
+            }
+        }
     }
 
     anyhow::bail!("JSON 解析失败");
+}
+
+fn json_has_plugin_list_fields(value: &serde_json::Value) -> bool {
+    let Some(obj) = value.as_object() else {
+        return false;
+    };
+
+    obj.contains_key("installed")
+        || obj.contains_key("available")
+        || obj.contains_key("installedPlugins")
+        || obj.contains_key("availablePlugins")
+}
+
+fn find_json_value_with_predicate<F>(output: &str, predicate: F) -> Option<serde_json::Value>
+where
+    F: Fn(&serde_json::Value) -> bool,
+{
+    let bytes = output.as_bytes();
+    let mut pos = 0;
+
+    while pos < bytes.len() {
+        let offset = match bytes[pos..].iter().position(|b| *b == b'{' || *b == b'[') {
+            Some(value) => value,
+            None => break,
+        };
+        let start = pos + offset;
+        let slice = &output[start..];
+        let mut stream = serde_json::Deserializer::from_str(slice).into_iter::<serde_json::Value>();
+        let value = match stream.next() {
+            Some(Ok(v)) => v,
+            _ => {
+                pos = start + 1;
+                continue;
+            }
+        };
+
+        let end = stream.byte_offset();
+        if end == 0 || end > slice.len() {
+            pos = start + 1;
+            continue;
+        }
+
+        if predicate(&value) {
+            return Some(value);
+        }
+
+        pos = start + end;
+    }
+
+    None
 }
 
 fn strip_terminal_escapes(input: &str) -> String {
@@ -1537,6 +1619,35 @@ noise after json..."#;
         assert_eq!(payload.available[0].plugin_id, "foo@bar");
         assert_eq!(payload.available[0].marketplace_name.as_deref(), Some("bar"));
         assert_eq!(payload.available[0].version.as_deref(), Some("1.0.1"));
+    }
+
+    #[test]
+    fn parse_claude_plugin_list_with_available_skips_unrelated_json() {
+        let output = r#"
+{"event":"progress","message":"fetching"}
+{
+  "installed": [
+    {
+      "id": "sample@market",
+      "version": "1.0.0"
+    }
+  ],
+  "available": [
+    {
+      "pluginId": "sample@market",
+      "marketplaceName": "market",
+      "version": "1.1.0"
+    }
+  ]
+}
+"#;
+
+        let payload = parse_claude_plugin_list_with_available(output).unwrap();
+        assert_eq!(payload.installed.len(), 1);
+        assert_eq!(payload.installed[0].id, "sample@market");
+        assert_eq!(payload.available.len(), 1);
+        assert_eq!(payload.available[0].plugin_id, "sample@market");
+        assert_eq!(payload.available[0].version.as_deref(), Some("1.1.0"));
     }
 }
 
