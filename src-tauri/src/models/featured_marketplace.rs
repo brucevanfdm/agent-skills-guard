@@ -10,7 +10,8 @@ pub struct LocalizedText {
 pub struct FeaturedMarketplacesConfig {
     pub version: String,
     pub last_updated: String,
-    pub categories: Vec<FeaturedMarketplaceCategory>,
+    #[serde(rename = "marketplace", alias = "categories")]
+    pub marketplace: Vec<FeaturedMarketplaceCategory>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

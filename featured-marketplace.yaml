@@ -7,7 +7,7 @@
 version: "1.0"
 last_updated: "2026-01-23"
 
-categories:
+marketplace:
   - id: "official"
     name:
       en: "Official"
@@ -224,3 +224,58 @@ categories:
             source: "./"
             tags: ["obsidian", "visualization", "diagram", "excalidraw", "mermaid", "canvas"]
             featured: true
+
+repositories:
+  version: "1.0"
+  last_updated: "2026-01-09"
+  categories:
+    - id: "community"
+      name:
+        en: "Community"
+        zh: "社区精选"
+      description:
+        en: "High-quality community-contributed skill repositories"
+        zh: "社区贡献的高质量技能仓库"
+      repositories:
+        - url: "https://github.com/GBSOSS/skill-from-masters"
+          name: "GBSOSS"
+          description:
+            en: "Create AI skills built on proven methodologies from domain experts across 15+ fields"
+            zh: "基于各领域专家经验方法论的 AI 技能创建工具，覆盖 15+ 专业领域"
+          tags: ["community", "methodology", "experts", "framework"]
+          featured: true
+        - url: "https://github.com/huangserva/skill-prompt-generator"
+          name: "huangserva"
+          description:
+            en: "AI portrait prompt generator with 1140+ elements library and 12 specialized domain skills"
+            zh: "AI 人像 Prompt 生成系统，包含 1140+ 元素库和 12 个专业领域技能"
+          tags: ["community", "prompt", "ai-art", "portrait", "generator"]
+          featured: true
+        - url: "https://github.com/vercel-labs/agent-skills"
+          name: "vercel-labs"
+          description:
+            en: "A collection of skills for AI coding agents that follow the Agent Skills format."
+            zh: "面向 AI 编程代理的技能集合，遵循 Agent Skills 格式。"
+          tags: ["community", "agent-skills", "ai-agents", "collection"]
+          featured: true
+        - url: "https://github.com/yangliu2060/smith--skills"
+          name: "yangliu2060"
+          description:
+            en: "From Visual Workflows to AI-Native Skills: Empower your Claude Code with 14+ elite automation templates ported directly from n8n. Instantly equip your AI agent with expert-level capabilities in Marketing, SEO, and Market Research."
+            zh: "从可视化工作流到 AI 原生技能：一键将 14 款精选 n8n 自动化模板导入 Claude Code，让你的 AI 助手瞬间掌握营销、SEO 和市场调研的专家级实战能力。"
+          tags: ["community", "cli", "developer-tools"]
+          featured: true
+        - url: "https://github.com/lxfater/nano-image-generator-skill"
+          name: "lxfater"
+          description:
+            en: "Image generation skill using Gemini API with reference image support and multiple aspect ratios"
+            zh: "基于 Gemini API 的图像生成技能，支持参考图像和多种宽高比"
+          tags: ["community", "image-generation", "gemini", "ai-art"]
+          featured: true
+        - url: "https://github.com/op7418/Humanizer-zh"
+          name: "op7418"
+          description:
+            en: "Chinese version of Humanizer - a Claude Code skill that removes AI-generated traces from text, making it sound more natural and human-written. Detects and fixes 24 AI writing patterns across content, language, style, and communication categories."
+            zh: "来自歸藏的 Humanizer 中文版 - 用于去除文本中 AI 生成的痕迹，使文本更自然、更像人类书写。可检测并修复 24 种 AI 写作模式，涵盖内容、语言、风格和交流四大类别。"
+          tags: ["community", "writing", "text-processing", "chinese", "humanizer"]
+          featured: true

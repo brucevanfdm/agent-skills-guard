@@ -374,13 +374,13 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
               <div className="text-sm text-muted-foreground">
                 {t("repositories.featuredMarketplaces.loading")}
               </div>
-            ) : !featuredMarketplaces || featuredMarketplaces.categories.length === 0 ? (
+            ) : !featuredMarketplaces || featuredMarketplaces.marketplace.length === 0 ? (
               <div className="text-sm text-muted-foreground">
                 {t("repositories.featuredMarketplaces.empty")}
               </div>
             ) : (
               <div className="space-y-5">
-                {featuredMarketplaces.categories.map((category) => (
+                {featuredMarketplaces.marketplace.map((category) => (
                   <div key={category.id} className="space-y-3">
                     <div>
                       <h4 className="font-semibold text-foreground">

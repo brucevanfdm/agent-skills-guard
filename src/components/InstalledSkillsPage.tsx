@@ -139,8 +139,8 @@ export function InstalledSkillsPage() {
 
   const marketplaceDescriptions = useMemo(() => {
     const map = new Map<string, string>();
-    if (!featuredMarketplaces?.categories) return map;
-    featuredMarketplaces.categories.forEach((category) => {
+    if (!featuredMarketplaces?.marketplace) return map;
+    featuredMarketplaces.marketplace.forEach((category) => {
       category.marketplaces.forEach((marketplace) => {
         const description = getLocalizedText(marketplace.description);
         if (description) {

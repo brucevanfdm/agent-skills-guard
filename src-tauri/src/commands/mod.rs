@@ -567,8 +567,8 @@ pub async fn select_custom_install_path(app: tauri::AppHandle) -> Result<Option<
 }
 
 const FEATURED_REPOSITORIES_REMOTE_URL: &str =
-    "https://raw.githubusercontent.com/brucevanfdm/agent-skills-guard/main/featured-repositories.yaml";
-const DEFAULT_FEATURED_REPOSITORIES_YAML: &str = include_str!("../../../featured-repositories.yaml");
+    "https://raw.githubusercontent.com/brucevanfdm/agent-skills-guard/main/featured-marketplace.yaml";
+const DEFAULT_FEATURED_REPOSITORIES_YAML: &str = include_str!("../../../featured-marketplace.yaml");
 
 fn featured_repositories_cache_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let app_dir = app
@@ -579,7 +579,24 @@ fn featured_repositories_cache_path(app: &tauri::AppHandle) -> Result<PathBuf, S
     std::fs::create_dir_all(&app_dir)
         .map_err(|e| format!("Failed to create app data directory: {}", e))?;
 
-    Ok(app_dir.join("featured-repositories.yaml"))
+    Ok(app_dir.join("featured-marketplace.yaml"))
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct FeaturedRepositoriesWrapper {
+    #[serde(default, alias = "featured_repositories")]
+    repositories: Option<FeaturedRepositoriesConfig>,
+}
+
+fn parse_featured_repositories_yaml(yaml_content: &str) -> Result<FeaturedRepositoriesConfig, String> {
+    let wrapper: FeaturedRepositoriesWrapper = serde_yaml::from_str(yaml_content)
+        .map_err(|e| format!("Failed to parse featured repositories wrapper: {}", e))?;
+    if let Some(config) = wrapper.repositories {
+        return Ok(config);
+    }
+
+    serde_yaml::from_str::<FeaturedRepositoriesConfig>(yaml_content)
+        .map_err(|e| format!("Failed to parse featured repositories: {}", e))
 }
 
 /// 获取精选仓库列表
@@ -588,7 +605,7 @@ pub async fn get_featured_repositories(app: tauri::AppHandle) -> Result<Featured
     // 1) 优先读取 app_data_dir 下的缓存文件（支持在线刷新后持久化）
     let cache_path = featured_repositories_cache_path(&app)?;
     if let Ok(cached_yaml) = std::fs::read_to_string(&cache_path) {
-        match serde_yaml::from_str::<FeaturedRepositoriesConfig>(&cached_yaml) {
+        match parse_featured_repositories_yaml(&cached_yaml) {
             Ok(config) => return Ok(config),
             Err(e) => {
                 log::warn!(
@@ -601,8 +618,7 @@ pub async fn get_featured_repositories(app: tauri::AppHandle) -> Result<Featured
     }
 
     // 2) 回退到编译期内置的默认 YAML（用于首次启动/离线/打包环境）
-    serde_yaml::from_str::<FeaturedRepositoriesConfig>(DEFAULT_FEATURED_REPOSITORIES_YAML)
-        .map_err(|e| format!("Failed to parse default featured repositories: {}", e))
+    parse_featured_repositories_yaml(DEFAULT_FEATURED_REPOSITORIES_YAML)
 }
 
 /// 刷新精选仓库列表（从 GitHub 下载最新 YAML 并写入 app_data_dir 缓存）
@@ -625,7 +641,7 @@ pub async fn refresh_featured_repositories(
         .map_err(|e| format!("Failed to read featured repositories content: {}", e))?;
 
     // 先校验解析成功，再落盘
-    let config: FeaturedRepositoriesConfig = serde_yaml::from_str(&yaml_content)
+    let config = parse_featured_repositories_yaml(&yaml_content)
         .map_err(|e| format!("Failed to parse downloaded featured repositories: {}", e))?;
 
     let cache_path = featured_repositories_cache_path(&app)?;

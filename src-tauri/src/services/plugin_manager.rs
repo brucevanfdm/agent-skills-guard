@@ -825,7 +825,7 @@ impl PluginManager {
         }
 
         let mut featured_by_name: HashMap<String, &FeaturedMarketplace> = HashMap::new();
-        for category in &config.categories {
+        for category in &config.marketplace {
             for marketplace in &category.marketplaces {
                 featured_by_name.insert(marketplace.marketplace_name.clone(), marketplace);
             }
@@ -908,7 +908,7 @@ impl PluginManager {
 
         let mut featured_ids: HashSet<String> = HashSet::new();
 
-        for category in &config.categories {
+        for category in &config.marketplace {
             for marketplace in &category.marketplaces {
                 let repo_url = marketplace.repository_url.clone().unwrap_or_else(|| {
                     format!("https://github.com/{}", marketplace.marketplace_repo)

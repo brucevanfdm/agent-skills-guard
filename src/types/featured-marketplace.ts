@@ -6,7 +6,7 @@ export interface LocalizedText {
 export interface FeaturedMarketplacesConfig {
   version: string;
   last_updated: string;
-  categories: FeaturedMarketplaceCategory[];
+  marketplace: FeaturedMarketplaceCategory[];
 }
 
 export interface FeaturedMarketplaceCategory {
