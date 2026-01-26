@@ -11,6 +11,7 @@ interface ScanStatusCardProps {
   isScanning: boolean;
   countLabel: string;
   scanLabel: string;
+  fileProgress?: { scanned: number; total: number } | null;
 }
 
 export function ScanStatusCard({
@@ -21,12 +22,16 @@ export function ScanStatusCard({
   isScanning,
   countLabel,
   scanLabel,
+  fileProgress,
 }: ScanStatusCardProps) {
   const { t, i18n } = useTranslation();
 
   const progress = totalCount > 0 ? Math.min(100, (scannedCount / totalCount) * 100) : 0;
   const isComplete = totalCount > 0 && scannedCount >= totalCount;
-  const scannedDisplay = totalCount > 0 ? `${scannedCount}/${totalCount}` : `${scannedCount}`;
+  const fileProgressDisplay =
+    fileProgress && fileProgress.total > 0 ? fileProgress : null;
+  const noIssueDisplay = fileProgressDisplay ?? { scanned: scannedCount, total: totalCount };
+  const noIssueLabel = fileProgressDisplay ? t("overview.scanStatus.files") : countLabel;
 
   const formatRelativeTime = (date: Date) => {
     const locale = i18n.language === "zh" ? zhCN : enUS;
@@ -85,7 +90,13 @@ export function ScanStatusCard({
               <>
                 <Activity className="w-4 h-4 text-blue-500 animate-pulse" />
                 <span className="text-sm text-blue-500 font-medium">
-                  {scanLabel}...
+                  {fileProgressDisplay
+                    ? t("overview.scanStatus.scanningWithProgress", {
+                        scanned: fileProgressDisplay.scanned,
+                        total: fileProgressDisplay.total,
+                        label: t("overview.scanStatus.files"),
+                      })
+                    : `${scanLabel}...`}
                 </span>
               </>
             ) : isComplete ? (
@@ -98,9 +109,9 @@ export function ScanStatusCard({
                 >
                   {issueCount === 0
                     ? t("overview.scanStatus.noIssues", {
-                        scanned: scannedCount,
-                        total: totalCount,
-                        label: countLabel,
+                        scanned: noIssueDisplay.scanned,
+                        total: noIssueDisplay.total,
+                        label: noIssueLabel,
                       })
                     : t("overview.scanStatus.completed", { count: issueCount })}
                 </span>

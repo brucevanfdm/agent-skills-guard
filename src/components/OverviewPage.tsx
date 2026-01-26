@@ -36,6 +36,10 @@ export function OverviewPage() {
     total: 0,
     unit: "items",
   });
+  const [itemProgress, setItemProgress] = useState<{ scanned: number; total: number }>({
+    scanned: 0,
+    total: 0,
+  });
   const scanProgressRef = useRef(scanProgress);
   const [lastFileScan, setLastFileScan] = useState<{ scanned: number; total: number } | null>(null);
   const unlistenRef = useRef<(() => void) | null>(null);
@@ -130,6 +134,7 @@ export function OverviewPage() {
       let installedSkillsCount = 0;
 
       setScanProgress({ scanned: 0, total: 0, unit: "items" });
+      setItemProgress({ scanned: 0, total: 0 });
       setLastFileScan(null);
       await startProgressListener(scanId);
 
@@ -166,6 +171,7 @@ export function OverviewPage() {
 
       const totalItems = installedSkillsCount + installedPluginsCount;
       setScanProgress({ scanned: 0, total: totalItems, unit: "items" });
+      setItemProgress({ scanned: 0, total: totalItems });
 
       let totalScanFiles = 0;
       const countTasks: Array<Promise<number>> = [];
@@ -214,6 +220,10 @@ export function OverviewPage() {
           } catch (e) {
             console.error("扫描插件失败:", plugin.name, e);
           } finally {
+            setItemProgress((prev) => {
+              const next = prev.total > 0 ? Math.min(prev.total, prev.scanned + 1) : 0;
+              return { ...prev, scanned: next };
+            });
             setScanProgress((prev) => {
               const step = prev.unit === "files" ? 0 : 1;
               return { total: prev.total, scanned: prev.scanned + step, unit: prev.unit };
@@ -234,6 +244,10 @@ export function OverviewPage() {
           } catch (e) {
             console.error("扫描技能失败:", skill.name, e);
           } finally {
+            setItemProgress((prev) => {
+              const next = prev.total > 0 ? Math.min(prev.total, prev.scanned + 1) : 0;
+              return { ...prev, scanned: next };
+            });
             setScanProgress((prev) => {
               const step = prev.unit === "files" ? 0 : 1;
               return { total: prev.total, scanned: prev.scanned + step, unit: prev.unit };
@@ -312,9 +326,13 @@ export function OverviewPage() {
     return uniqueScanResults.length + scannedPluginsCount;
   }, [scannedPluginsCount, uniqueScanResults.length]);
 
-  const displayScannedCount = isScanning ? scanProgress.scanned : lastFileScan?.scanned ?? scannedItemsCount;
-  const displayTotalCount = isScanning ? scanProgress.total : lastFileScan?.total ?? totalItemsCount;
-  const displayUnit = isScanning ? scanProgress.unit : lastFileScan ? "files" : "items";
+  const displayScannedCount = isScanning ? itemProgress.scanned : scannedItemsCount;
+  const displayTotalCount = isScanning ? itemProgress.total : totalItemsCount;
+  const fileProgress = isScanning
+    ? scanProgress.unit === "files" && scanProgress.total > 0
+      ? { scanned: scanProgress.scanned, total: scanProgress.total }
+      : null
+    : lastFileScan;
 
   const issuesByLevel = useMemo(() => {
     const result: Record<string, number> = { Severe: 0, MidHigh: 0, Safe: 0 };
@@ -477,7 +495,8 @@ export function OverviewPage() {
             issueCount={issueCount}
             isScanning={isScanning}
             scanLabel={scanActionLabel}
-            countLabel={displayUnit === "files" ? t("overview.scanStatus.files") : t("overview.scanStatus.items")}
+            countLabel={t("overview.scanStatus.items")}
+            fileProgress={fileProgress}
           />
         </div>
         <div className="lg:col-span-5 h-full">

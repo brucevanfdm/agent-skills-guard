@@ -482,10 +482,11 @@
       "of": "/",
       "skills": "个技能",
       "items": "个技能插件",
-      "files": "文件",
+      "files": "个文件",
       "scanAll": "一键扫描",
       "preparing": "准备扫描（统计文件中）",
       "scanning": "正在扫描",
+      "scanningWithProgress": "正在扫描{{scanned}}/{{total}}{{label}}...",
       "completed": "扫描完成，发现 {{count}} 个问题",
       "noIssues": "扫描完成，未发现问题（已扫描 {{scanned}}/{{total}} {{label}}）",
       "never": "从未扫描"
@@ -495,7 +496,7 @@
       "localSkillsFailed": "扫描本地技能失败：{{error}}",
       "completed": "安全扫描完成，已扫描 {{count}} 个技能",
       "failed": "安全扫描失败：{{error}}",
-      "allCompleted": "扫描完成：发现 {{localCount}} 个技能，插件 {{pluginCount}} 个，市场 {{marketplaceCount}} 个，安全扫描 {{scannedCount}} 个技能， {{scannedPluginsCount}} 个插件"
+      "allCompleted": "扫描完成：发现 {{localCount}} 个技能， {{pluginCount}} 个插件，安全扫描 {{scannedCount}} 个技能， {{scannedPluginsCount}} 个插件"
     },
     "riskLevels": {
       "critical": "严重",

@@ -486,6 +486,7 @@
       "scanAll": "Scan all",
       "preparing": "Preparing scan (counting files)",
       "scanning": "Scanning",
+      "scanningWithProgress": "Scanning {{scanned}}/{{total}} {{label}}...",
       "completed": "Scan complete — {{count}} issues found",
       "noIssues": "Scan complete — no issues found (scanned {{scanned}}/{{total}} {{label}})",
       "never": "Never scanned"
