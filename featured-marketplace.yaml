@@ -26,7 +26,7 @@ marketplace:
         owner:
           name: "Keith Lazuka"
           email: "klazuka@anthropic.com"
-        tags: ["official", "verified", "anthropic", "claude-code", "skills"]
+        tags: ["official", "claude-code", "skills"]
         featured: true
         plugins:
           - name: "document-skills"
@@ -38,7 +38,7 @@ marketplace:
               name: "Keith Lazuka"
               email: "klazuka@anthropic.com"
             source: "./"
-            tags: ["documents", "office", "pdf", "spreadsheets", "slides"]
+            tags: ["documents", "office", "pdf"]
             featured: true
           - name: "example-skills"
             install_command: "/plugin install example-skills@anthropic-agent-skills"
@@ -49,7 +49,7 @@ marketplace:
               name: "Keith Lazuka"
               email: "klazuka@anthropic.com"
             source: "./"
-            tags: ["examples", "creative", "design", "testing", "mcp"]
+            tags: ["examples", "creative", "mcp"]
             featured: true
       - marketplace_name: "superpowers-marketplace"
         marketplace_repo: "obra/superpowers-marketplace"
@@ -95,7 +95,7 @@ marketplace:
         owner:
           name: "Jim Liu (宝玉)"
           email: "junminliu@gmail.com"
-        tags: ["community", "claude-code", "productivity", "collection"]
+        tags: ["community", "productivity", "collection"]
         featured: true
         plugins:
           - name: "content-skills"
@@ -107,7 +107,7 @@ marketplace:
               name: "Jim Liu (宝玉)"
               email: "junminliu@gmail.com"
             source: "./"
-            tags: ["content", "publishing", "social", "media"]
+            tags: ["content", "publishing", "social"]
             featured: true
           - name: "ai-generation-skills"
             install_command: "/plugin install ai-generation-skills@baoyu-skills"
@@ -140,7 +140,7 @@ marketplace:
           zh: "提供丰富样式、配色、字体与图表参考的 UI/UX 设计智能技能"
         owner:
           name: "nextlevelbuilder"
-        tags: ["community", "ui-ux", "design", "frontend"]
+        tags: ["ui-ux", "design", "frontend"]
         featured: true
         plugins:
           - name: "ui-ux-pro-max"
@@ -152,7 +152,7 @@ marketplace:
             author:
               name: "nextlevelbuilder"
             source: "./"
-            tags: ["ui", "ux", "design", "styles", "typography", "color-palette", "accessibility", "charts"]
+            tags: ["ui", "ux", "design"]
             featured: true
       - marketplace_name: "n8n-mcp-skills"
         marketplace_repo: "czlonkowski/n8n-skills"
@@ -163,7 +163,7 @@ marketplace:
           zh: "用于构建高质量 n8n 工作流的专家级技能"
         owner:
           name: "Romuald Członkowski"
-        tags: ["community", "n8n", "workflow-automation", "mcp", "claude-code"]
+        tags: ["n8n", "workflow-automation", "mcp"]
         featured: true
         plugins:
           - name: "n8n-mcp-skills"
@@ -175,7 +175,7 @@ marketplace:
             author:
               name: "Romuald Członkowski"
             source: "./"
-            tags: ["n8n", "workflow", "mcp", "automation", "validation", "expressions", "javascript", "python"]
+            tags: ["n8n", "workflow", "automation"]
             featured: true
       - marketplace_name: "obsidian-skills"
         marketplace_repo: "kepano/obsidian-skills"
@@ -186,7 +186,7 @@ marketplace:
           zh: "面向 Obsidian 使用场景的 Claude 技能"
         owner:
           name: "Steph Ango"
-        tags: ["community", "obsidian", "markdown", "productivity", "note-taking"]
+        tags: ["obsidian", "markdown", "note-taking"]
         featured: true
         plugins:
           - name: "obsidian"
@@ -198,7 +198,7 @@ marketplace:
             author:
               name: "Steph Ango"
             source: "./"
-            tags: ["obsidian", "markdown", "notes", "productivity"]
+            tags: ["obsidian", "notes", "productivity"]
             featured: true
       - marketplace_name: "axton-obsidian-visual-skills"
         marketplace_repo: "axtonliu/axton-obsidian-visual-skills"
@@ -210,7 +210,7 @@ marketplace:
         owner:
           name: "Axton Liu"
           email: "hey@axtonliu.com"
-        tags: ["community", "obsidian", "visualization", "diagram", "excalidraw", "mermaid", "canvas"]
+        tags: ["obsidian", "visualization", "diagram"]
         featured: true
         plugins:
           - name: "obsidian-visual-skills"
@@ -222,7 +222,7 @@ marketplace:
               name: "Axton Liu"
               email: "hey@axtonliu.com"
             source: "./"
-            tags: ["obsidian", "visualization", "diagram", "excalidraw", "mermaid", "canvas"]
+            tags: ["obsidian", "visualization", "diagram"]
             featured: true
 
 repositories:
@@ -242,40 +242,40 @@ repositories:
           description:
             en: "Create AI skills built on proven methodologies from domain experts across 15+ fields"
             zh: "基于各领域专家经验方法论的 AI 技能创建工具，覆盖 15+ 专业领域"
-          tags: ["community", "methodology", "experts", "framework"]
+          tags: ["methodology", "experts", "framework"]
           featured: true
         - url: "https://github.com/huangserva/skill-prompt-generator"
           name: "huangserva"
           description:
             en: "AI portrait prompt generator with 1140+ elements library and 12 specialized domain skills"
             zh: "AI 人像 Prompt 生成系统，包含 1140+ 元素库和 12 个专业领域技能"
-          tags: ["community", "prompt", "ai-art", "portrait", "generator"]
+          tags: ["prompt", "ai-art", "generator"]
           featured: true
         - url: "https://github.com/vercel-labs/agent-skills"
           name: "vercel-labs"
           description:
             en: "A collection of skills for AI coding agents that follow the Agent Skills format."
             zh: "面向 AI 编程代理的技能集合，遵循 Agent Skills 格式。"
-          tags: ["community", "agent-skills", "ai-agents", "collection"]
+          tags: ["agent-skills", "ai-agents", "collection"]
           featured: true
         - url: "https://github.com/yangliu2060/smith--skills"
           name: "yangliu2060"
           description:
             en: "From Visual Workflows to AI-Native Skills: Empower your Claude Code with 14+ elite automation templates ported directly from n8n. Instantly equip your AI agent with expert-level capabilities in Marketing, SEO, and Market Research."
             zh: "从可视化工作流到 AI 原生技能：一键将 14 款精选 n8n 自动化模板导入 Claude Code，让你的 AI 助手瞬间掌握营销、SEO 和市场调研的专家级实战能力。"
-          tags: ["community", "cli", "developer-tools"]
+          tags: ["n8n", "workflow", "automation"]
           featured: true
         - url: "https://github.com/lxfater/nano-image-generator-skill"
           name: "lxfater"
           description:
             en: "Image generation skill using Gemini API with reference image support and multiple aspect ratios"
             zh: "基于 Gemini API 的图像生成技能，支持参考图像和多种宽高比"
-          tags: ["community", "image-generation", "gemini", "ai-art"]
+          tags: ["image-generation", "gemini", "ai-art"]
           featured: true
         - url: "https://github.com/op7418/Humanizer-zh"
           name: "op7418"
           description:
             en: "Chinese version of Humanizer - a Claude Code skill that removes AI-generated traces from text, making it sound more natural and human-written. Detects and fixes 24 AI writing patterns across content, language, style, and communication categories."
             zh: "来自歸藏的 Humanizer 中文版 - 用于去除文本中 AI 生成的痕迹，使文本更自然、更像人类书写。可检测并修复 24 种 AI 写作模式，涵盖内容、语言、风格和交流四大类别。"
-          tags: ["community", "writing", "text-processing", "chinese", "humanizer"]
+          tags: ["writing", "text-processing", "humanizer"]
           featured: true

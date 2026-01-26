@@ -469,7 +469,7 @@
     "statistics": {
       "installedSkills": "INSTALLED_SKILLS",
       "installedPlugins": "INSTALLED_PLUGINS",
-      "marketplaces": "CONFIGURED_MARKETPLACES",
+      "marketplaces": "CONFIG_MARKET",
       "repositories": "REPOSITORIES",
       "scannedSkills": "SCANNED_SKILLS"
     },
@@ -501,7 +501,7 @@
     },
     "riskFilters": {
       "Severe": "SEVERE_RISK",
-      "MidHigh": "MID_HIGH_RISK",
+      "MidHigh": "MID_RISK",
       "Safe": "SAFE"
     },
     "issues": {
