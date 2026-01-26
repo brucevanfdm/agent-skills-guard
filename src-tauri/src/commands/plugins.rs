@@ -30,7 +30,7 @@ pub async fn get_plugins(
     // 同步失败不阻塞 UI：回退到 DB 缓存
     if let Ok(manager) = state.plugin_manager.try_lock() {
         if let Some(config) = &featured_config {
-            if let Err(e) = manager.sync_featured_marketplaces(config, &locale) {
+            if let Err(e) = manager.sync_featured_marketplaces(config, &locale, None).await {
                 log::warn!("同步精选插件清单失败: {}", e);
             }
         }
@@ -40,7 +40,7 @@ pub async fn get_plugins(
     } else {
         let manager = state.plugin_manager.lock().await;
         if let Some(config) = &featured_config {
-            if let Err(e) = manager.sync_featured_marketplaces(config, &locale) {
+            if let Err(e) = manager.sync_featured_marketplaces(config, &locale, None).await {
                 log::warn!("同步精选插件清单失败: {}", e);
             }
         }

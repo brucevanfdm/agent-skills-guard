@@ -1,5 +1,6 @@
 use crate::models::{
     FeaturedMarketplacesConfig,
+    FeaturedMarketplace,
     FeaturedMarketplaceOwner,
     LocalizedText,
     Plugin,
@@ -806,11 +807,93 @@ impl PluginManager {
         Ok(candidates)
     }
 
+    async fn load_installed_featured_marketplace_plugins(
+        &self,
+        config: &FeaturedMarketplacesConfig,
+        claude_command: Option<String>,
+    ) -> HashMap<String, Vec<Plugin>> {
+        let marketplaces = match self.get_claude_marketplaces(claude_command).await {
+            Ok(list) => list,
+            Err(e) => {
+                log::warn!("获取 Claude marketplaces 失败: {}", e);
+                return HashMap::new();
+            }
+        };
+
+        if marketplaces.is_empty() {
+            return HashMap::new();
+        }
+
+        let mut featured_by_name: HashMap<String, &FeaturedMarketplace> = HashMap::new();
+        for category in &config.categories {
+            for marketplace in &category.marketplaces {
+                featured_by_name.insert(marketplace.marketplace_name.clone(), marketplace);
+            }
+        }
+
+        let mut result = HashMap::new();
+        for marketplace in marketplaces {
+            let Some(featured) = featured_by_name.get(&marketplace.name) else { continue };
+
+            let install_location = marketplace
+                .install_location
+                .clone()
+                .or_else(|| default_marketplace_install_location(&marketplace.name));
+            let Some(install_location) = install_location else { continue };
+
+            let repo_root = PathBuf::from(&install_location);
+            if !repo_root.exists() {
+                continue;
+            }
+
+            let manifest = match read_marketplace_manifest(&repo_root) {
+                Ok(Some(manifest)) => manifest,
+                Ok(None) => continue,
+                Err(e) => {
+                    log::warn!("读取 marketplace.json 失败: {}", e);
+                    continue;
+                }
+            };
+
+            if manifest.name != marketplace.name {
+                log::warn!(
+                    "marketplace.json 名称与 CLI 不一致，跳过自动同步: {} vs {}",
+                    manifest.name,
+                    marketplace.name
+                );
+                continue;
+            }
+
+            let repo_url = featured.repository_url.clone().unwrap_or_else(|| {
+                format!("https://github.com/{}", featured.marketplace_repo)
+            });
+
+            let resolved = match resolve_marketplace_plugins(&repo_root, &repo_url, false) {
+                Ok(list) => list,
+                Err(e) => {
+                    log::warn!("解析 marketplace 插件失败: {}", e);
+                    continue;
+                }
+            };
+
+            let plugins = resolved
+                .into_iter()
+                .map(|entry| entry.plugin)
+                .collect::<Vec<_>>();
+            if !plugins.is_empty() {
+                result.insert(marketplace.name.clone(), plugins);
+            }
+        }
+
+        result
+    }
+
     /// 同步精选 Marketplace 插件清单到数据库（仅用于展示/安装入口）
-    pub fn sync_featured_marketplaces(
+    pub async fn sync_featured_marketplaces(
         &self,
         config: &FeaturedMarketplacesConfig,
         locale: &str,
+        claude_command: Option<String>,
     ) -> Result<()> {
         let locale = validate_locale(locale);
         let existing_plugins = self.db.get_plugins().unwrap_or_default();
@@ -819,6 +902,9 @@ impl PluginManager {
             .cloned()
             .map(|plugin| (plugin.id.clone(), plugin))
             .collect();
+        let installed_marketplace_plugins = self
+            .load_installed_featured_marketplace_plugins(config, claude_command)
+            .await;
 
         let mut featured_ids: HashSet<String> = HashSet::new();
 
@@ -829,26 +915,80 @@ impl PluginManager {
                 });
                 let marketplace_name = marketplace.marketplace_name.clone();
 
-                for entry in &marketplace.plugins {
-                    let source = entry.source.clone().unwrap_or_else(|| ".".to_string());
-                    let mut plugin = Plugin::new(
-                        entry.name.clone(),
-                        repo_url.clone(),
-                        marketplace_name.clone(),
-                        source,
-                    );
+                let plugins_to_sync: Vec<Plugin> = if let Some(manifest_plugins) =
+                    installed_marketplace_plugins.get(&marketplace_name)
+                {
+                    let config_plugins_by_name: HashMap<String, &crate::models::FeaturedMarketplacePlugin> =
+                        marketplace
+                            .plugins
+                            .iter()
+                            .map(|plugin| (plugin.name.to_lowercase(), plugin))
+                            .collect();
 
-                    plugin.discovery_source = Some("featured_marketplace".to_string());
-                    plugin.description = Some(localized_text(&entry.description, &locale));
-                    plugin.version = entry.version.clone();
-                    plugin.author = entry
-                        .author
-                        .as_ref()
-                        .and_then(author_to_display)
-                        .or_else(|| marketplace.owner.as_ref().and_then(author_to_display));
-                    plugin.marketplace_add_command = marketplace.marketplace_add_command.clone();
-                    plugin.plugin_install_command = entry.install_command.clone();
+                    manifest_plugins
+                        .iter()
+                        .cloned()
+                        .map(|mut plugin| {
+                            plugin.discovery_source = Some("featured_marketplace".to_string());
+                            plugin.marketplace_add_command = marketplace.marketplace_add_command.clone();
 
+                            if let Some(config_entry) =
+                                config_plugins_by_name.get(&plugin.name.to_lowercase())
+                            {
+                                if plugin.description.is_none() {
+                                    plugin.description =
+                                        Some(localized_text(&config_entry.description, &locale));
+                                }
+                                if plugin.version.is_none() {
+                                    plugin.version = config_entry.version.clone();
+                                }
+                                if plugin.author.is_none() {
+                                    plugin.author = config_entry
+                                        .author
+                                        .as_ref()
+                                        .and_then(author_to_display)
+                                        .or_else(|| marketplace.owner.as_ref().and_then(author_to_display));
+                                }
+                                if plugin.plugin_install_command.is_none() {
+                                    plugin.plugin_install_command = config_entry.install_command.clone();
+                                }
+                            } else if plugin.author.is_none() {
+                                plugin.author = marketplace.owner.as_ref().and_then(author_to_display);
+                            }
+
+                            plugin
+                        })
+                        .collect()
+                } else {
+                    marketplace
+                        .plugins
+                        .iter()
+                        .map(|entry| {
+                            let source = entry.source.clone().unwrap_or_else(|| ".".to_string());
+                            let mut plugin = Plugin::new(
+                                entry.name.clone(),
+                                repo_url.clone(),
+                                marketplace_name.clone(),
+                                source,
+                            );
+
+                            plugin.discovery_source = Some("featured_marketplace".to_string());
+                            plugin.description = Some(localized_text(&entry.description, &locale));
+                            plugin.version = entry.version.clone();
+                            plugin.author = entry
+                                .author
+                                .as_ref()
+                                .and_then(author_to_display)
+                                .or_else(|| marketplace.owner.as_ref().and_then(author_to_display));
+                            plugin.marketplace_add_command = marketplace.marketplace_add_command.clone();
+                            plugin.plugin_install_command = entry.install_command.clone();
+
+                            plugin
+                        })
+                        .collect()
+                };
+
+                for mut plugin in plugins_to_sync {
                     if let Some(existing) = existing_map.get(&plugin.id) {
                         if plugin.marketplace_add_command.is_none() {
                             plugin.marketplace_add_command = existing.marketplace_add_command.clone();
