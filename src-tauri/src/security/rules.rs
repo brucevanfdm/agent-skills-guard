@@ -85,7 +85,7 @@ lazy_static! {
         PatternRule::new(
             "RM_RF_ROOT",
             "删除根目录",
-            r"rm\s+(-[a-zA-Z]*)*\s*-r[a-zA-Z]*\s+(-[a-zA-Z]*\s+)*/($|\s|;|\|)",
+            r"rm\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*[rR][a-zA-Z]*\s+(-[a-zA-Z]*\s+)*/($|\s|;|\|)",
             Severity::Critical,
             Category::Destructive,
             100,
@@ -98,7 +98,7 @@ lazy_static! {
         PatternRule::new(
             "RM_RF_HOME",
             "删除用户目录",
-            r#"rm\s+(-[a-zA-Z]*)*\s*-r[a-zA-Z]*\s+(-[a-zA-Z]*\s+)*(?:'|")?(~|\$HOME|\$\{HOME\})(?:'|")?/?(?:\s|;|\||$)"#,
+            r#"rm\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*[rR][a-zA-Z]*\s+(-[a-zA-Z]*\s+)*(?:'|")?(~|\$HOME|\$\{HOME\})(?:'|")?/?(?:\s|;|\||$)"#,
             Severity::Critical,
             Category::Destructive,
             90,
@@ -111,7 +111,7 @@ lazy_static! {
         PatternRule::new(
             "RM_RF_HOME_GLOB",
             "清空用户目录内容",
-            r#"rm\s+(-[a-zA-Z]*)*\s*-r[a-zA-Z]*\s+(-[a-zA-Z]*\s+)*(?:'|")?(~|\$HOME|\$\{HOME\})(?:'|")?/\*(?:\s|;|\||$)"#,
+            r#"rm\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*[rR][a-zA-Z]*\s+(-[a-zA-Z]*\s+)*(?:'|")?(~|\$HOME|\$\{HOME\})(?:'|")?/\*(?:\s|;|\||$)"#,
             Severity::Critical,
             Category::Destructive,
             95,
@@ -137,7 +137,7 @@ lazy_static! {
         PatternRule::new(
             "RM_RF_USERS_HOME",
             "删除macOS用户目录",
-            r#"rm\s+(-[a-zA-Z]*)*\s*-r[a-zA-Z]*\s+(-[a-zA-Z]*\s+)*(?:'|")?/Users/[^/\s]+(?:'|")?/?(?:\s|;|\||$)"#,
+            r#"rm\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*[rR][a-zA-Z]*\s+(-[a-zA-Z]*\s+)*(?:'|")?/Users/[^/\s]+(?:'|")?/?(?:\s|;|\||$)"#,
             Severity::Critical,
             Category::Destructive,
             95,
@@ -528,7 +528,7 @@ lazy_static! {
         PatternRule::new(
             "READ_AWS_CREDENTIALS",
             "读取AWS凭证",
-            r"(cat|less|head|tail|vim|nano|open)\s+.*\.aws/credentials",
+            r"(cat|less|head|tail|vim|nano|open)\s+.*\.aws/credentials($|\s)",
             Severity::High,
             Category::SensitiveFileAccess,
             70,
@@ -554,7 +554,7 @@ lazy_static! {
         PatternRule::new(
             "READ_PASSWD",
             "读取passwd文件",
-            r"(cat|less|head|tail)\s+/etc/passwd",
+            r"(cat|less|head|tail)\s+/etc/passwd($|\s)",
             Severity::Medium,
             Category::SensitiveFileAccess,
             45,
@@ -567,7 +567,7 @@ lazy_static! {
         PatternRule::new(
             "READ_SHADOW",
             "读取shadow文件",
-            r"(cat|less|head|tail)\s+/etc/shadow",
+            r"(cat|less|head|tail)\s+/etc/shadow($|\s)",
             Severity::Critical,
             Category::SensitiveFileAccess,
             85,
@@ -580,7 +580,7 @@ lazy_static! {
         PatternRule::new(
             "READ_GIT_CREDENTIALS",
             "读取Git凭证",
-            r"(cat|less|head|tail|vim|nano|open)\s+.*\.git-credentials",
+            r"(cat|less|head|tail|vim|nano|open)\s+.*\.git-credentials($|\s)",
             Severity::High,
             Category::SensitiveFileAccess,
             65,
@@ -689,7 +689,7 @@ lazy_static! {
         PatternRule::new(
             "FTP_PROTOCOL",
             "FTP 协议使用",
-            r"ftp://",
+            r"\bftp://",
             Severity::Low,
             Category::Network,
             6,
