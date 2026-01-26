@@ -642,13 +642,19 @@ function SkillCard({
       </div>
 
       {/* Description - 自动填充剩余空间 */}
-      <p
-        ref={descriptionRef}
-        title={isDescriptionTruncated && skill.description ? skill.description : undefined}
-        className="text-sm text-muted-foreground mb-3 leading-5 overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]"
-      >
-        {skill.description || t("skills.noDescription")}
-      </p>
+      <div className="relative mb-3">
+        <p
+          ref={descriptionRef}
+          className="text-sm text-muted-foreground leading-5 h-[3.75rem] overflow-hidden [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] peer"
+        >
+          {skill.description || t("skills.noDescription")}
+        </p>
+        {isDescriptionTruncated && skill.description && (
+          <div className="apple-tooltip peer-hover:opacity-100 peer-hover:translate-y-0">
+            {skill.description}
+          </div>
+        )}
+      </div>
 
       {/* Repository */}
       <div className="text-xs text-muted-foreground mt-auto">
@@ -689,6 +695,24 @@ function PluginCard({
     ["installed", "already_installed", "failed", "uninstalled", "uninstall_failed"].includes(
       plugin.install_status ?? ""
     );
+  const descriptionRef = useRef<HTMLParagraphElement | null>(null);
+  const [isDescriptionTruncated, setIsDescriptionTruncated] = useState(false);
+
+  useLayoutEffect(() => {
+    const element = descriptionRef.current;
+    if (!element) return;
+
+    const update = () => {
+      setIsDescriptionTruncated(
+        element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth
+      );
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [plugin.description]);
 
   return (
     <div className="apple-card p-5 pt-10 flex flex-col relative">
@@ -750,9 +774,19 @@ function PluginCard({
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-3 leading-5 overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
-        {plugin.description || t("plugins.noDescription")}
-      </p>
+      <div className="relative mb-3">
+        <p
+          ref={descriptionRef}
+          className="text-sm text-muted-foreground leading-5 h-[3.75rem] overflow-hidden [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] peer"
+        >
+          {plugin.description || t("plugins.noDescription")}
+        </p>
+        {isDescriptionTruncated && plugin.description && (
+          <div className="apple-tooltip peer-hover:opacity-100 peer-hover:translate-y-0">
+            {plugin.description}
+          </div>
+        )}
+      </div>
 
       <div className="text-xs text-muted-foreground space-y-1">
         <div>

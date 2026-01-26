@@ -300,6 +300,11 @@
   .apple-list-item:not(:last-child) {
     @apply border-b border-border;
   }
+
+  .apple-tooltip {
+    @apply pointer-events-none absolute left-0 top-full z-30 mt-2 w-max max-w-xs rounded-xl bg-card/95 px-3 py-2 text-xs leading-5 text-foreground ring-1 ring-black/5 backdrop-blur-md opacity-0 translate-y-1 transition-all duration-150 whitespace-normal break-words;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  }
 }
 
 @layer utilities {
