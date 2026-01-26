@@ -482,10 +482,12 @@
       "of": "/",
       "skills": "个技能",
       "items": "个技能插件",
+      "files": "文件",
       "scanAll": "一键扫描",
+      "preparing": "准备扫描（统计文件中）",
       "scanning": "正在扫描",
       "completed": "扫描完成，发现 {{count}} 个问题",
-      "noIssues": "扫描完成，未发现问题",
+      "noIssues": "扫描完成，未发现问题（已扫描 {{scanned}}/{{total}} {{label}}）",
       "never": "从未扫描"
     },
     "scan": {

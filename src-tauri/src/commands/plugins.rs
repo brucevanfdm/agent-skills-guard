@@ -13,8 +13,17 @@ use crate::commands::featured_marketplaces;
 use crate::security::{ScanOptions, SecurityScanner};
 use crate::i18n::validate_locale;
 use chrono::Utc;
+use serde::Serialize;
 use std::path::PathBuf;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
+
+#[derive(Serialize, Clone)]
+struct ScanProgressEvent {
+    scan_id: String,
+    kind: String,
+    item_id: String,
+    file_path: String,
+}
 
 /// 获取所有 plugins
 #[tauri::command]
@@ -227,12 +236,13 @@ pub async fn scan_all_installed_plugins(
             continue;
         }
 
-        match scanner.scan_directory_with_options(
-            path.to_str().unwrap_or(""),
-            &plugin.id,
-            &locale,
-            ScanOptions { skip_readme: true },
-        ) {
+            match scanner.scan_directory_with_options(
+                path.to_str().unwrap_or(""),
+                &plugin.id,
+                &locale,
+                ScanOptions { skip_readme: true },
+                None,
+            ) {
             Ok(report) => {
                 plugin.security_score = Some(report.score);
                 plugin.security_level = Some(report.level.as_str().to_string());
@@ -271,9 +281,11 @@ pub async fn scan_all_installed_plugins(
 #[tauri::command]
 pub async fn scan_installed_plugin(
     state: State<'_, AppState>,
+    app: AppHandle,
     plugin_id: String,
     locale: String,
     claude_command: Option<String>,
+    scan_id: Option<String>,
 ) -> Result<String, String> {
     let locale = validate_locale(&locale);
 
@@ -307,14 +319,39 @@ pub async fn scan_installed_plugin(
     }
 
     let scanner = SecurityScanner::new();
-    let report = scanner
-        .scan_directory_with_options(
-            path.to_str().unwrap_or(""),
-            &plugin.id,
-            &locale,
-            ScanOptions { skip_readme: true },
-        )
-        .map_err(|e| e.to_string())?;
+    let report = if let Some(scan_id) = scan_id.filter(|id| !id.is_empty()) {
+        let app_handle = app.clone();
+        let item_id = plugin.id.clone();
+        let kind = "plugin".to_string();
+        let mut progress_cb = |file_path: &str| {
+            let payload = ScanProgressEvent {
+                scan_id: scan_id.clone(),
+                kind: kind.clone(),
+                item_id: item_id.clone(),
+                file_path: file_path.to_string(),
+            };
+            let _ = app_handle.emit("scan-progress", payload);
+        };
+        scanner
+            .scan_directory_with_options(
+                path.to_str().unwrap_or(""),
+                &plugin.id,
+                &locale,
+                ScanOptions { skip_readme: true },
+                Some(&mut progress_cb),
+            )
+            .map_err(|e| e.to_string())?
+    } else {
+        scanner
+            .scan_directory_with_options(
+                path.to_str().unwrap_or(""),
+                &plugin.id,
+                &locale,
+                ScanOptions { skip_readme: true },
+                None,
+            )
+            .map_err(|e| e.to_string())?
+    };
 
     plugin.security_score = Some(report.score);
     plugin.security_level = Some(report.level.as_str().to_string());

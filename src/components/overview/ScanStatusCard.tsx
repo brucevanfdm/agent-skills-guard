@@ -9,6 +9,8 @@ interface ScanStatusCardProps {
   totalCount: number;
   issueCount: number;
   isScanning: boolean;
+  countLabel: string;
+  scanLabel: string;
 }
 
 export function ScanStatusCard({
@@ -17,11 +19,14 @@ export function ScanStatusCard({
   totalCount,
   issueCount,
   isScanning,
+  countLabel,
+  scanLabel,
 }: ScanStatusCardProps) {
   const { t, i18n } = useTranslation();
 
   const progress = totalCount > 0 ? Math.min(100, (scannedCount / totalCount) * 100) : 0;
   const isComplete = totalCount > 0 && scannedCount >= totalCount;
+  const scannedDisplay = totalCount > 0 ? `${scannedCount}/${totalCount}` : `${scannedCount}`;
 
   const formatRelativeTime = (date: Date) => {
     const locale = i18n.language === "zh" ? zhCN : enUS;
@@ -62,34 +67,25 @@ export function ScanStatusCard({
               {scannedCount}
               <span className="text-muted-foreground"> / {totalCount}</span>
             </div>
-            <div className="text-xs text-muted-foreground">{t("overview.scanStatus.items")}</div>
+            <div className="text-xs text-muted-foreground">{countLabel}</div>
           </div>
         </div>
 
         {/* 进度条 */}
         <div className="space-y-2">
-          <div className="apple-progress h-2">
+          <div className="apple-progress h-4">
             <div
               className={`h-full rounded-full transition-all duration-500 ease-out ${status.bg}`}
               style={{ width: `${progress}%` }}
             />
           </div>
-          {isScanning && (
-            <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
-              <span>
-                {t("overview.scanStatus.scanned")}: {scannedCount}
-              </span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-          )}
-
           {/* 状态文字 */}
           <div className="flex items-center gap-2">
             {isScanning ? (
               <>
                 <Activity className="w-4 h-4 text-blue-500 animate-pulse" />
                 <span className="text-sm text-blue-500 font-medium">
-                  {t("overview.scanStatus.scanning")}...
+                  {scanLabel}...
                 </span>
               </>
             ) : isComplete ? (
@@ -101,7 +97,11 @@ export function ScanStatusCard({
                   className={`text-sm font-medium ${issueCount === 0 ? "text-green-600" : "text-orange-500"}`}
                 >
                   {issueCount === 0
-                    ? t("overview.scanStatus.noIssues")
+                    ? t("overview.scanStatus.noIssues", {
+                        scanned: scannedCount,
+                        total: totalCount,
+                        label: countLabel,
+                      })
                     : t("overview.scanStatus.completed", { count: issueCount })}
                 </span>
               </>

@@ -41,9 +41,83 @@ impl SecurityScanner {
         Self
     }
 
+    pub fn count_scan_files(&self, dir_path: &str, options: ScanOptions) -> Result<usize> {
+        use std::path::Path;
+        use walkdir::WalkDir;
+
+        let path = Path::new(dir_path);
+        if !path.exists() || !path.is_dir() {
+            anyhow::bail!("Directory does not exist: {}", dir_path);
+        }
+
+        // 扫描边界：避免被巨型目录/文件拖垮（且不会跟随符号链接）
+        const MAX_SCAN_DEPTH: usize = 20;
+        const MAX_FILES: usize = 2000;
+
+        // 常见大目录（依赖/构建产物），默认不深入扫描
+        const SKIP_DIR_NAMES: &[&str] = &[
+            ".git",
+            "node_modules",
+            "target",
+            "dist",
+            "build",
+            "__pycache__",
+            ".venv",
+            "venv",
+        ];
+
+        let mut total = 0usize;
+        let mut iter = WalkDir::new(path)
+            .follow_links(false)
+            .max_depth(MAX_SCAN_DEPTH)
+            .into_iter();
+
+        while let Some(next) = iter.next() {
+            let entry = match next {
+                Ok(e) => e,
+                Err(e) => {
+                    log::warn!("Failed to read directory entry under {:?}: {}", path, e);
+                    continue;
+                }
+            };
+
+            if entry.file_type().is_dir() {
+                if let Some(name) = entry.file_name().to_str() {
+                    if SKIP_DIR_NAMES.contains(&name) {
+                        iter.skip_current_dir();
+                    }
+                }
+                continue;
+            }
+
+            if !entry.file_type().is_file() {
+                continue;
+            }
+
+            if options.skip_readme {
+                if let Some(file_name) = entry.file_name().to_str() {
+                    let lower = file_name.to_ascii_lowercase();
+                    let is_readme_md = lower == "readme.md";
+                    let is_localized_readme_md = lower.starts_with("readme.") && lower.ends_with(".md");
+                    if is_readme_md || is_localized_readme_md {
+                        continue;
+                    }
+                }
+            }
+
+            total += 1;
+            if total >= MAX_FILES {
+                log::warn!("Too many files under {:?}, capping count at {}", path, MAX_FILES);
+                break;
+            }
+        }
+
+        Ok(total)
+    }
+
     /// 扫描目录下的所有文件，生成综合安全报告
     pub fn scan_directory(&self, dir_path: &str, skill_id: &str, locale: &str) -> Result<SecurityReport> {
-        self.scan_directory_with_options(dir_path, skill_id, locale, ScanOptions::default())
+        self.scan_directory_with_options(dir_path, skill_id, locale, ScanOptions::default(), None)
     }
 
     pub fn scan_directory_with_options(
@@ -52,6 +126,7 @@ impl SecurityScanner {
         skill_id: &str,
         locale: &str,
         options: ScanOptions,
+        mut on_file_scanned: Option<&mut dyn FnMut(&str)>,
     ) -> Result<SecurityReport> {
         let locale = validate_locale(locale);
         use std::path::Path;
@@ -177,6 +252,10 @@ impl SecurityScanner {
                         continue;
                     }
                 }
+            }
+
+            if let Some(callback) = on_file_scanned.as_deref_mut() {
+                callback(&rel_str);
             }
 
             // 读取文件内容（最多 MAX_BYTES_PER_FILE，避免 OOM/卡顿）

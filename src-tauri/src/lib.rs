@@ -287,6 +287,7 @@ pub fn run() {
             commands::plugins::scan_installed_plugin,
             scan_all_installed_skills,
             commands::security::scan_installed_skill,
+            commands::security::count_scan_files,
             get_scan_results,
             scan_skill_archive,
         ])

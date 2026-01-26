@@ -477,16 +477,18 @@
       "scannedSkills": "SCANNED_SKILLS"
     },
     "scanStatus": {
-      "lastScan": "LAST_SCAN",
-      "scanned": "SCANNED",
+      "lastScan": "Last scan",
+      "scanned": "Scanned",
       "of": "/",
-      "skills": "SKILLS",
-      "items": "ITEMS",
-      "scanAll": "SCAN_ALL",
-      "scanning": "SCANNING...",
-      "completed": "SCAN_COMPLETE: {{count}} ISSUES_FOUND",
-      "noIssues": "SCAN_COMPLETE: NO_ISSUES",
-      "never": "NEVER_SCANNED"
+      "skills": "skills",
+      "items": "items",
+      "files": "files",
+      "scanAll": "Scan all",
+      "preparing": "Preparing scan (counting files)",
+      "scanning": "Scanning",
+      "completed": "Scan complete — {{count}} issues found",
+      "noIssues": "Scan complete — no issues found (scanned {{scanned}}/{{total}} {{label}})",
+      "never": "Never scanned"
     },
     "scan": {
       "localSkillsFound": "FOUND {{count}} LOCAL_SKILLS",

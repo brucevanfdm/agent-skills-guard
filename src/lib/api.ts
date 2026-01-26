@@ -214,12 +214,26 @@ export const api = {
     return invoke("scan_all_installed_plugins", { locale, claudeCommand: claudeCommand || null });
   },
 
-  async scanInstalledSkill(skillId: string, locale: string): Promise<SkillScanResult> {
-    return invoke("scan_installed_skill", { skillId, locale });
+  async scanInstalledSkill(skillId: string, locale: string, scanId?: string): Promise<SkillScanResult> {
+    return invoke("scan_installed_skill", { skillId, locale, scanId: scanId || null });
   },
 
-  async scanInstalledPlugin(pluginId: string, locale: string, claudeCommand?: string): Promise<string> {
-    return invoke("scan_installed_plugin", { pluginId, locale, claudeCommand: claudeCommand || null });
+  async scanInstalledPlugin(
+    pluginId: string,
+    locale: string,
+    claudeCommand?: string,
+    scanId?: string
+  ): Promise<string> {
+    return invoke("scan_installed_plugin", {
+      pluginId,
+      locale,
+      claudeCommand: claudeCommand || null,
+      scanId: scanId || null,
+    });
+  },
+
+  async countScanFiles(dirPath: string, skipReadme = true): Promise<number> {
+    return invoke("count_scan_files", { dirPath, skipReadme });
   },
 
   // Reset

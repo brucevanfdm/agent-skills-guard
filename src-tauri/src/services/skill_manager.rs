@@ -207,6 +207,7 @@ impl SkillManager {
             &skill.id,
             "zh",
             ScanOptions { skip_readme: true },
+            None,
         )?;
 
         log::info!("Security scan completed: score={}, scanned {} files",
@@ -336,6 +337,7 @@ impl SkillManager {
             &skill.id,
             locale,
             ScanOptions { skip_readme: true },
+            None,
         )?;
 
         log::info!("Security scan completed: score={}, scanned {} files",
@@ -796,6 +798,7 @@ impl SkillManager {
                                 &existing_skill.id,
                                 "zh",
                                 ScanOptions { skip_readme: true },
+                                None,
                             )?;
 
                             existing_skill.security_score = Some(report.score);
@@ -836,6 +839,7 @@ impl SkillManager {
                             &skill_id,
                             "zh",
                             ScanOptions { skip_readme: true },
+                            None,
                         )?;
 
                         log::info!("Scanned local skill '{}': score={}, files={:?}",
@@ -1069,6 +1073,7 @@ impl SkillManager {
             &skill.id,
             locale,
             ScanOptions { skip_readme: true },
+            None,
         )?;
 
         log::info!("Security scan completed: score={}, scanned {} files",

@@ -5,8 +5,17 @@ use crate::security::{ScanOptions, SecurityScanner};
 use crate::i18n::validate_locale;
 use anyhow::Result;
 use rust_i18n::t;
+use serde::Serialize;
 use std::path::PathBuf;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
+
+#[derive(Serialize, Clone)]
+struct ScanProgressEvent {
+    scan_id: String,
+    kind: String,
+    item_id: String,
+    file_path: String,
+}
 
 /// 扫描所有已安装的 skills
 #[tauri::command]
@@ -39,6 +48,7 @@ pub async fn scan_all_installed_skills(
                 &skill.id,
                 &locale,
                 ScanOptions { skip_readme: true },
+                None,
             ) {
                 Ok(report) => {
                     // 更新 skill 的安全信息
@@ -84,8 +94,10 @@ pub async fn scan_all_installed_skills(
 #[tauri::command]
 pub async fn scan_installed_skill(
     state: State<'_, AppState>,
+    app: AppHandle,
     skill_id: String,
     locale: String,
+    scan_id: Option<String>,
 ) -> Result<SkillScanResult, String> {
     let locale = validate_locale(&locale);
     let mut skill = state
@@ -107,14 +119,39 @@ pub async fn scan_installed_skill(
     }
 
     let scanner = SecurityScanner::new();
-    let report = scanner
-        .scan_directory_with_options(
-            path.to_str().unwrap_or(""),
-            &skill.id,
-            &locale,
-            ScanOptions { skip_readme: true },
-        )
-        .map_err(|e| e.to_string())?;
+    let report = if let Some(scan_id) = scan_id.filter(|id| !id.is_empty()) {
+        let app_handle = app.clone();
+        let item_id = skill.id.clone();
+        let kind = "skill".to_string();
+        let mut progress_cb = |file_path: &str| {
+            let payload = ScanProgressEvent {
+                scan_id: scan_id.clone(),
+                kind: kind.clone(),
+                item_id: item_id.clone(),
+                file_path: file_path.to_string(),
+            };
+            let _ = app_handle.emit("scan-progress", payload);
+        };
+        scanner
+            .scan_directory_with_options(
+                path.to_str().unwrap_or(""),
+                &skill.id,
+                &locale,
+                ScanOptions { skip_readme: true },
+                Some(&mut progress_cb),
+            )
+            .map_err(|e| e.to_string())?
+    } else {
+        scanner
+            .scan_directory_with_options(
+                path.to_str().unwrap_or(""),
+                &skill.id,
+                &locale,
+                ScanOptions { skip_readme: true },
+                None,
+            )
+            .map_err(|e| e.to_string())?
+    };
 
     skill.security_score = Some(report.score);
     skill.security_level = Some(report.level.as_str().to_string());
@@ -147,6 +184,24 @@ pub async fn scan_installed_skill(
         scanned_at: chrono::Utc::now().to_rfc3339(),
         report,
     })
+}
+
+/// 统计目录内可扫描的文件数量（用于前端进度条预估）
+#[tauri::command]
+pub async fn count_scan_files(dir_path: String, skip_readme: Option<bool>) -> Result<usize, String> {
+    let path = PathBuf::from(&dir_path);
+    if !path.exists() || !path.is_dir() {
+        return Err(format!("Directory does not exist: {}", dir_path));
+    }
+
+    let scanner = SecurityScanner::new();
+    let options = ScanOptions {
+        skip_readme: skip_readme.unwrap_or(true),
+    };
+
+    scanner
+        .count_scan_files(path.to_str().unwrap_or(""), options)
+        .map_err(|e| e.to_string())
 }
 
 /// 获取缓存的扫描结果
