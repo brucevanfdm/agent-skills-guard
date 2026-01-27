@@ -45,6 +45,7 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
 
   const isCheckingRef = useRef(false);
   const updatePhaseRef = useRef<UpdaterPhase>("idle");
+  const didScheduleAutoCheckRef = useRef(false);
 
   const setUpdatePhaseSafe = useCallback((phase: UpdaterPhase) => {
     updatePhaseRef.current = phase;
@@ -175,6 +176,9 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
 
   // 应用启动时自动检查（延迟1秒避免阻塞）
   useEffect(() => {
+    if (didScheduleAutoCheckRef.current) return;
+    didScheduleAutoCheckRef.current = true;
+
     const timer = setTimeout(() => {
       checkUpdate().catch(console.error);
     }, 1000);

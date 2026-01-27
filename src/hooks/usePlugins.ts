@@ -7,6 +7,10 @@ export function usePlugins() {
   return useQuery({
     queryKey: ["plugins", i18n.language],
     queryFn: () => api.getPlugins(i18n.language),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 
@@ -14,6 +18,10 @@ export function useClaudeMarketplaces() {
   return useQuery({
     queryKey: ["claudeMarketplaces"],
     queryFn: () => api.getClaudeMarketplaces(),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 

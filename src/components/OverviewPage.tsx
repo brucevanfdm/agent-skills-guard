@@ -4,7 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { Loader2, CheckCircle, Shield, X } from "lucide-react";
 import type { SkillScanResult } from "@/types/security";
-import type { ClaudeMarketplace, Plugin, Skill, Repository } from "@/types";
+import type { Plugin, Skill, Repository } from "@/types";
 import { api } from "@/lib/api";
 import { StatisticsCards } from "./overview/StatisticsCards";
 import { ScanStatusCard } from "./overview/ScanStatusCard";
@@ -14,6 +14,7 @@ import { appToast } from "@/lib/toast";
 import { GroupCard, GroupCardItem } from "./ui/GroupCard";
 import type { SecurityIssue, SecurityReport } from "@/types/security";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { useClaudeMarketplaces, usePlugins } from "@/hooks/usePlugins";
 
 export function OverviewPage() {
   const { t, i18n } = useTranslation();
@@ -60,15 +61,9 @@ export function OverviewPage() {
     queryFn: api.getRepositories,
   });
 
-  const { data: plugins = [], isLoading: isPluginsLoading } = useQuery<Plugin[]>({
-    queryKey: ["plugins", i18n.language],
-    queryFn: () => api.getPlugins(i18n.language),
-  });
+  const { data: plugins = [], isLoading: isPluginsLoading } = usePlugins();
 
-  const { data: marketplaces = [], isLoading: isMarketplacesLoading } = useQuery<ClaudeMarketplace[]>({
-    queryKey: ["claudeMarketplaces"],
-    queryFn: () => api.getClaudeMarketplaces(),
-  });
+  const { data: marketplaces = [], isLoading: isMarketplacesLoading } = useClaudeMarketplaces();
 
   const { data: scanResults = [], isLoading: isScanResultsLoading } = useQuery<SkillScanResult[]>({
     queryKey: ["scanResults"],

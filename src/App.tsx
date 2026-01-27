@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { InstalledSkillsPage } from "./components/InstalledSkillsPage";
 import { MarketplacePage } from "./components/MarketplacePage";
@@ -40,6 +40,8 @@ function AppContent() {
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [isImportingFeatured, setIsImportingFeatured] = useState(false);
+  const didRunStartupTasksRef = useRef(false);
+  const didRunOnboardingCheckRef = useRef(false);
 
   const clearMarketplacePreset = useCallback(() => {
     setMarketplacePreset(null);
@@ -62,35 +64,34 @@ function AppContent() {
     };
   }, [platform]);
 
-  // 启动时自动更新精选仓库
+  // 启动时任务（防止 StrictMode 下重复触发）
   useEffect(() => {
-    const updateFeaturedRepos = async () => {
+    if (didRunStartupTasksRef.current) return;
+    didRunStartupTasksRef.current = true;
+
+    let cancelled = false;
+
+    const run = async () => {
+      // 1) 自动更新精选仓库
       try {
         const data = await api.refreshFeaturedRepositories();
-        queryClient.setQueryData(["featured-repositories"], data);
+        if (!cancelled) queryClient.setQueryData(["featured-repositories"], data);
       } catch (error) {
         console.debug("Failed to auto-update featured repositories:", error);
       }
-    };
-    updateFeaturedRepos();
-  }, [queryClient]);
 
-  // 启动时自动更新精选插件市场
-  useEffect(() => {
-    const updateFeaturedMarketplaces = async () => {
+      // 2) 自动更新精选插件市场（不强制触发 plugins 立刻重拉，避免高成本同步重复跑）
       try {
         const data = await api.refreshFeaturedMarketplaces();
-        queryClient.setQueryData(["featured-marketplaces"], data);
-        queryClient.invalidateQueries({ queryKey: ["plugins"] });
+        if (!cancelled) queryClient.setQueryData(["featured-marketplaces"], data);
       } catch (error) {
         console.debug("Failed to auto-update featured marketplaces:", error);
       }
     };
-    updateFeaturedMarketplaces();
-  }, [queryClient]);
 
-  // 首次启动时自动扫描未扫描的仓库
-  useEffect(() => {
+    run();
+
+    // 3) 首次启动时自动扫描未扫描的仓库（延迟 1 秒避免阻塞启动渲染）
     const autoScanRepositories = async () => {
       try {
         const scannedRepos = await api.autoScanUnscannedRepositories();
@@ -104,11 +105,17 @@ function AppContent() {
       }
     };
     const timer = setTimeout(autoScanRepositories, 1000);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [queryClient]);
 
   // 首次进入程序时提示是否导入精选仓库（官方推荐 + 社区精选）
   useEffect(() => {
+    if (didRunOnboardingCheckRef.current) return;
+    didRunOnboardingCheckRef.current = true;
+
     let cancelled = false;
 
     const hasDecision = () => {

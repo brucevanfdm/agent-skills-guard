@@ -13,8 +13,8 @@ marketplace:
       en: "Official"
       zh: "官方推荐"
     description:
-      en: "Official and verified marketplaces"
-      zh: "官方认证的 Marketplace"
+      en: ""
+      zh: ""
     marketplaces:
       - marketplace_name: "anthropic-agent-skills"
         marketplace_repo: "anthropics/skills"
@@ -82,8 +82,8 @@ marketplace:
       en: "Community"
       zh: "社区精选"
     description:
-      en: "High-quality community-contributed marketplaces"
-      zh: "社区贡献的高质量 Marketplace"
+      en: ""
+      zh: ""
     marketplaces:
       - marketplace_name: "baoyu-skills"
         marketplace_repo: "JimLiu/baoyu-skills"
