@@ -276,11 +276,90 @@
   /* Apple 风格进度条 */
   .apple-progress {
     @apply h-1 bg-secondary rounded-full overflow-hidden;
+    position: relative;
   }
 
   .apple-progress-bar {
     @apply h-full rounded-full transition-all duration-500;
     background: linear-gradient(90deg, #34c759 0%, #30d158 100%);
+  }
+
+  @keyframes progressSheen {
+    0% {
+      transform: translate3d(-120%, 0, 0);
+      opacity: 0;
+    }
+    12% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 0.85;
+    }
+    88% {
+      opacity: 0.6;
+    }
+    100% {
+      transform: translate3d(120%, 0, 0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes progressIndeterminate {
+    0% {
+      transform: translate3d(-60%, 0, 0);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate3d(160%, 0, 0);
+      opacity: 0;
+    }
+  }
+
+  .apple-progress-active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.35) 45%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(255, 255, 255, 0.35) 55%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    opacity: 0;
+    animation: progressSheen 2.2s linear infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  .apple-progress-indeterminate::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(
+      90deg,
+      rgba(59, 130, 246, 0) 0%,
+      rgba(59, 130, 246, 0.55) 50%,
+      rgba(59, 130, 246, 0) 100%
+    );
+    opacity: 0;
+    animation: progressIndeterminate 1.4s linear infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  .apple-progress-bar-active {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+      0 2px 10px rgba(0, 0, 0, 0.12);
   }
 
   /* Apple 风格分割线 */

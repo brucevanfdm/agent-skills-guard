@@ -1,8 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { Loader2, CheckCircle, Shield, X } from "lucide-react";
 import type { SkillScanResult } from "@/types/security";
 import type { ClaudeMarketplace, Plugin, Skill, Repository } from "@/types";
@@ -16,69 +15,15 @@ import { GroupCard, GroupCardItem } from "./ui/GroupCard";
 import type { SecurityIssue, SecurityReport } from "@/types/security";
 import { openPath } from "@tauri-apps/plugin-opener";
 
-type ScanProgressEvent = {
-  scan_id: string;
-  kind: "skill" | "plugin";
-  item_id: string;
-  file_path: string;
-};
-
 export function OverviewPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState<{
-    scanned: number;
-    total: number;
-    unit: "items" | "files";
-  }>({
-    scanned: 0,
-    total: 0,
-    unit: "items",
-  });
   const [itemProgress, setItemProgress] = useState<{ scanned: number; total: number }>({
     scanned: 0,
     total: 0,
   });
-  const scanProgressRef = useRef(scanProgress);
-  const [lastFileScan, setLastFileScan] = useState<{ scanned: number; total: number } | null>(null);
-  const unlistenRef = useRef<(() => void) | null>(null);
   const [filterLevel, setFilterLevel] = useState<string | null>(null);
-
-  const createScanId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-  const startProgressListener = async (scanId: string) => {
-    if (unlistenRef.current) {
-      unlistenRef.current();
-      unlistenRef.current = null;
-    }
-    try {
-      const unlisten = await listen<ScanProgressEvent>("scan-progress", (event) => {
-        if (event.payload.scan_id !== scanId) return;
-        setScanProgress((prev) => {
-          if (prev.unit !== "files") return prev;
-          const next = Math.min(prev.total, prev.scanned + 1);
-          return { total: prev.total, scanned: next, unit: prev.unit };
-        });
-      });
-      unlistenRef.current = unlisten;
-    } catch (error) {
-      console.warn("Scan progress listener failed:", error);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (unlistenRef.current) {
-        unlistenRef.current();
-        unlistenRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    scanProgressRef.current = scanProgress;
-  }, [scanProgress]);
 
   const { data: installedSkills = [] } = useQuery<Skill[]>({
     queryKey: ["skills", "installed"],
@@ -126,17 +71,13 @@ export function OverviewPage() {
   const scanMutation = useMutation({
     mutationFn: async () => {
       setIsScanning(true);
-      const scanId = createScanId();
       let localSkillsCount = 0;
       let installedPluginsCount = 0;
       let marketplaceCount = 0;
       let scannedPluginsCount = 0;
       let installedSkillsCount = 0;
 
-      setScanProgress({ scanned: 0, total: 0, unit: "items" });
       setItemProgress({ scanned: 0, total: 0 });
-      setLastFileScan(null);
-      await startProgressListener(scanId);
 
       try {
         const localSkills = await api.scanLocalSkills();
@@ -170,39 +111,7 @@ export function OverviewPage() {
       }
 
       const totalItems = installedSkillsCount + installedPluginsCount;
-      setScanProgress({ scanned: 0, total: totalItems, unit: "items" });
       setItemProgress({ scanned: 0, total: totalItems });
-
-      let totalScanFiles = 0;
-      const countTasks: Array<Promise<number>> = [];
-
-      installedPlugins.forEach((plugin) => {
-        const path = plugin.claude_install_path;
-        if (!path) return;
-        countTasks.push(
-          api.countScanFiles(path, true).catch(() => 0)
-        );
-      });
-
-      installedSkills.forEach((skill) => {
-        const path = skill.local_path;
-        if (!path) return;
-        countTasks.push(
-          api.countScanFiles(path, true).catch(() => 0)
-        );
-      });
-
-      if (countTasks.length > 0) {
-        const counts = await Promise.all(countTasks);
-        totalScanFiles = counts.reduce((sum, count) => {
-          const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
-          return sum + safeCount;
-        }, 0);
-      }
-
-      if (totalScanFiles > 0) {
-        setScanProgress({ scanned: 0, total: totalScanFiles, unit: "files" });
-      }
 
       try {
         const latestMarketplaces = await api.getClaudeMarketplaces();
@@ -215,7 +124,7 @@ export function OverviewPage() {
       try {
         for (const plugin of installedPlugins) {
           try {
-            await api.scanInstalledPlugin(plugin.id, i18n.language, undefined, scanId);
+            await api.scanInstalledPlugin(plugin.id, i18n.language);
             scannedPluginsCount += 1;
           } catch (e) {
             console.error("扫描插件失败:", plugin.name, e);
@@ -223,10 +132,6 @@ export function OverviewPage() {
             setItemProgress((prev) => {
               const next = prev.total > 0 ? Math.min(prev.total, prev.scanned + 1) : 0;
               return { ...prev, scanned: next };
-            });
-            setScanProgress((prev) => {
-              const step = prev.unit === "files" ? 0 : 1;
-              return { total: prev.total, scanned: prev.scanned + step, unit: prev.unit };
             });
           }
         }
@@ -239,7 +144,7 @@ export function OverviewPage() {
       try {
         for (const skill of installedSkills) {
           try {
-            const result = await api.scanInstalledSkill(skill.id, i18n.language, scanId);
+            const result = await api.scanInstalledSkill(skill.id, i18n.language);
             results.push(result);
           } catch (e) {
             console.error("扫描技能失败:", skill.name, e);
@@ -247,10 +152,6 @@ export function OverviewPage() {
             setItemProgress((prev) => {
               const next = prev.total > 0 ? Math.min(prev.total, prev.scanned + 1) : 0;
               return { ...prev, scanned: next };
-            });
-            setScanProgress((prev) => {
-              const step = prev.unit === "files" ? 0 : 1;
-              return { total: prev.total, scanned: prev.scanned + step, unit: prev.unit };
             });
           }
         }
@@ -288,14 +189,6 @@ export function OverviewPage() {
     },
     onSettled: () => {
       setIsScanning(false);
-      const progress = scanProgressRef.current;
-      if (progress.unit === "files" && progress.total > 0) {
-        setLastFileScan({ scanned: progress.scanned, total: progress.total });
-      }
-      if (unlistenRef.current) {
-        unlistenRef.current();
-        unlistenRef.current = null;
-      }
     },
   });
 
@@ -309,10 +202,7 @@ export function OverviewPage() {
     [marketplaces.length, plugins, repositories.length, uniqueInstalledSkills]
   );
 
-  const scanActionLabel =
-    isScanning && scanProgress.unit !== "files"
-      ? t("overview.scanStatus.preparing")
-      : t("overview.scanStatus.scanning");
+  const scanActionLabel = t("overview.scanStatus.scanning");
 
   const scannedPluginsCount = useMemo(() => {
     return plugins.filter((p) => p.installed && p.security_score != null).length;
@@ -328,12 +218,6 @@ export function OverviewPage() {
 
   const displayScannedCount = isScanning ? itemProgress.scanned : scannedItemsCount;
   const displayTotalCount = isScanning ? itemProgress.total : totalItemsCount;
-  const fileProgress = isScanning
-    ? scanProgress.unit === "files" && scanProgress.total > 0
-      ? { scanned: scanProgress.scanned, total: scanProgress.total }
-      : null
-    : lastFileScan;
-
   const issuesByLevel = useMemo(() => {
     const result: Record<string, number> = { Severe: 0, MidHigh: 0, Safe: 0 };
     uniqueScanResults.forEach((r) => {
@@ -496,7 +380,6 @@ export function OverviewPage() {
             isScanning={isScanning}
             scanLabel={scanActionLabel}
             countLabel={t("overview.scanStatus.items")}
-            fileProgress={fileProgress}
           />
         </div>
         <div className="lg:col-span-5 h-full">

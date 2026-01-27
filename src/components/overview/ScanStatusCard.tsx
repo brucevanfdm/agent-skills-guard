@@ -32,6 +32,7 @@ export function ScanStatusCard({
     fileProgress && fileProgress.total > 0 ? fileProgress : null;
   const noIssueDisplay = fileProgressDisplay ?? { scanned: scannedCount, total: totalCount };
   const noIssueLabel = fileProgressDisplay ? t("overview.scanStatus.files") : countLabel;
+  const showIndeterminate = isScanning && (totalCount === 0 || scannedCount === 0);
 
   const formatRelativeTime = (date: Date) => {
     const locale = i18n.language === "zh" ? zhCN : enUS;
@@ -48,6 +49,10 @@ export function ScanStatusCard({
   };
 
   const status = getStatusInfo();
+  const countClass = isScanning
+    ? "text-base font-semibold text-muted-foreground tabular-nums"
+    : "text-2xl font-semibold text-foreground tabular-nums";
+  const labelClass = isScanning ? "text-[11px] text-muted-foreground" : "text-xs text-muted-foreground";
 
   return (
     <div className="apple-card p-6 h-full">
@@ -68,19 +73,25 @@ export function ScanStatusCard({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-semibold text-foreground tabular-nums">
+            <div className={countClass}>
               {scannedCount}
               <span className="text-muted-foreground"> / {totalCount}</span>
             </div>
-            <div className="text-xs text-muted-foreground">{countLabel}</div>
+            <div className={labelClass}>{countLabel}</div>
           </div>
         </div>
 
         {/* 进度条 */}
         <div className="space-y-2">
-          <div className="apple-progress h-4">
+          <div
+            className={`apple-progress ${isScanning ? "h-5 apple-progress-active" : "h-4"} ${
+              showIndeterminate ? "apple-progress-indeterminate" : ""
+            }`}
+          >
             <div
-              className={`h-full rounded-full transition-all duration-500 ease-out ${status.bg}`}
+              className={`h-full rounded-full transition-[width] duration-700 ease-out ${status.bg} ${
+                isScanning ? "apple-progress-bar-active" : ""
+              }`}
               style={{ width: `${progress}%` }}
             />
           </div>
