@@ -59,6 +59,17 @@ type InstalledEntry =
   | { kind: "plugin"; item: Plugin }
   | { kind: "marketplace"; item: InstalledMarketplace };
 
+type InstalledOpsStatus = {
+  uninstallingSkillId: string | null;
+  uninstallingPluginId: string | null;
+  pendingMarketplaceRemove: {
+    marketplaceName: string;
+    marketplaceRepo: string;
+    installedPluginNames: string[];
+  } | null;
+  removingMarketplaceName: string | null;
+};
+
 const MARKETPLACE_OWNER_REGEX = /github\.com\/([^/]+)/;
 
 const getMarketplaceOwner = (repoUrl: string) => {
@@ -87,18 +98,36 @@ export function InstalledSkillsPage() {
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
+  const installedOpsQueryKey = ["installed", "ops-status"];
+  const defaultInstalledOps: InstalledOpsStatus = {
+    uninstallingSkillId: null,
+    uninstallingPluginId: null,
+    pendingMarketplaceRemove: null,
+    removingMarketplaceName: null,
+  };
+  const { data: installedOps = defaultInstalledOps } = useQuery<InstalledOpsStatus>({
+    queryKey: installedOpsQueryKey,
+    queryFn: () => defaultInstalledOps,
+    initialData: defaultInstalledOps,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+  const setInstalledOps = (updater: (prev: InstalledOpsStatus) => InstalledOpsStatus) => {
+    queryClient.setQueryData(installedOpsQueryKey, (prev?: InstalledOpsStatus) =>
+      updater(prev ?? defaultInstalledOps)
+    );
+  };
+
   const [activeTab, setActiveTab] = useState<"all" | "skills" | "plugins" | "marketplaces">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRepository, setSelectedRepository] = useState("all");
   const [isScanning, setIsScanning] = useState(false);
-  const [uninstallingSkillId, setUninstallingSkillId] = useState<string | null>(null);
-  const [uninstallingPluginId, setUninstallingPluginId] = useState<string | null>(null);
-  const [pendingMarketplaceRemove, setPendingMarketplaceRemove] = useState<{
-    marketplaceName: string;
-    marketplaceRepo: string;
-    installedPluginNames: string[];
-  } | null>(null);
-  const [removingMarketplaceName, setRemovingMarketplaceName] = useState<string | null>(null);
+  const {
+    uninstallingSkillId,
+    uninstallingPluginId,
+    pendingMarketplaceRemove,
+    removingMarketplaceName,
+  } = installedOps;
 
   const [availableUpdates, setAvailableUpdates] = useState<Map<string, string>>(() => {
     try {
@@ -777,14 +806,14 @@ export function InstalledSkillsPage() {
           if (upgradeCandidate) setPendingSkillPluginUpgrade(upgradeCandidate);
         }}
         onUninstall={() => {
-          setUninstallingSkillId(skill.id);
+          setInstalledOps((prev) => ({ ...prev, uninstallingSkillId: skill.id }));
           uninstallMutation.mutate(skill.id, {
             onSuccess: () => {
-              setUninstallingSkillId(null);
+              setInstalledOps((prev) => ({ ...prev, uninstallingSkillId: null }));
               appToast.success(t("skills.toast.uninstalled"));
             },
             onError: (error: any) => {
-              setUninstallingSkillId(null);
+              setInstalledOps((prev) => ({ ...prev, uninstallingSkillId: null }));
               appToast.error(`${t("skills.toast.uninstallFailed")}: ${error.message || error}`);
             },
           });
@@ -849,7 +878,7 @@ export function InstalledSkillsPage() {
       onUpdate={() => updatePlugin(plugin.id)}
       onUninstall={async () => {
         try {
-          setUninstallingPluginId(plugin.id);
+          setInstalledOps((prev) => ({ ...prev, uninstallingPluginId: plugin.id }));
           const result = await uninstallPluginMutation.mutateAsync(plugin.id);
           if (result.success) {
             appToast.success(t("plugins.toast.uninstalled"));
@@ -859,7 +888,7 @@ export function InstalledSkillsPage() {
         } catch (error: any) {
           appToast.error(`${t("plugins.toast.uninstallFailed")}: ${error.message || error}`);
         } finally {
-          setUninstallingPluginId(null);
+          setInstalledOps((prev) => ({ ...prev, uninstallingPluginId: null }));
         }
       }}
     />
@@ -891,11 +920,14 @@ export function InstalledSkillsPage() {
           .filter((p) => p.installed)
           .map((p) => p.name)
           .sort((a, b) => a.localeCompare(b));
-        setPendingMarketplaceRemove({
-          marketplaceName: marketplace.name,
-          marketplaceRepo: marketplace.repoUrl,
-          installedPluginNames,
-        });
+        setInstalledOps((prev) => ({
+          ...prev,
+          pendingMarketplaceRemove: {
+            marketplaceName: marketplace.name,
+            marketplaceRepo: marketplace.repoUrl,
+            installedPluginNames,
+          },
+        }));
       }}
     />
   );
@@ -1224,7 +1256,9 @@ export function InstalledSkillsPage() {
       <AlertDialog
         open={pendingMarketplaceRemove !== null}
         onOpenChange={(open) => {
-          if (!open) setPendingMarketplaceRemove(null);
+          if (!open) {
+            setInstalledOps((prev) => ({ ...prev, pendingMarketplaceRemove: null }));
+          }
         }}
       >
         <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -1270,8 +1304,11 @@ export function InstalledSkillsPage() {
               onClick={async () => {
                 if (!pendingMarketplaceRemove) return;
                 const { marketplaceName, marketplaceRepo } = pendingMarketplaceRemove;
-                setRemovingMarketplaceName(marketplaceName);
-                setPendingMarketplaceRemove(null);
+                setInstalledOps((prev) => ({
+                  ...prev,
+                  removingMarketplaceName: marketplaceName,
+                  pendingMarketplaceRemove: null,
+                }));
                 try {
                   const result = await removeMarketplaceMutation.mutateAsync({
                     marketplaceName,
@@ -1289,7 +1326,7 @@ export function InstalledSkillsPage() {
                     `${t("plugins.toast.marketplaceRemoveFailed")}: ${error.message || error}`
                   );
                 } finally {
-                  setRemovingMarketplaceName(null);
+                  setInstalledOps((prev) => ({ ...prev, removingMarketplaceName: null }));
                 }
               }}
               disabled={removingMarketplaceName !== null}

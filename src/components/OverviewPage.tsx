@@ -18,12 +18,37 @@ import { openPath } from "@tauri-apps/plugin-opener";
 export function OverviewPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const [isScanning, setIsScanning] = useState(false);
-  const [itemProgress, setItemProgress] = useState<{ scanned: number; total: number }>({
-    scanned: 0,
-    total: 0,
+  const scanStatusQueryKey = ["overview", "scan-status"];
+  const defaultScanStatus = {
+    isScanning: false,
+    itemProgress: { scanned: 0, total: 0 },
+  };
+  const { data: scanStatus = defaultScanStatus } = useQuery<{
+    isScanning: boolean;
+    itemProgress: { scanned: number; total: number };
+  }>({
+    queryKey: scanStatusQueryKey,
+    queryFn: () => defaultScanStatus,
+    initialData: defaultScanStatus,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
   const [filterLevel, setFilterLevel] = useState<string | null>(null);
+
+  const isScanning = scanStatus.isScanning;
+  const itemProgress = scanStatus.itemProgress;
+  const setScanStatus = (
+    updater: (prev: { isScanning: boolean; itemProgress: { scanned: number; total: number } }) => {
+      isScanning: boolean;
+      itemProgress: { scanned: number; total: number };
+    }
+  ) => {
+    queryClient.setQueryData(
+      scanStatusQueryKey,
+      (prev?: { isScanning: boolean; itemProgress: { scanned: number; total: number } }) =>
+        updater(prev ?? defaultScanStatus)
+    );
+  };
 
   const { data: installedSkills = [] } = useQuery<Skill[]>({
     queryKey: ["skills", "installed"],
@@ -70,14 +95,15 @@ export function OverviewPage() {
 
   const scanMutation = useMutation({
     mutationFn: async () => {
-      setIsScanning(true);
+      setScanStatus(() => ({
+        isScanning: true,
+        itemProgress: { scanned: 0, total: 0 },
+      }));
       let localSkillsCount = 0;
       let installedPluginsCount = 0;
       let marketplaceCount = 0;
       let scannedPluginsCount = 0;
       let installedSkillsCount = 0;
-
-      setItemProgress({ scanned: 0, total: 0 });
 
       try {
         const localSkills = await api.scanLocalSkills();
@@ -111,7 +137,10 @@ export function OverviewPage() {
       }
 
       const totalItems = installedSkillsCount + installedPluginsCount;
-      setItemProgress({ scanned: 0, total: totalItems });
+      setScanStatus((prev) => ({
+        ...prev,
+        itemProgress: { scanned: 0, total: totalItems },
+      }));
 
       try {
         const latestMarketplaces = await api.getClaudeMarketplaces();
@@ -129,9 +158,15 @@ export function OverviewPage() {
           } catch (e) {
             console.error("扫描插件失败:", plugin.name, e);
           } finally {
-            setItemProgress((prev) => {
-              const next = prev.total > 0 ? Math.min(prev.total, prev.scanned + 1) : 0;
-              return { ...prev, scanned: next };
+            setScanStatus((prev) => {
+              const next =
+                prev.itemProgress.total > 0
+                  ? Math.min(prev.itemProgress.total, prev.itemProgress.scanned + 1)
+                  : 0;
+              return {
+                ...prev,
+                itemProgress: { ...prev.itemProgress, scanned: next },
+              };
             });
           }
         }
@@ -149,9 +184,15 @@ export function OverviewPage() {
           } catch (e) {
             console.error("扫描技能失败:", skill.name, e);
           } finally {
-            setItemProgress((prev) => {
-              const next = prev.total > 0 ? Math.min(prev.total, prev.scanned + 1) : 0;
-              return { ...prev, scanned: next };
+            setScanStatus((prev) => {
+              const next =
+                prev.itemProgress.total > 0
+                  ? Math.min(prev.itemProgress.total, prev.itemProgress.scanned + 1)
+                  : 0;
+              return {
+                ...prev,
+                itemProgress: { ...prev.itemProgress, scanned: next },
+              };
             });
           }
         }
@@ -188,7 +229,10 @@ export function OverviewPage() {
       appToast.error(t("overview.scan.failed", { error: error.message }), { duration: 4000 });
     },
     onSettled: () => {
-      setIsScanning(false);
+      setScanStatus((prev) => ({
+        ...prev,
+        isScanning: false,
+      }));
     },
   });
 

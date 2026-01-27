@@ -906,6 +906,15 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
             await queryClient.refetchQueries({ queryKey: ["skills"] });
             await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
             await queryClient.refetchQueries({ queryKey: ["scanResults"] });
+            setPreview((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                skills: prev.skills.map((skill) =>
+                  skill.id === skillId ? { ...skill, installed: true } : skill
+                ),
+              };
+            });
             appToast.success(t("skills.toast.installed"));
           } catch (error: any) {
             appToast.error(`${t("skills.toast.installFailed")}: ${error.message || error}`);

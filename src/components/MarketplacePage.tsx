@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSkills, useInstallSkill } from "../hooks/useSkills";
 import { usePlugins } from "../hooks/usePlugins";
 import type { Plugin, PluginInstallResult, Skill } from "../types";
@@ -43,6 +43,13 @@ interface MarketplacePageProps {
 }
 
 type MarketplaceItem = { kind: "skill"; item: Skill } | { kind: "plugin"; item: Plugin };
+type MarketplaceInstallStatus = {
+  pendingInstall: { skill: Skill; report: SecurityReport } | null;
+  preparingSkillId: string | null;
+  installingSkillId: string | null;
+  installingPluginId: string | null;
+  scanPromptPlugin: Plugin | null;
+};
 
 const ANSI_ESCAPE_REGEX =
   /[\u001B\u009B][[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
@@ -64,21 +71,38 @@ export function MarketplacePage({
   const { data: plugins = [], isLoading: isPluginsLoading } = usePlugins();
   const installMutation = useInstallSkill();
 
+  const installStatusQueryKey = ["marketplace", "install-status"];
+  const defaultInstallStatus: MarketplaceInstallStatus = {
+    pendingInstall: null,
+    preparingSkillId: null,
+    installingSkillId: null,
+    installingPluginId: null,
+    scanPromptPlugin: null,
+  };
+  const { data: installStatus = defaultInstallStatus } = useQuery<MarketplaceInstallStatus>({
+    queryKey: installStatusQueryKey,
+    queryFn: () => defaultInstallStatus,
+    initialData: defaultInstallStatus,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  const setInstallStatus = (updater: (prev: MarketplaceInstallStatus) => MarketplaceInstallStatus) => {
+    queryClient.setQueryData(installStatusQueryKey, (prev?: MarketplaceInstallStatus) =>
+      updater(prev ?? defaultInstallStatus)
+    );
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRepository, setSelectedRepository] = useState("all");
   const [activeTypeTab, setActiveTypeTab] = useState<"all" | "skills" | "plugins">("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pendingInstall, setPendingInstall] = useState<{
-    skill: Skill;
-    report: SecurityReport;
-  } | null>(null);
-  const [preparingSkillId, setPreparingSkillId] = useState<string | null>(null);
-  const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
-  const [installingPluginId, setInstallingPluginId] = useState<string | null>(null);
   const [logPlugin, setLogPlugin] = useState<Plugin | null>(null);
-  const [scanPromptPlugin, setScanPromptPlugin] = useState<Plugin | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const { pendingInstall, preparingSkillId, installingSkillId, installingPluginId, scanPromptPlugin } =
+    installStatus;
 
   const isLoading = isSkillsLoading || isPluginsLoading;
 
@@ -338,15 +362,24 @@ export function MarketplacePage({
                     skill={entry.item}
                     onInstall={async () => {
                       try {
-                        setPreparingSkillId(entry.item.id);
+                        setInstallStatus((prev) => ({
+                          ...prev,
+                          preparingSkillId: entry.item.id,
+                        }));
                         const report = await invoke<SecurityReport>("prepare_skill_installation", {
                           skillId: entry.item.id,
                           locale: i18n.language,
                         });
-                        setPreparingSkillId(null);
-                        setPendingInstall({ skill: entry.item, report });
+                        setInstallStatus((prev) => ({
+                          ...prev,
+                          preparingSkillId: null,
+                          pendingInstall: { skill: entry.item, report },
+                        }));
                       } catch (error: any) {
-                        setPreparingSkillId(null);
+                        setInstallStatus((prev) => ({
+                          ...prev,
+                          preparingSkillId: null,
+                        }));
                         appToast.error(
                           `${t("skills.toast.installFailed")}: ${error.message || error}`
                         );
@@ -383,7 +416,10 @@ export function MarketplacePage({
                         return;
                       }
                       try {
-                        setInstallingPluginId(entry.item.id);
+                        setInstallStatus((prev) => ({
+                          ...prev,
+                          installingPluginId: entry.item.id,
+                        }));
                         const result = await invoke<PluginInstallResult>("confirm_plugin_installation", {
                           pluginId: entry.item.id,
                           claudeCommand: null,
@@ -397,7 +433,10 @@ export function MarketplacePage({
                         } else {
                           appToast.success(t("plugins.toast.installed"));
                           if (getPluginScanPromptEnabled()) {
-                            setScanPromptPlugin(entry.item);
+                            setInstallStatus((prev) => ({
+                              ...prev,
+                              scanPromptPlugin: entry.item,
+                            }));
                           }
                         }
                       } catch (error: any) {
@@ -405,7 +444,10 @@ export function MarketplacePage({
                           `${t("plugins.toast.installFailed")}: ${error.message || error}`
                         );
                       } finally {
-                        setInstallingPluginId(null);
+                        setInstallStatus((prev) => ({
+                          ...prev,
+                          installingPluginId: null,
+                        }));
                       }
                     }}
                   />
@@ -475,7 +517,10 @@ export function MarketplacePage({
         onClose={() => {
           const skillId = pendingInstall?.skill.id;
           const shouldCancel = skillId && installingSkillId !== skillId;
-          setPendingInstall(null);
+          setInstallStatus((prev) => ({
+            ...prev,
+            pendingInstall: null,
+          }));
           if (!shouldCancel) return;
           void invoke("cancel_skill_installation", { skillId }).catch((error: any) => {
             console.error("[ERROR] 取消安装失败:", error);
@@ -484,8 +529,11 @@ export function MarketplacePage({
         onConfirm={async (selectedPath) => {
           if (!pendingInstall) return;
           const skillId = pendingInstall.skill.id;
-          setInstallingSkillId(skillId);
-          setPendingInstall(null);
+          setInstallStatus((prev) => ({
+            ...prev,
+            installingSkillId: skillId,
+            pendingInstall: null,
+          }));
           try {
             await invoke("confirm_skill_installation", {
               skillId,
@@ -499,7 +547,10 @@ export function MarketplacePage({
           } catch (error: any) {
             appToast.error(`${t("skills.toast.installFailed")}: ${error.message || error}`);
           } finally {
-            setInstallingSkillId(null);
+            setInstallStatus((prev) => ({
+              ...prev,
+              installingSkillId: null,
+            }));
           }
         }}
         report={pendingInstall?.report || null}
@@ -515,9 +566,17 @@ export function MarketplacePage({
       <PluginScanPromptDialog
         open={scanPromptPlugin !== null}
         pluginName={scanPromptPlugin?.name ?? ""}
-        onClose={() => setScanPromptPlugin(null)}
+        onClose={() =>
+          setInstallStatus((prev) => ({
+            ...prev,
+            scanPromptPlugin: null,
+          }))
+        }
         onConfirm={() => {
-          setScanPromptPlugin(null);
+          setInstallStatus((prev) => ({
+            ...prev,
+            scanPromptPlugin: null,
+          }));
           onNavigateToOverview?.();
         }}
       />
