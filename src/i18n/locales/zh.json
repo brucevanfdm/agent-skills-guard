@@ -35,6 +35,14 @@
       "marketplaces": "市场 ({{count}})"
     },
     "search": "搜索已安装的技能/插件/市场...",
+    "checkUpdatesSummary": "检查更新完成：技能 {{skills}} 个、插件 {{plugins}} 个、市场 {{marketplaces}} 个可更新",
+    "checkUpdatesAllUpToDate": "已是最新版本",
+    "checkUpdatesFailed": "检查更新失败：{{targets}}",
+    "checkUpdatesTargets": {
+      "skills": "技能",
+      "plugins": "插件",
+      "marketplaces": "市场"
+    },
     "plugins": {
       "empty": "暂无已安装插件"
     },

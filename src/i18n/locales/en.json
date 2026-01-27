@@ -35,6 +35,14 @@
       "marketplaces": "MARKETPLACES ({{count}})"
     },
     "search": "SEARCH_INSTALLED_ITEMS...",
+    "checkUpdatesSummary": "Update check complete: {{skills}} skills, {{plugins}} plugins, {{marketplaces}} marketplaces available",
+    "checkUpdatesAllUpToDate": "All items are up to date",
+    "checkUpdatesFailed": "Update check failed: {{targets}}",
+    "checkUpdatesTargets": {
+      "skills": "skills",
+      "plugins": "plugins",
+      "marketplaces": "marketplaces"
+    },
     "plugins": {
       "empty": "NO_INSTALLED_PLUGINS"
     },

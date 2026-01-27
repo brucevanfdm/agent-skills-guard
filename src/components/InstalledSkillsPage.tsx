@@ -21,6 +21,7 @@ import {
   CheckCircle,
   XCircle,
   Lightbulb,
+  RefreshCw,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
@@ -153,6 +154,7 @@ export function InstalledSkillsPage() {
   });
   const [isCheckingMarketplaceUpdates, setIsCheckingMarketplaceUpdates] = useState(false);
   const [updatingMarketplaceName, setUpdatingMarketplaceName] = useState<string | null>(null);
+  const [isCheckingAllUpdates, setIsCheckingAllUpdates] = useState(false);
 
   const getLocalizedText = (text?: { en: string; zh: string }) => {
     if (!text) return "";
@@ -269,7 +271,9 @@ export function InstalledSkillsPage() {
     }
   }, [claudeMarketplaces, availableMarketplaceUpdates]);
 
-  const checkUpdatesWithRefresh = async () => {
+  const checkUpdatesWithRefresh = async (
+    options?: { silent?: boolean }
+  ): Promise<{ count: number; error?: string }> => {
     try {
       // 第一步：刷新本地技能
       setIsScanning(true);
@@ -277,7 +281,9 @@ export function InstalledSkillsPage() {
       queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
-      appToast.success(t("skills.installedPage.scanCompleted", { count: localSkills.length }));
+      if (!options?.silent) {
+        appToast.success(t("skills.installedPage.scanCompleted", { count: localSkills.length }));
+      }
       setIsScanning(false);
 
       // 第二步：检查更新
@@ -285,52 +291,123 @@ export function InstalledSkillsPage() {
       const updates = await api.checkSkillsUpdates();
       const updateMap = new Map(updates.map(([skillId, latestSha]) => [skillId, latestSha]));
       setAvailableUpdates(updateMap);
-      if (updates.length > 0) {
-        appToast.success(t("skills.installedPage.updatesFound", { count: updates.length }));
-      } else {
-        appToast.success(t("skills.installedPage.noUpdates"));
+      if (!options?.silent) {
+        if (updates.length > 0) {
+          appToast.success(t("skills.installedPage.updatesFound", { count: updates.length }));
+        } else {
+          appToast.success(t("skills.installedPage.noUpdates"));
+        }
       }
+      return { count: updates.length };
     } catch (error: any) {
-      if (isScanning) {
-        appToast.error(t("skills.installedPage.scanFailed", { error: error.message }));
-      } else {
-        appToast.error(t("skills.installedPage.checkUpdatesFailed", { error: error.message }));
+      const message = error?.message || String(error);
+      if (!options?.silent) {
+        if (isScanning) {
+          appToast.error(t("skills.installedPage.scanFailed", { error: message }));
+        } else {
+          appToast.error(t("skills.installedPage.checkUpdatesFailed", { error: message }));
+        }
       }
+      return { count: 0, error: message };
     } finally {
       setIsScanning(false);
       setIsCheckingUpdates(false);
     }
   };
 
-  const checkPluginUpdates = async () => {
-    if (isCheckingPluginUpdates) return;
+  const checkPluginUpdates = async (
+    options?: { silent?: boolean }
+  ): Promise<{ count: number; error?: string }> => {
+    if (isCheckingPluginUpdates) return { count: 0 };
     setIsCheckingPluginUpdates(true);
     try {
       const updates = await api.checkPluginsUpdates();
       setAvailablePluginUpdates(new Map(updates));
       await queryClient.invalidateQueries({ queryKey: ["plugins"] });
-      appToast.success(t("plugins.updates.checked", { count: updates.length }));
+      if (!options?.silent) {
+        appToast.success(t("plugins.updates.checked", { count: updates.length }));
+      }
+      return { count: updates.length };
     } catch (error: any) {
-      appToast.error(t("plugins.updates.checkFailed", { error: error.message || String(error) }));
+      const message = error?.message || String(error);
+      if (!options?.silent) {
+        appToast.error(t("plugins.updates.checkFailed", { error: message }));
+      }
+      return { count: 0, error: message };
     } finally {
       setIsCheckingPluginUpdates(false);
     }
   };
 
-  const checkMarketplaceUpdates = async () => {
-    if (isCheckingMarketplaceUpdates) return;
+  const checkMarketplaceUpdates = async (
+    options?: { silent?: boolean }
+  ): Promise<{ count: number; error?: string }> => {
+    if (isCheckingMarketplaceUpdates) return { count: 0 };
     setIsCheckingMarketplaceUpdates(true);
     try {
       const updates = await api.checkMarketplacesUpdates();
       setAvailableMarketplaceUpdates(new Map(updates));
       await queryClient.invalidateQueries({ queryKey: ["claudeMarketplaces"] });
-      appToast.success(t("plugins.marketplaces.updates.checked", { count: updates.length }));
+      if (!options?.silent) {
+        appToast.success(t("plugins.marketplaces.updates.checked", { count: updates.length }));
+      }
+      return { count: updates.length };
     } catch (error: any) {
-      appToast.error(
-        t("plugins.marketplaces.updates.checkFailed", { error: error.message || String(error) })
-      );
+      const message = error?.message || String(error);
+      if (!options?.silent) {
+        appToast.error(
+          t("plugins.marketplaces.updates.checkFailed", { error: message })
+        );
+      }
+      return { count: 0, error: message };
     } finally {
       setIsCheckingMarketplaceUpdates(false);
+    }
+  };
+
+  const checkAllUpdates = async () => {
+    if (
+      isCheckingAllUpdates ||
+      isScanning ||
+      isCheckingUpdates ||
+      isCheckingPluginUpdates ||
+      isCheckingMarketplaceUpdates
+    ) {
+      return;
+    }
+    setIsCheckingAllUpdates(true);
+    try {
+      const skillsResult = await checkUpdatesWithRefresh({ silent: true });
+      const pluginsResult = await checkPluginUpdates({ silent: true });
+      const marketplacesResult = await checkMarketplaceUpdates({ silent: true });
+      const skillsCount = skillsResult?.count ?? 0;
+      const pluginsCount = pluginsResult?.count ?? 0;
+      const marketplacesCount = marketplacesResult?.count ?? 0;
+      const total = skillsCount + pluginsCount + marketplacesCount;
+      const failures: string[] = [];
+      if (skillsResult?.error) failures.push(t("installed.checkUpdatesTargets.skills"));
+      if (pluginsResult?.error) failures.push(t("installed.checkUpdatesTargets.plugins"));
+      if (marketplacesResult?.error) failures.push(t("installed.checkUpdatesTargets.marketplaces"));
+      if (failures.length > 0) {
+        const separator = i18n.language === "zh" ? "、" : ", ";
+        appToast.error(
+          t("installed.checkUpdatesFailed", { targets: failures.join(separator) })
+        );
+        return;
+      }
+      if (total > 0) {
+        appToast.success(
+          t("installed.checkUpdatesSummary", {
+            skills: skillsCount,
+            plugins: pluginsCount,
+            marketplaces: marketplacesCount,
+          })
+        );
+      } else {
+        appToast.success(t("installed.checkUpdatesAllUpToDate"));
+      }
+    } finally {
+      setIsCheckingAllUpdates(false);
     }
   };
 
@@ -852,7 +929,36 @@ export function InstalledSkillsPage() {
                 isHeaderCollapsed ? "max-h-0 opacity-0" : "max-h-24 opacity-100"
               }`}
             >
-              <h1 className="text-headline text-foreground mb-4">{t("nav.installed")}</h1>
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <h1 className="text-headline text-foreground">{t("nav.installed")}</h1>
+                <button
+                  onClick={checkAllUpdates}
+                  disabled={
+                    isCheckingAllUpdates ||
+                    isScanning ||
+                    isCheckingUpdates ||
+                    isCheckingPluginUpdates ||
+                    isCheckingMarketplaceUpdates
+                  }
+                  className="apple-button-primary h-10 px-5 flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isCheckingAllUpdates ||
+                  isScanning ||
+                  isCheckingUpdates ||
+                  isCheckingPluginUpdates ||
+                  isCheckingMarketplaceUpdates ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("skills.installedPage.checkingUpdates")}
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      {t("skills.installedPage.checkUpdates")}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 mb-4">
@@ -923,70 +1029,6 @@ export function InstalledSkillsPage() {
                 />
               )}
 
-              {activeTab === "skills" && (
-                <button
-                  onClick={checkUpdatesWithRefresh}
-                  disabled={isScanning || isCheckingUpdates}
-                  className="apple-button-primary h-10 px-5 flex items-center gap-2"
-                >
-                  {isScanning ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {t("skills.installedPage.scanning")}
-                    </>
-                  ) : isCheckingUpdates ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {t("skills.installedPage.checkingUpdates")}
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      {t("skills.installedPage.checkUpdates")}
-                    </>
-                  )}
-                </button>
-              )}
-
-              {activeTab === "plugins" && (
-                <button
-                  onClick={checkPluginUpdates}
-                  disabled={isCheckingPluginUpdates}
-                  className="apple-button-primary h-10 px-5 flex items-center gap-2"
-                >
-                  {isCheckingPluginUpdates ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {t("plugins.updates.checking")}
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      {t("plugins.updates.check")}
-                    </>
-                  )}
-                </button>
-              )}
-
-              {activeTab === "marketplaces" && (
-                <button
-                  onClick={checkMarketplaceUpdates}
-                  disabled={isCheckingMarketplaceUpdates}
-                  className="apple-button-primary h-10 px-5 flex items-center gap-2"
-                >
-                  {isCheckingMarketplaceUpdates ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {t("plugins.marketplaces.updates.checking")}
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      {t("plugins.marketplaces.updates.check")}
-                    </>
-                  )}
-                </button>
-              )}
             </div>
           </div>
         </div>
