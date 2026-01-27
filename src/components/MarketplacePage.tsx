@@ -244,7 +244,26 @@ export function MarketplacePage({
                 isHeaderCollapsed ? "max-h-0 opacity-0" : "max-h-24 opacity-100"
               }`}
             >
-              <h1 className="text-headline text-foreground mb-4">{t("nav.marketplace")}</h1>
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <h1 className="text-headline text-foreground">{t("nav.marketplace")}</h1>
+                <button
+                  onClick={refreshMarketplace}
+                  disabled={isLoading || isRefreshing}
+                  className="apple-button-primary h-10 px-4 flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isRefreshing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("market.refreshing")}
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      {t("market.refresh")}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="mb-4 flex items-center gap-2">
@@ -290,23 +309,6 @@ export function MarketplacePage({
                 className="min-w-[200px]"
               />
 
-              <button
-                onClick={refreshMarketplace}
-                disabled={isLoading || isRefreshing}
-                className="apple-button-primary h-10 px-4 flex items-center gap-2 disabled:opacity-50"
-              >
-                {isRefreshing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {t("market.refreshing")}
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    {t("market.refresh")}
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>

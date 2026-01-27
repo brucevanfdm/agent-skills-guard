@@ -12,8 +12,8 @@
   },
   "market": {
     "search": "搜索技能/插件...",
-    "refresh": "刷新",
-    "refreshing": "刷新中",
+    "refresh": "立即同步",
+    "refreshing": "同步中",
     "installed": "已安装",
     "clearFilters": "清除筛选",
     "noResults": "没有找到包含\"{{query}}\"的内容",
