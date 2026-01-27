@@ -388,7 +388,7 @@ lazy_static! {
         PatternRule::new(
             "PY_EXEC",
             "Python exec",
-            r"\bexec\s*\(",
+            r"(?:^|[^\w.])exec\(",
             Severity::Low,
             Category::CmdInjection,
             6,
@@ -453,7 +453,7 @@ lazy_static! {
         PatternRule::new(
             "POWERSHELL_BYPASS_POLICY",
             "PowerShell 规避策略",
-            r"(?i)\b(powershell|pwsh)(\.exe)?\b[^\r\n]*(-executionpolicy\s+bypass|-ep\s+bypass|-nop|-noprofile|-windowstyle\s+hidden|-w\s+hidden)",
+            r"(?i)\b(powershell|pwsh)(\.exe)?\b[^\r\n]*(-executionpolicy\s+bypass|-ep\s+bypass|-windowstyle\s+hidden|-w\s+hidden)",
             Severity::Medium,
             Category::CmdInjection,
             30,
@@ -1024,7 +1024,7 @@ lazy_static! {
         PatternRule::new(
             "PHP_EXEC",
             "PHP 命令执行",
-            r"\b(shell_exec|exec|system|passthru|proc_open|popen)\s*\(",
+            r"(?:^|[^\w.])(shell_exec|exec|system|passthru|proc_open|popen)\(",
             Severity::Low,
             Category::CmdInjection,
             6,
@@ -1037,7 +1037,7 @@ lazy_static! {
         PatternRule::new(
             "RUBY_SYSTEM_EXEC",
             "Ruby 命令执行",
-            r"\b(system|exec|IO\.popen|Open3\.popen3)\s*\(",
+            r"(?:^|[^\w.])(system|exec|IO\.popen|Open3\.popen3)\(",
             Severity::Low,
             Category::CmdInjection,
             6,
@@ -1105,11 +1105,11 @@ lazy_static! {
         PatternRule::new(
             "WEBSOCKET_CONNECT",
             "WebSocket 连接",
-            r"(new\s+WebSocket|ws://|wss://)",
+            r"\bws://",
             Severity::Low,
             Category::Network,
             3,
-            "WebSocket 连接",
+            "WebSocket 非加密连接",
             false,
             Confidence::Low,
             "确认 WebSocket 连接的安全性，使用 wss:// 加密连接",
