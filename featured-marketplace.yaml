@@ -5,7 +5,7 @@
 # 本文件包含为 Agent Skills Guard 用户推荐的精选 Marketplace 与插件。
 
 version: "1.0"
-last_updated: "2026-01-23"
+last_updated: "2026-01-27"
 
 marketplace:
   - id: "official"
@@ -224,6 +224,50 @@ marketplace:
             source: "./"
             tags: ["obsidian", "visualization", "diagram"]
             featured: true
+      - marketplace_name: "marketingskills"
+        marketplace_repo: "coreyhaines31/marketingskills"
+        repository_url: "https://github.com/coreyhaines31/marketingskills"
+        marketplace_add_command: "/plugin marketplace add coreyhaines31/marketingskills"
+        description:
+          en: "Marketing skills for Claude Code and AI agents covering CRO, copywriting, SEO, analytics, and growth engineering"
+          zh: "面向 Claude Code 与 AI 代理的营销技能合集，涵盖 CRO、文案写作、SEO、数据分析与增长工程"
+        owner:
+          name: "Corey Haines"
+        tags: ["marketing", "claude-code", "cro", "seo", "copywriting", "analytics", "growth"]
+        featured: true
+        plugins:
+          - name: "marketing-skills"
+            install_command: "/plugin install marketing-skills"
+            description:
+              en: "Marketing skills bundle for Claude Code and AI agents covering CRO, copywriting, SEO, analytics, and growth engineering"
+              zh: "面向 Claude Code 与 AI 代理的营销技能合集，涵盖 CRO、文案写作、SEO、数据分析与增长工程"
+            author:
+              name: "Corey Haines"
+            source: "./"
+            tags: ["marketing", "cro", "seo", "copywriting", "analytics", "growth"]
+            featured: true
+      - marketplace_name: "supabase-agent-skills"
+        marketplace_repo: "supabase/agent-skills"
+        repository_url: "https://github.com/supabase/agent-skills"
+        marketplace_add_command: "/plugin marketplace add supabase/agent-skills"
+        description:
+          en: "Agent Skills to help developers using AI agents with Supabase"
+          zh: "帮助使用 AI 代理的开发者在 Supabase 上更高效工作的技能合集"
+        owner:
+          name: "Supabase"
+        tags: ["supabase", "postgres", "database", "best-practices", "performance"]
+        featured: true
+        plugins:
+          - name: "postgres-best-practices"
+            install_command: "/plugin install postgres-best-practices@supabase-agent-skills"
+            description:
+              en: "Postgres performance optimization guidelines from Supabase"
+              zh: "来自 Supabase 的 Postgres 性能优化最佳实践指南"
+            author:
+              name: "Supabase"
+            source: "./"
+            tags: ["supabase", "postgres", "performance", "database", "best-practices"]
+            featured: true
 
 repositories:
   version: "1.0"
@@ -243,13 +287,6 @@ repositories:
             en: "Create AI skills built on proven methodologies from domain experts across 15+ fields"
             zh: "基于各领域专家经验方法论的 AI 技能创建工具，覆盖 15+ 专业领域"
           tags: ["methodology", "experts", "framework"]
-          featured: true
-        - url: "https://github.com/huangserva/skill-prompt-generator"
-          name: "huangserva"
-          description:
-            en: "AI portrait prompt generator with 1140+ elements library and 12 specialized domain skills"
-            zh: "AI 人像 Prompt 生成系统，包含 1140+ 元素库和 12 个专业领域技能"
-          tags: ["prompt", "ai-art", "generator"]
           featured: true
         - url: "https://github.com/vercel-labs/agent-skills"
           name: "vercel-labs"
