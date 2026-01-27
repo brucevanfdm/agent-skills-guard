@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Trash2 } from "lucide-react";
+import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Trash2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { appToast } from "@/lib/toast";
 import { useUpdate } from "../contexts/UpdateContext";
@@ -18,6 +18,7 @@ import {
 import { clearWebPersistedData } from "@/lib/reset";
 import { api } from "@/lib/api";
 import { relaunchApp } from "@/lib/updater";
+import { getPluginScanPromptEnabled, setPluginScanPromptEnabled } from "@/lib/storage";
 
 declare const __APP_VERSION__: string;
 
@@ -153,6 +154,7 @@ export function SettingsPage() {
   const currentLang = i18n.language;
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [scanPromptEnabled, setScanPromptEnabled] = useState(() => getPluginScanPromptEnabled());
   const updatePhase = updateContext.updatePhase;
   const isDownloading = updatePhase === "downloading";
   const isInstalling = updatePhase === "installing" || updatePhase === "restarting";
@@ -227,51 +229,17 @@ export function SettingsPage() {
     }
   };
 
+  const handleScanPromptToggle = (enabled: boolean) => {
+    setScanPromptEnabled(enabled);
+    setPluginScanPromptEnabled(enabled);
+  };
+
   return (
     <div className="space-y-8">
       {/* 页面标题 */}
       <div>
         <h1 className="text-headline text-foreground">{t("nav.settings")}</h1>
       </div>
-
-      {/* 语言设置 */}
-      <GroupCard>
-        <GroupCardItem className="py-3">
-          <div className="apple-section-title mb-0">{t("settings.language.title")}</div>
-        </GroupCardItem>
-        <GroupCardItem noBorder>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center">
-                <Languages className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm font-medium">{t("settings.language.label")}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleLanguageChange("zh")}
-                className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${
-                  currentLang === "zh"
-                    ? "bg-blue-500 text-white"
-                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                }`}
-              >
-                中文
-              </button>
-              <button
-                onClick={() => handleLanguageChange("en")}
-                className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${
-                  currentLang === "en"
-                    ? "bg-blue-500 text-white"
-                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                }`}
-              >
-                English
-              </button>
-            </div>
-          </div>
-        </GroupCardItem>
-      </GroupCard>
 
       {/* 应用信息 */}
       <GroupCard>
@@ -381,10 +349,73 @@ export function SettingsPage() {
         </GroupCard>
       )}
 
-      {/* 重置应用数据 */}
+      {/* 偏好设置 */}
       <GroupCard>
         <GroupCardItem className="py-3">
-          <div className="apple-section-title mb-0">{t("settings.reset.title")}</div>
+          <div className="apple-section-title mb-0">{t("settings.preferences.title")}</div>
+        </GroupCardItem>
+        <GroupCardItem>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <ShieldCheck className="w-4 h-4 text-white" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{t("settings.preferences.scanPrompt.title")}</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("settings.preferences.scanPrompt.description")}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={scanPromptEnabled}
+              aria-label={t("settings.preferences.scanPrompt.title")}
+              onClick={() => handleScanPromptToggle(!scanPromptEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                scanPromptEnabled ? "bg-emerald-500" : "bg-secondary"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  scanPromptEnabled ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        </GroupCardItem>
+        <GroupCardItem>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center">
+                <Languages className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-medium">{t("settings.language.label")}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleLanguageChange("zh")}
+                className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${
+                  currentLang === "zh"
+                    ? "bg-blue-500 text-white"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                }`}
+              >
+                中文
+              </button>
+              <button
+                onClick={() => handleLanguageChange("en")}
+                className={`h-8 px-4 text-sm font-medium rounded-lg transition-all ${
+                  currentLang === "en"
+                    ? "bg-blue-500 text-white"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                }`}
+              >
+                English
+              </button>
+            </div>
+          </div>
         </GroupCardItem>
         <GroupCardItem noBorder>
           <div className="flex items-start justify-between gap-4">
@@ -426,7 +457,7 @@ export function SettingsPage() {
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
-            </AlertDialog>
+              </AlertDialog>
           </div>
         </GroupCardItem>
       </GroupCard>

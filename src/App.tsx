@@ -295,6 +295,7 @@ function AppContent() {
             <div className="h-full overflow-hidden">
               <MarketplacePage
                 onNavigateToRepositories={() => setCurrentTab("repositories")}
+                onNavigateToOverview={() => setCurrentTab("overview")}
                 presetFilter={marketplacePreset ?? undefined}
                 onPresetApplied={clearMarketplacePreset}
               />

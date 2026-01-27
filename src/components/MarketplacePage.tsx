@@ -13,12 +13,13 @@ import {
   RefreshCw,
   XCircle,
   CheckCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatRepositoryTag, parseRepositoryOwner } from "../lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { countIssuesBySeverity } from "@/lib/security-utils";
-import { addRecentInstallPath } from "@/lib/storage";
+import { addRecentInstallPath, getPluginScanPromptEnabled } from "@/lib/storage";
 import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
 import { InstallPathSelector } from "./InstallPathSelector";
 import { appToast } from "@/lib/toast";
@@ -34,6 +35,7 @@ import {
 
 interface MarketplacePageProps {
   onNavigateToRepositories?: () => void;
+  onNavigateToOverview?: () => void;
   presetFilter?: {
     marketplaceName?: string;
   };
@@ -52,6 +54,7 @@ function stripAnsi(input: string): string {
 
 export function MarketplacePage({
   onNavigateToRepositories,
+  onNavigateToOverview,
   presetFilter,
   onPresetApplied,
 }: MarketplacePageProps = {}) {
@@ -73,6 +76,7 @@ export function MarketplacePage({
   const [installingSkillId, setInstallingSkillId] = useState<string | null>(null);
   const [installingPluginId, setInstallingPluginId] = useState<string | null>(null);
   const [logPlugin, setLogPlugin] = useState<Plugin | null>(null);
+  const [scanPromptPlugin, setScanPromptPlugin] = useState<Plugin | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -390,7 +394,9 @@ export function MarketplacePage({
                           appToast.error(t("plugins.toast.installFailed"));
                         } else {
                           appToast.success(t("plugins.toast.installed"));
-                          appToast.info(t("plugins.toast.scanHint"));
+                          if (getPluginScanPromptEnabled()) {
+                            setScanPromptPlugin(entry.item);
+                          }
                         }
                       } catch (error: any) {
                         appToast.error(
@@ -502,6 +508,16 @@ export function MarketplacePage({
         open={logPlugin !== null}
         plugin={logPlugin}
         onClose={() => setLogPlugin(null)}
+      />
+
+      <PluginScanPromptDialog
+        open={scanPromptPlugin !== null}
+        pluginName={scanPromptPlugin?.name ?? ""}
+        onClose={() => setScanPromptPlugin(null)}
+        onConfirm={() => {
+          setScanPromptPlugin(null);
+          onNavigateToOverview?.();
+        }}
       />
     </div>
   );
@@ -845,6 +861,49 @@ function PluginLogDialog({ open, plugin, onClose }: PluginLogDialogProps) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>{t("plugins.close")}</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+interface PluginScanPromptDialogProps {
+  open: boolean;
+  pluginName: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function PluginScanPromptDialog({
+  open,
+  pluginName,
+  onClose,
+  onConfirm,
+}: PluginScanPromptDialogProps) {
+  const { t } = useTranslation();
+
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-success" />
+            {t("plugins.scanPrompt.title")}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("plugins.scanPrompt.description", { name: pluginName })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t("plugins.scanPrompt.cancel")}</AlertDialogCancel>
+          <button onClick={onConfirm} className="apple-button-primary h-10 px-4">
+            {t("plugins.scanPrompt.confirm")}
+          </button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

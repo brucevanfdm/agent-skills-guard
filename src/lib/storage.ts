@@ -1,5 +1,6 @@
 const RECENT_PATHS_KEY = "recentInstallPaths";
 const MAX_RECENT_PATHS = 3;
+const PLUGIN_SCAN_PROMPT_KEY = "asguard.preferences.pluginScanPrompt.v1";
 
 /**
  * 获取最近使用的安装路径列表
@@ -36,5 +37,24 @@ export function addRecentInstallPath(path: string): void {
     localStorage.setItem(RECENT_PATHS_KEY, JSON.stringify(paths));
   } catch (error) {
     console.warn("Failed to save recent install path:", error);
+  }
+}
+
+export function getPluginScanPromptEnabled(): boolean {
+  try {
+    const stored = localStorage.getItem(PLUGIN_SCAN_PROMPT_KEY);
+    if (stored === null) return true;
+    return stored === "true";
+  } catch (error) {
+    console.warn("Failed to read scan prompt preference:", error);
+    return true;
+  }
+}
+
+export function setPluginScanPromptEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(PLUGIN_SCAN_PROMPT_KEY, String(enabled));
+  } catch (error) {
+    console.warn("Failed to save scan prompt preference:", error);
   }
 }

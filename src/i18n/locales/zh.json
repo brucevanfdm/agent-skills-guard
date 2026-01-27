@@ -282,6 +282,12 @@
       "warningTitle": "强烈不建议安装该插件！",
       "warningMessage": "检测到严重安全风险，可能危害系统或数据。"
     },
+    "scanPrompt": {
+      "title": "安装完成，开始安全扫描？",
+      "description": "插件「{{name}}」已安装。请前往「概览」页点击「一键扫描」进行安全检查。",
+      "confirm": "前往概览",
+      "cancel": "稍后再说"
+    },
     "status": {
       "label": "状态：",
       "installed": "已安装",
@@ -588,6 +594,12 @@
     },
     "preferences": {
       "title": "偏好设置",
+      "scanPrompt": {
+        "title": "安装后弹窗提示一键扫描",
+        "description": "插件安装完成后弹窗引导前往「概览」页进行一键安全扫描。",
+        "enabled": "已开启",
+        "disabled": "已关闭"
+      },
       "comingSoon": "更多设置项即将推出..."
     }
   }

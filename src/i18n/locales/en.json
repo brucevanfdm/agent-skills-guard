@@ -282,6 +282,12 @@
       "warningTitle": "Strongly Recommended NOT to Install This Plugin!",
       "warningMessage": "Severe security threats detected that may harm your system or data."
     },
+    "scanPrompt": {
+      "title": "Installation complete — run a security scan?",
+      "description": "Plugin \"{{name}}\" is installed. Go to Overview and click \"Scan all\" for a security check.",
+      "confirm": "Go to Overview",
+      "cancel": "Later"
+    },
     "status": {
       "label": "STATUS:",
       "installed": "INSTALLED",
@@ -588,6 +594,12 @@
     },
     "preferences": {
       "title": "PREFERENCES",
+      "scanPrompt": {
+        "title": "Show scan prompt after installation",
+        "description": "After a plugin is installed, show a dialog that guides you to Overview for a one-click security scan.",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
       "comingSoon": "More settings coming soon..."
     }
   }
