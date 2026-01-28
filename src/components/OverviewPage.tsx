@@ -89,34 +89,25 @@ export function OverviewPage() {
     return Array.from(byId.values());
   }, [scanResults]);
 
+  const pendingSkills = useMemo(() => {
+    return installedSkills.filter((skill) => skill.installed && skill.security_score == null);
+  }, [installedSkills]);
+
+  const pendingPlugins = useMemo(() => {
+    return plugins.filter((plugin) => plugin.installed && plugin.security_score == null);
+  }, [plugins]);
+
   const scanMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (mode: "full" | "pending") => {
       setScanStatus(() => ({
         isScanning: true,
         itemProgress: { scanned: 0, total: 0 },
       }));
+      const isPendingScan = mode === "pending";
       let localSkillsCount = 0;
       let installedPluginsCount = 0;
       let scannedPluginsCount = 0;
       let installedSkillsCount = 0;
-
-      let installedSkills: Skill[] = [];
-      try {
-        installedSkills = await api.getInstalledSkills();
-        installedSkillsCount = installedSkills.length;
-        localSkillsCount = installedSkillsCount;
-      } catch (error: any) {
-        console.error("获取已安装技能失败:", error);
-      }
-
-      let installedPlugins: Plugin[] = [];
-      try {
-        const latestPlugins = await api.getPluginsCached();
-        installedPlugins = latestPlugins.filter((p) => p.installed);
-        installedPluginsCount = installedPlugins.length;
-      } catch (error: any) {
-        console.error("获取已安装插件失败:", error);
-      }
 
       const scanConcurrency = getScanConcurrency();
 
@@ -142,6 +133,112 @@ export function OverviewPage() {
         await Promise.all(workers);
       };
 
+      const pendingSkillsSnapshot = pendingSkills;
+      const pendingPluginsSnapshot = pendingPlugins;
+      if (isPendingScan) {
+        const pendingTotal = pendingSkillsSnapshot.length + pendingPluginsSnapshot.length;
+        setScanStatus((prev) => ({
+          ...prev,
+          itemProgress: { scanned: 0, total: pendingTotal },
+        }));
+
+        const results: SkillScanResult[] = [];
+
+        try {
+          await runWithConcurrency(pendingPluginsSnapshot, scanConcurrency, async (plugin) => {
+            try {
+              await api.scanInstalledPlugin(plugin.id, i18n.language, undefined, undefined, true);
+              scannedPluginsCount += 1;
+            } catch (e) {
+              console.error("补扫插件失败:", plugin.name, e);
+            } finally {
+              setScanStatus((prev) => {
+                const next =
+                  prev.itemProgress.total > 0
+                    ? Math.min(prev.itemProgress.total, prev.itemProgress.scanned + 1)
+                    : 0;
+                return {
+                  ...prev,
+                  itemProgress: { ...prev.itemProgress, scanned: next },
+                };
+              });
+            }
+          });
+        } catch (error: any) {
+          console.error("补扫插件失败:", error);
+        }
+
+        try {
+          await runWithConcurrency(pendingSkillsSnapshot, scanConcurrency, async (skill) => {
+            try {
+              const result = await api.scanInstalledSkill(skill.id, i18n.language);
+              results.push(result);
+            } catch (e) {
+              console.error("补扫技能失败:", skill.name, e);
+            } finally {
+              setScanStatus((prev) => {
+                const next =
+                  prev.itemProgress.total > 0
+                    ? Math.min(prev.itemProgress.total, prev.itemProgress.scanned + 1)
+                    : 0;
+                return {
+                  ...prev,
+                  itemProgress: { ...prev.itemProgress, scanned: next },
+                };
+              });
+            }
+          });
+        } catch (error: any) {
+          console.error("补扫技能失败:", error);
+        }
+
+        localSkillsCount = installedSkills.length;
+        installedPluginsCount = plugins.filter((p) => p.installed).length;
+
+        return {
+          results,
+          localSkillsCount,
+          installedPluginsCount,
+          scannedPluginsCount,
+        };
+      }
+
+      let scanSkills: Skill[] = [];
+      try {
+        scanSkills = await api.getInstalledSkills();
+        installedSkillsCount = scanSkills.length;
+        localSkillsCount = installedSkillsCount;
+      } catch (error: any) {
+        console.error("获取已安装技能失败:", error);
+      }
+
+      let scanPlugins: Plugin[] = [];
+      try {
+        const latestPlugins = await api.getPluginsCached();
+        scanPlugins = latestPlugins.filter((p) => p.installed);
+        installedPluginsCount = scanPlugins.length;
+      } catch (error: any) {
+        console.error("获取已安装插件失败:", error);
+      }
+
+      const backgroundLocalSkills = api.scanLocalSkills().catch((error) => {
+        console.error("本地技能发现失败:", error);
+        appToast.error(t("overview.scan.localSkillsFailed", { error: error.message }), {
+          duration: 4000,
+        });
+        return [] as Skill[];
+      });
+
+      const backgroundPluginsSync = api.getPlugins(i18n.language).catch((error) => {
+        console.error("插件 CLI 同步失败:", error);
+        return [] as Plugin[];
+      });
+
+      const backgroundMarketplaces = api.getClaudeMarketplaces().catch((error) => {
+        console.error("Marketplace 同步失败:", error);
+        return [];
+      });
+
       const totalItems = installedSkillsCount + installedPluginsCount;
       setScanStatus((prev) => ({
         ...prev,
@@ -149,7 +246,7 @@ export function OverviewPage() {
       }));
 
       try {
-        await runWithConcurrency(installedPlugins, scanConcurrency, async (plugin) => {
+        await runWithConcurrency(scanPlugins, scanConcurrency, async (plugin) => {
           try {
             await api.scanInstalledPlugin(plugin.id, i18n.language, undefined, undefined, true);
             scannedPluginsCount += 1;
@@ -174,7 +271,7 @@ export function OverviewPage() {
 
       const results: SkillScanResult[] = [];
       try {
-        await runWithConcurrency(installedSkills, scanConcurrency, async (skill) => {
+        await runWithConcurrency(scanSkills, scanConcurrency, async (skill) => {
           try {
             const result = await api.scanInstalledSkill(skill.id, i18n.language);
             results.push(result);
@@ -196,6 +293,31 @@ export function OverviewPage() {
       } catch (error: any) {
         console.error("安全扫描技能失败:", error);
       }
+
+      await Promise.allSettled([backgroundLocalSkills, backgroundPluginsSync, backgroundMarketplaces]);
+      await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
+      await queryClient.refetchQueries({ queryKey: ["skills"] });
+      await queryClient.refetchQueries({ queryKey: ["plugins"] });
+      await queryClient.refetchQueries({ queryKey: ["claudeMarketplaces"] });
+
+      let updatedSkills: Skill[] = [];
+      try {
+        updatedSkills = await api.getInstalledSkills();
+      } catch (error: any) {
+        console.error("刷新已安装技能失败:", error);
+      }
+
+      let updatedPlugins: Plugin[] = [];
+      try {
+        const latestPlugins = await api.getPluginsCached();
+        updatedPlugins = latestPlugins.filter((p) => p.installed);
+      } catch (error: any) {
+        console.error("刷新已安装插件失败:", error);
+      }
+
+      installedSkillsCount = updatedSkills.length;
+      installedPluginsCount = updatedPlugins.length;
+      localSkillsCount = installedSkillsCount;
 
       return {
         results,
@@ -241,8 +363,6 @@ export function OverviewPage() {
     [marketplaces.length, plugins, repositories.length, uniqueInstalledSkills]
   );
 
-  const scanActionLabel = t("overview.scanStatus.scanning");
-
   const scannedPluginsCount = useMemo(() => {
     return plugins.filter((p) => p.installed && p.security_score != null).length;
   }, [plugins]);
@@ -254,6 +374,15 @@ export function OverviewPage() {
   const scannedItemsCount = useMemo(() => {
     return uniqueScanResults.length + scannedPluginsCount;
   }, [scannedPluginsCount, uniqueScanResults.length]);
+
+  const pendingItemsCount = pendingSkills.length + pendingPlugins.length;
+  const hasPendingItems = pendingItemsCount > 0;
+  const scanActionLabel = t("overview.scanStatus.scanning");
+  const scanButtonLabel = isScanning
+    ? scanActionLabel
+    : hasPendingItems
+      ? t("overview.scanStatus.scanContinue")
+      : t("overview.scanStatus.scanAll");
 
   const displayScannedCount = isScanning ? itemProgress.scanned : scannedItemsCount;
   const displayTotalCount = isScanning ? itemProgress.total : totalItemsCount;
@@ -387,7 +516,7 @@ export function OverviewPage() {
           <h1 className="text-headline text-foreground">{t("overview.title")}</h1>
         </div>
         <button
-          onClick={() => scanMutation.mutate()}
+          onClick={() => scanMutation.mutate(hasPendingItems ? "pending" : "full")}
           disabled={isScanning}
           className="apple-button-primary flex items-center gap-2"
         >
@@ -396,7 +525,7 @@ export function OverviewPage() {
           ) : (
             <Shield className="w-4 h-4" />
           )}
-          {isScanning ? scanActionLabel : t("overview.scanStatus.scanAll")}
+          {scanButtonLabel}
         </button>
       </div>
 

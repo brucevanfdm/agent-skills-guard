@@ -498,6 +498,7 @@
       "items": "items",
       "files": "files",
       "scanAll": "Scan all",
+      "scanContinue": "Continue scan",
       "preparing": "Preparing scan (counting files)",
       "scanning": "Scanning",
       "scanningWithProgress": "Scanning {{scanned}}/{{total}} {{label}}...",
@@ -510,7 +511,7 @@
       "localSkillsFailed": "LOCAL_SCAN_FAILED: {{error}}",
       "completed": "SECURITY_SCAN_COMPLETE: {{count}} SKILLS_SCANNED",
       "failed": "SECURITY_SCAN_FAILED: {{error}}",
-      "allCompleted": "SCAN_COMPLETE: {{localCount}} LOCAL_SKILLS_FOUND, PLUGINS {{pluginCount}}, MARKETPLACES {{marketplaceCount}}, {{scannedCount}} SKILLS_SCANNED, {{scannedPluginsCount}} PLUGINS_SCANNED"
+      "allCompleted": "SCAN_COMPLETE: {{localCount}} LOCAL_SKILLS_FOUND, PLUGINS {{pluginCount}}, {{scannedCount}} SKILLS_SCANNED, {{scannedPluginsCount}} PLUGINS_SCANNED"
     },
     "riskLevels": {
       "critical": "CRITICAL",

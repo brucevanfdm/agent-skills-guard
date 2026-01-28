@@ -498,6 +498,7 @@
       "items": "个技能插件",
       "files": "个文件",
       "scanAll": "一键扫描",
+      "scanContinue": "继续扫描",
       "preparing": "准备扫描（统计文件中）",
       "scanning": "正在扫描",
       "scanningWithProgress": "正在扫描{{scanned}}/{{total}}{{label}}...",
