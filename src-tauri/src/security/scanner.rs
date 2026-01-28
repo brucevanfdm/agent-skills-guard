@@ -1,12 +1,15 @@
 use crate::models::security::*;
 use crate::security::rules::{SecurityRules, Category, Severity};
 use anyhow::Result;
+use lazy_static::lazy_static;
+use regex::RegexSet;
 use sha2::{Sha256, Digest};
 use rust_i18n::t;
 use crate::i18n::validate_locale;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Copy)]
 enum Utf16Encoding {
@@ -30,6 +33,29 @@ struct MatchResult {
 }
 
 pub struct SecurityScanner;
+
+#[derive(Debug)]
+struct FilteredRuleSet {
+    regex_set: RegexSet,
+    rule_indices: Vec<usize>,
+}
+
+impl FilteredRuleSet {
+    fn match_into(&self, content: &str, out: &mut Vec<usize>) {
+        out.clear();
+        out.extend(
+            self.regex_set
+                .matches(content)
+                .into_iter()
+                .map(|i| self.rule_indices[i]),
+        );
+    }
+}
+
+lazy_static! {
+    static ref FILTERED_RULE_SETS: Mutex<HashMap<String, Arc<FilteredRuleSet>>> =
+        Mutex::new(HashMap::new());
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct ScanOptions {
@@ -112,6 +138,37 @@ impl SecurityScanner {
             .and_then(|s| s.to_str())
             .map(|name| name.eq_ignore_ascii_case("skill.md"))
             .unwrap_or(false)
+    }
+
+    fn get_filtered_rule_set(ext: Option<&str>) -> Arc<FilteredRuleSet> {
+        let key = ext.unwrap_or("").to_string();
+        if let Ok(cache) = FILTERED_RULE_SETS.lock() {
+            if let Some(set) = cache.get(&key) {
+                return Arc::clone(set);
+            }
+        }
+
+        let rules = SecurityRules::get_all_patterns();
+        let mut patterns = Vec::new();
+        let mut rule_indices = Vec::new();
+        for (idx, rule) in rules.iter().enumerate() {
+            if Self::rule_applies_to_extension(rule.id, ext) {
+                patterns.push(rule.pattern.as_str());
+                rule_indices.push(idx);
+            }
+        }
+
+        let regex_set = RegexSet::new(patterns).expect("Invalid regex patterns");
+        let set = Arc::new(FilteredRuleSet {
+            regex_set,
+            rule_indices,
+        });
+
+        if let Ok(mut cache) = FILTERED_RULE_SETS.lock() {
+            cache.insert(key, Arc::clone(&set));
+        }
+
+        set
     }
 
     fn rule_applies_to_extension(rule_id: &str, ext: Option<&str>) -> bool {
@@ -572,10 +629,20 @@ impl SecurityScanner {
             scanned_files.push(rel_str.clone());
             files_scanned += 1;
             let is_skill_md = Self::is_skill_md(&rel_str);
+            let filtered_rule_set = if is_skill_md {
+                None
+            } else {
+                Some(Self::get_filtered_rule_set(file_ext.as_deref()))
+            };
+            let mut matched_indices: Vec<usize> = Vec::new();
 
             for (line_num, line) in content.lines().enumerate() {
                 // 使用RegexSet批量匹配进行初步筛选，性能提升3-5倍
-                let matched_indices = SecurityRules::quick_match(line);
+                if let Some(set) = filtered_rule_set.as_ref() {
+                    set.match_into(line, &mut matched_indices);
+                } else {
+                    SecurityRules::quick_match_into(line, &mut matched_indices);
+                }
                 if matched_indices.is_empty() {
                     continue;
                 }
@@ -583,15 +650,6 @@ impl SecurityScanner {
                 // 只对可能匹配的规则进行详细检查
                 for &rule_idx in &matched_indices {
                     if let Some(rule) = rules.get(rule_idx) {
-                        if !is_skill_md && !Self::rule_applies_to_extension(rule.id, file_ext.as_deref()) {
-                            continue;
-                        }
-
-                        // RegexSet只做初步筛选，需要用原始正则再次验证
-                        if !rule.pattern.is_match(line) {
-                            continue;
-                        }
-
                         let match_result = MatchResult {
                             _rule_id: rule.id.to_string(),
                             rule_name: rule.name.to_string(),
@@ -666,10 +724,20 @@ impl SecurityScanner {
 
         let file_ext = Self::normalized_extension(file_path);
         let is_skill_md = Self::is_skill_md(file_path);
+        let filtered_rule_set = if is_skill_md {
+            None
+        } else {
+            Some(Self::get_filtered_rule_set(file_ext.as_deref()))
+        };
+        let mut matched_indices: Vec<usize> = Vec::new();
         // 逐行扫描代码
         for (line_num, line) in content.lines().enumerate() {
             // 使用RegexSet批量匹配进行初步筛选，性能提升3-5倍
-            let matched_indices = SecurityRules::quick_match(line);
+            if let Some(set) = filtered_rule_set.as_ref() {
+                set.match_into(line, &mut matched_indices);
+            } else {
+                SecurityRules::quick_match_into(line, &mut matched_indices);
+            }
             if matched_indices.is_empty() {
                 continue;
             }
@@ -677,15 +745,6 @@ impl SecurityScanner {
             // 只对可能匹配的规则进行详细检查
             for &rule_idx in &matched_indices {
                 if let Some(rule) = rules.get(rule_idx) {
-                    if !is_skill_md && !Self::rule_applies_to_extension(rule.id, file_ext.as_deref()) {
-                        continue;
-                    }
-
-                    // RegexSet只做初步筛选，需要用原始正则再次验证
-                    if !rule.pattern.is_match(line) {
-                        continue;
-                    }
-
                     matches.push(MatchResult {
                         _rule_id: rule.id.to_string(),
                         rule_name: rule.name.to_string(),

@@ -1211,10 +1211,18 @@ impl SecurityRules {
         PATTERN_RULES.iter().filter(|r| r.hard_trigger).collect()
     }
 
-    /// 快速批量匹配，返回命中的规则索引
+    /// 快速批量匹配（复用缓冲区），返回命中的规则索引
     /// 使用RegexSet一次性匹配所有模式，性能比逐条匹配快3-5倍
+    pub fn quick_match_into(content: &str, out: &mut Vec<usize>) {
+        out.clear();
+        out.extend(PATTERN_SET.matches(content).into_iter());
+    }
+
+    /// 兼容旧接口（避免重复分配）
     pub fn quick_match(content: &str) -> Vec<usize> {
-        PATTERN_SET.matches(content).into_iter().collect()
+        let mut out = Vec::new();
+        Self::quick_match_into(content, &mut out);
+        out
     }
 
     /// 根据索引获取匹配的规则
