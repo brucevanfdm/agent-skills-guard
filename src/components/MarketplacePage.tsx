@@ -54,9 +54,40 @@ type MarketplaceInstallStatus = {
 const ANSI_ESCAPE_REGEX =
   /[\u001B\u009B][[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
 const OSC_ESCAPE_REGEX = /\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g;
+const INSTALL_ERROR_HINT_REGEX =
+  /error|failed|failure|unable to|could not|not found|denied|permission|refused|timeout|timed out/i;
 
 function stripAnsi(input: string): string {
   return input.replace(OSC_ESCAPE_REGEX, "").replace(ANSI_ESCAPE_REGEX, "");
+}
+
+function summarizePluginInstallFailure(result: PluginInstallResult): string | null {
+  const candidates: string[] = [];
+  if (result.marketplace_status === "failed" && result.raw_log) {
+    candidates.push(result.raw_log);
+  }
+  result.plugin_statuses.forEach((status) => {
+    if (status.status === "failed" && status.output) {
+      candidates.push(status.output);
+    }
+  });
+
+  for (const text of candidates) {
+    const summary = summarizeErrorText(text);
+    if (summary) return summary;
+  }
+
+  return null;
+}
+
+function summarizeErrorText(text: string): string | null {
+  const lines = stripAnsi(text)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return null;
+  const hint = lines.find((line) => INSTALL_ERROR_HINT_REGEX.test(line)) ?? lines[0];
+  return hint.length > 180 ? `${hint.slice(0, 177)}...` : hint;
 }
 
 export function MarketplacePage({
@@ -435,7 +466,12 @@ export function MarketplacePage({
                           result.marketplace_status === "failed" ||
                           result.plugin_statuses.some((status) => status.status === "failed");
                         if (hasFailed) {
-                          appToast.error(t("plugins.toast.installFailed"));
+                          const detail = summarizePluginInstallFailure(result);
+                          appToast.error(
+                            detail
+                              ? `${t("plugins.toast.installFailed")}: ${detail}`
+                              : t("plugins.toast.installFailed")
+                          );
                         } else if (getPluginScanPromptEnabled()) {
                           setInstallStatus((prev) => ({
                             ...prev,
