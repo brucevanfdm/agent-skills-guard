@@ -608,6 +608,12 @@
         "enabled": "Enabled",
         "disabled": "Disabled"
       },
+      "scanConcurrency": {
+        "title": "Parallel scan slots",
+        "description": "Number of plugins/skills scanned at the same time (1-{{max}}, default {{default}}).",
+        "decrease": "Decrease parallel scan slots",
+        "increase": "Increase parallel scan slots"
+      },
       "comingSoon": "More settings coming soon..."
     }
   }

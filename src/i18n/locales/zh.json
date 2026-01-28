@@ -608,6 +608,12 @@
         "enabled": "已开启",
         "disabled": "已关闭"
       },
+      "scanConcurrency": {
+        "title": "安全扫描并发数",
+        "description": "同时扫描的插件/技能数量（1-{{max}}，默认 {{default}}）。",
+        "decrease": "减少并行数",
+        "increase": "增加并行数"
+      },
       "comingSoon": "更多设置项即将推出..."
     }
   }

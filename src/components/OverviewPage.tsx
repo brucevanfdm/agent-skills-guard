@@ -15,6 +15,7 @@ import { GroupCard, GroupCardItem } from "./ui/GroupCard";
 import type { SecurityIssue, SecurityReport } from "@/types/security";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useClaudeMarketplaces, usePlugins } from "@/hooks/usePlugins";
+import { getScanConcurrency } from "@/lib/storage";
 
 export function OverviewPage() {
   const { t, i18n } = useTranslation();
@@ -131,6 +132,30 @@ export function OverviewPage() {
         installedSkills = [];
       }
 
+      const scanConcurrency = getScanConcurrency();
+
+      const runWithConcurrency = async <T,>(
+        items: T[],
+        limit: number,
+        worker: (item: T) => Promise<void>
+      ) => {
+        const maxWorkers = Math.max(1, Math.min(limit, items.length));
+        let nextIndex = 0;
+
+        const workers = Array.from({ length: maxWorkers }, async () => {
+          while (true) {
+            const currentIndex = nextIndex;
+            nextIndex += 1;
+            if (currentIndex >= items.length) {
+              break;
+            }
+            await worker(items[currentIndex]);
+          }
+        });
+
+        await Promise.all(workers);
+      };
+
       const totalItems = installedSkillsCount + installedPluginsCount;
       setScanStatus((prev) => ({
         ...prev,
@@ -146,7 +171,7 @@ export function OverviewPage() {
       }
 
       try {
-        for (const plugin of installedPlugins) {
+        await runWithConcurrency(installedPlugins, scanConcurrency, async (plugin) => {
           try {
             await api.scanInstalledPlugin(plugin.id, i18n.language);
             scannedPluginsCount += 1;
@@ -164,7 +189,7 @@ export function OverviewPage() {
               };
             });
           }
-        }
+        });
         await queryClient.refetchQueries({ queryKey: ["plugins"] });
       } catch (error: any) {
         console.error("安全扫描插件失败:", error);
@@ -172,7 +197,7 @@ export function OverviewPage() {
 
       const results: SkillScanResult[] = [];
       try {
-        for (const skill of installedSkills) {
+        await runWithConcurrency(installedSkills, scanConcurrency, async (skill) => {
           try {
             const result = await api.scanInstalledSkill(skill.id, i18n.language);
             results.push(result);
@@ -190,7 +215,7 @@ export function OverviewPage() {
               };
             });
           }
-        }
+        });
       } catch (error: any) {
         console.error("安全扫描技能失败:", error);
       }

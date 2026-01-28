@@ -210,8 +210,16 @@ export const api = {
     return invoke("get_skill_plugin_upgrade_candidates", { claudeCommand: claudeCommand || null });
   },
 
-  async scanAllInstalledPlugins(locale: string, claudeCommand?: string): Promise<string[]> {
-    return invoke("scan_all_installed_plugins", { locale, claudeCommand: claudeCommand || null });
+  async scanAllInstalledPlugins(
+    locale: string,
+    claudeCommand?: string,
+    scanParallelism?: number
+  ): Promise<string[]> {
+    return invoke("scan_all_installed_plugins", {
+      locale,
+      claudeCommand: claudeCommand || null,
+      scanParallelism: scanParallelism ?? null,
+    });
   },
 
   async scanInstalledSkill(skillId: string, locale: string, scanId?: string): Promise<SkillScanResult> {

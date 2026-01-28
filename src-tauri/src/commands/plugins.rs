@@ -13,6 +13,8 @@ use crate::commands::featured_marketplaces;
 use crate::security::{ScanOptions, SecurityScanner};
 use crate::i18n::validate_locale;
 use chrono::Utc;
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use serde::Serialize;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, State};
@@ -211,6 +213,7 @@ pub async fn scan_all_installed_plugins(
     state: State<'_, AppState>,
     locale: String,
     claude_command: Option<String>,
+    scan_parallelism: Option<usize>,
 ) -> Result<Vec<String>, String> {
     let locale = validate_locale(&locale);
 
@@ -225,28 +228,51 @@ pub async fn scan_all_installed_plugins(
     let plugins = state.db.get_plugins().map_err(|e| e.to_string())?;
     let installed_plugins: Vec<Plugin> = plugins.into_iter().filter(|p| p.installed).collect();
 
-    let scanner = SecurityScanner::new();
-    let mut scanned = Vec::new();
+    const DEFAULT_SCAN_PARALLELISM: usize = 3;
+    const MAX_SCAN_PARALLELISM: usize = 8;
+    let parallelism = scan_parallelism
+        .unwrap_or(DEFAULT_SCAN_PARALLELISM)
+        .clamp(1, MAX_SCAN_PARALLELISM);
 
-    for mut plugin in installed_plugins {
-        let Some(install_path) = plugin.claude_install_path.clone() else { continue };
-        let path = PathBuf::from(&install_path);
-        if !path.exists() || !path.is_dir() {
-            log::warn!("Plugin directory does not exist: {:?}", path);
-            continue;
-        }
+    let db = state.db.clone();
+    let locale_owned = locale.to_string();
 
-            match scanner.scan_directory_with_options(
-                path.to_str().unwrap_or(""),
-                &plugin.id,
-                &locale,
-                ScanOptions { skip_readme: true },
-                None,
-            ) {
-            Ok(report) => {
-                plugin.security_score = Some(report.score);
-                plugin.security_level = Some(report.level.as_str().to_string());
-                plugin.security_issues = Some(
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(parallelism)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut scanned = pool.install(|| {
+        installed_plugins
+            .par_iter()
+            .enumerate()
+            .filter_map(|(index, plugin)| {
+                let Some(install_path) = plugin.claude_install_path.clone() else { return None };
+                let path = PathBuf::from(&install_path);
+                if !path.exists() || !path.is_dir() {
+                    log::warn!("Plugin directory does not exist: {:?}", path);
+                    return None;
+                }
+
+                let scanner = SecurityScanner::new();
+                let report = match scanner.scan_directory_with_options(
+                    path.to_str().unwrap_or(""),
+                    &plugin.id,
+                    &locale_owned,
+                    ScanOptions { skip_readme: true },
+                    None,
+                ) {
+                    Ok(report) => report,
+                    Err(e) => {
+                        log::warn!("Failed to scan plugin {}: {}", plugin.name, e);
+                        return None;
+                    }
+                };
+
+                let mut updated = plugin.clone();
+                updated.security_score = Some(report.score);
+                updated.security_level = Some(report.level.as_str().to_string());
+                updated.security_issues = Some(
                     report
                         .issues
                         .iter()
@@ -260,21 +286,20 @@ pub async fn scan_all_installed_plugins(
                         })
                         .collect(),
                 );
-                plugin.scanned_at = Some(Utc::now());
+                updated.scanned_at = Some(Utc::now());
 
-                if let Err(e) = state.db.save_plugin(&plugin) {
-                    log::warn!("Failed to save plugin {}: {}", plugin.name, e);
-                } else {
-                    scanned.push(plugin.id.clone());
+                if let Err(e) = db.save_plugin(&updated) {
+                    log::warn!("Failed to save plugin {}: {}", updated.name, e);
+                    return None;
                 }
-            }
-            Err(e) => {
-                log::warn!("Failed to scan plugin {}: {}", plugin.name, e);
-            }
-        }
-    }
 
-    Ok(scanned)
+                Some((index, updated.id.clone()))
+            })
+            .collect::<Vec<(usize, String)>>()
+    });
+
+    scanned.sort_by_key(|(index, _)| *index);
+    Ok(scanned.into_iter().map(|(_, id)| id).collect())
 }
 
 /// 安全扫描单个已安装 plugin（用于前端展示扫描进度）

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Trash2, ShieldCheck } from "lucide-react";
+import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Trash2, ShieldCheck, Gauge } from "lucide-react";
 import { useEffect, useState } from "react";
 import { appToast } from "@/lib/toast";
 import { useUpdate } from "../contexts/UpdateContext";
@@ -18,7 +18,14 @@ import {
 import { clearWebPersistedData } from "@/lib/reset";
 import { api } from "@/lib/api";
 import { relaunchApp } from "@/lib/updater";
-import { getPluginScanPromptEnabled, setPluginScanPromptEnabled } from "@/lib/storage";
+import {
+  getDefaultScanConcurrency,
+  getMaxScanConcurrency,
+  getPluginScanPromptEnabled,
+  getScanConcurrency,
+  setPluginScanPromptEnabled,
+  setScanConcurrency,
+} from "@/lib/storage";
 
 declare const __APP_VERSION__: string;
 
@@ -155,12 +162,15 @@ export function SettingsPage() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [scanPromptEnabled, setScanPromptEnabled] = useState(() => getPluginScanPromptEnabled());
+  const [scanConcurrency, setScanConcurrencyState] = useState(() => getScanConcurrency());
   const updatePhase = updateContext.updatePhase;
   const isDownloading = updatePhase === "downloading";
   const isInstalling = updatePhase === "installing" || updatePhase === "restarting";
   const isRestartRequired = updatePhase === "restartRequired";
   const isUpdating = isDownloading || isInstalling || isRestartRequired;
   const downloadPercent = updateContext.updateProgress?.percent;
+  const maxScanConcurrency = getMaxScanConcurrency();
+  const defaultScanConcurrency = getDefaultScanConcurrency();
 
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang).catch((error) => {
@@ -232,6 +242,16 @@ export function SettingsPage() {
   const handleScanPromptToggle = (enabled: boolean) => {
     setScanPromptEnabled(enabled);
     setPluginScanPromptEnabled(enabled);
+  };
+
+  const handleScanConcurrencyChange = (value: number) => {
+    const clamped = Math.min(Math.max(Math.round(value), 1), maxScanConcurrency);
+    setScanConcurrency(clamped);
+    setScanConcurrencyState(clamped);
+  };
+
+  const handleScanConcurrencyStep = (delta: number) => {
+    handleScanConcurrencyChange(scanConcurrency + delta);
   };
 
   return (
@@ -383,6 +403,51 @@ export function SettingsPage() {
                 }`}
               />
             </button>
+          </div>
+        </GroupCardItem>
+        <GroupCardItem>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Gauge className="w-4 h-4 text-white" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-medium">
+                  {t("settings.preferences.scanConcurrency.title")}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {t("settings.preferences.scanConcurrency.description", {
+                    max: maxScanConcurrency,
+                    default: defaultScanConcurrency,
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="flex items-center gap-1 rounded-full bg-secondary/80 p-1 shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.08)]">
+                <button
+                  type="button"
+                  onClick={() => handleScanConcurrencyStep(-1)}
+                  disabled={scanConcurrency <= 1}
+                  aria-label={t("settings.preferences.scanConcurrency.decrease")}
+                  className="h-7 w-7 rounded-full bg-card text-foreground shadow-sm transition-colors hover:bg-muted disabled:opacity-40"
+                >
+                  -
+                </button>
+                <div className="min-w-8 px-2 text-center text-sm font-semibold text-foreground">
+                  {scanConcurrency}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleScanConcurrencyStep(1)}
+                  disabled={scanConcurrency >= maxScanConcurrency}
+                  aria-label={t("settings.preferences.scanConcurrency.increase")}
+                  className="h-7 w-7 rounded-full bg-card text-foreground shadow-sm transition-colors hover:bg-muted disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
         </GroupCardItem>
         <GroupCardItem>
