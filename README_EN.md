@@ -6,7 +6,7 @@
 
 ### Making Claude Code Skills Management as Simple and Secure as an App Store
 
-[![Version](https://img.shields.io/badge/version-0.9.8-blue.svg)](https://github.com/brucevanfdm/agent-skills-guard/releases)
+[![Version](https://img.shields.io/badge/version-0.9.9-blue.svg)](https://github.com/brucevanfdm/agent-skills-guard/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/brucevanfdm/agent-skills-guard/releases)
 
@@ -43,26 +43,31 @@ When enjoying Claude Code's AI-assisted programming, do you face these frustrati
 Manage Claude Code skills like managing mobile apps, from discovery, installation, updates to uninstallation, all with visual operations.
 
 - ✅ **One-click install**: Install directly from featured or custom repositories
-- 🔄 **Smart updates**: Automatically detect skill updates, support online upgrades
+- 🔌 **Plugin-style installation**: Support installing skills as plugins using Claude non-interactive commands, avoiding compatibility issues
+- 🔄 **Smart updates**: Automatically detect skill and plugin updates, support online upgrades
 - 🗑️ **Easy uninstall**: Support multi-path installation management, clean on demand
 - 📂 **Custom paths**: Flexibly choose skill installation locations
 
-### 🛡️ Industry-Leading Security Scanning
+### 🛡️ Community-Leading Security Scanning
 
-**Covering 8 major risk categories with 10 hard-trigger protections**, making skill use more secure.
+**Covering 8 major risk categories with 22 hard-trigger protections**, making skill use more secure.
 
 - 🔍 **8 risk categories**: Destructive operations, remote code execution, command injection, data exfiltration, privilege escalation, persistence, sensitive information leakage, sensitive file access
-- 🚫 **10 hard-trigger rules**: Directly block high-risk operations, no冒险
+- 🚫 **22 hard-trigger rules**: Directly block high-risk operations, no冒险
 - 🔗 **Symbolic link detection**: Prevent symlink attacks
+- ⚡ **Parallel scanning acceleration**: Parallel scanning technology greatly improves detection speed
+- 🎯 **Rule optimization**: 3-5x performance improvement, ~30% reduction in false positives, new high-risk rules added
 - 📊 **Security scoring system**: 0-100 score intuitive display
 - 📝 **Detailed scan reports**: Tell you where the risk is, why it's risky, how to fix it
 - 🎯 **Confidence grading**: High/Medium/Low three-level confidence, reduce false positives
 
-### 🌟 Featured Skills Repository
+### 🌟 Featured Resource Marketplace
 
-Built-in manually curated quality skills repository, automatically syncs updates, discovering quality skills has never been easier.
+Built-in manually curated quality skills repository, syncs with Claude plugin marketplace, discovering quality resources has never been easier.
 
 - 📚 **Featured skills library**: Manually selected quality skills
+- 🔌 **Claude plugin support**: Sync local installed plugins, include in security scanning and risk statistics
+- 🌟 **Featured plugin marketplace**: New "Featured Marketplace" tab, supports online refresh and caching
 - 🔄 **Auto refresh**: Silent update on startup, keep latest
 - ➕ **Custom repositories**: Support adding any GitHub repository
 
@@ -82,11 +87,11 @@ Say goodbye to command lines and enjoy the intuitive Apple minimalist interface.
 
 | Feature            | Traditional Way                   | Agent Skills Guard               |
 | ------------------ | --------------------------------- | -------------------------------- |
-| **Discover skills** | ❌ Aimlessly search GitHub      | ✅ Featured repo, one-click browse |
-| **Security check** | ❌ Manual code review, time-consuming | ✅ 8-category auto scan, instant results |
-| **Install skills** | ❌ Command line, error-prone    | ✅ Visual UI, click to install  |
-| **Manage skills**  | ❌ Folder digging, unclear usage | ✅ Intuitive list, clear status |
-| **Update skills**  | ❌ Manual check, repetitive     | ✅ Auto detect, batch update    |
+| **Discover skills/plugins** | ❌ Aimlessly search GitHub      | ✅ Featured repo + plugin marketplace, one-click browse |
+| **Security check** | ❌ Manual code review, time-consuming | ✅ 8-category auto scan, 3-5x faster, instant results |
+| **Install skills** | ❌ Command line, error-prone    | ✅ Visual UI, plugin-style install, click to install  |
+| **Manage skills/plugins**  | ❌ Folder digging, unclear usage | ✅ Intuitive list, clear status |
+| **Update skills/plugins**  | ❌ Manual check, repetitive     | ✅ Auto detect, batch update    |
 | **Uninstall skills** | ❌ Manual delete, worried leftovers | ✅ One-click uninstall, auto cleanup |
 
 ---
@@ -168,9 +173,84 @@ Add and manage skill sources, built-in featured repositories auto-update.
 
 Our security scanning engine analyzes every file of skill code to detect potential risks:
 
+- **Parallel scanning acceleration**: Parallel scanning technology greatly improves scan speed for local installed skills/plugins
+- **Rule optimization**: Security scan rules achieve 3-5x performance improvement, ~30% reduction in false positives
 - **File scanning strategy**: Skip large directories like `node_modules`, `target`, limit scan depth and file count
 - **Symbolic link detection**: Immediately hard-block on symlink discovery, prevent attacks
 - **Multi-format support**: Support `.js`, `.ts`, `.py`, `.sh`, `.rs` and other code formats
+- **Platform adaptation**: Enhanced UTF-16 decoding and text validation, extended Windows/multi-language support
+
+### Scoring System Principles
+
+#### How is the Security Score Calculated?
+
+The security score uses a **100-point deduction mechanism**, starting from 100 points and deducting points based on detected risks:
+
+1. **Initial Score**: 100 points (full score)
+2. **Risk Deduction**: For each risk detected, deduct points based on its weight
+3. **Same-Rule Deduplication**: Deduct points only once per rule in the same file (avoiding duplicate deductions)
+4. **Score Accumulation**: All risk deductions accumulate, minimum to 0 points
+
+#### Scoring Example
+
+Assume the following risks are detected:
+
+| Risk Item                     | Weight | Description                       |
+| ----------------------------- | ------ | --------------------------------- |
+| `rm -rf /` (hard trigger)     | 100    | Installation prohibited directly   |
+| `curl \| bash`                | 90     | Deduct 90 points                  |
+| `eval()`                      | 6      | Deduct 6 points                   |
+| `os.system()`                 | 6      | Deduct 6 points                   |
+| Hardcoded API Key             | 60     | Deduct 60 points                  |
+| **Total Score**               | -      | 100 - 90 - 6 - 6 - 60 = **-62**  |
+
+Due to the presence of hard-trigger rules, installation is directly blocked.
+
+#### Scoring Levels
+
+- **90-100 (✅ Safe)**: Safe to use
+  - No or only very low-risk items
+  - No hard-trigger rules detected
+
+- **70-89 (⚠️ Low Risk)**: Minor risk, recommend checking details
+  - Few low-risk items
+  - Decide whether to use based on needs
+
+- **50-69 (⚠️ Medium Risk)**: Certain risk, use with caution
+  - Medium-risk items present
+  - Recommend carefully reviewing code before use
+
+- **30-49 (🔴 High Risk)**: High risk, not recommended for installation
+  - Multiple high-risk items
+  - Strongly recommend finding alternatives
+
+- **0-29 (🚨 Critical Risk)**: Serious threat, installation prohibited
+  - Hard-trigger rules triggered
+  - System directly blocks installation
+
+### Hard-Trigger Protection Mechanism
+
+**What are Hard-Trigger Rules?**
+
+Hard-trigger rules are "red lines" set by the system. Once triggered, installation is immediately blocked without giving users a chance to take risks. These rules correspond to **extremely dangerous** operations, including:
+
+- 🚨 **Destructive Operations** (8 rules): `rm -rf /`, disk wiping, formatting, etc.
+- 🚨 **Remote Code Execution** (10 rules): `curl | bash`, reverse shell, PowerShell encoded commands, etc.
+- 🚨 **Privilege Escalation** (1 rule): sudoers file modification
+- 🚨 **Persistence Backdoor** (1 rule): SSH key injection
+- 🚨 **Sensitive File Access** (2 rules): Reading shadow file, Windows credential store
+
+Totaling **22 hard-trigger rules**, covering the most common attack vectors.
+
+### Confidence Grading
+
+To reduce false positives, each risk is marked with a confidence level:
+
+- **🎯 High**: Low possibility of false positives, should focus on
+- **🎯 Medium**: Some possibility of false positives, recommend manual review
+- **🎯 Low**: High possibility of false positives, for reference only
+
+**Score Adjustment**: Low-confidence risks have lower weights in scoring to avoid false positives causing excessively low scores.
 
 ### Risk Classification
 
@@ -184,14 +264,6 @@ Our security scanning engine analyzes every file of skill code to detect potenti
 | **Persistence**            | Backdoor implantation       | `crontab`, SSH key injection    |
 | **Sensitive Info Leakage** | Hardcoded keys, Tokens      | AWS Key, GitHub Token           |
 | **Sensitive File Access**  | Access system sensitive files | `~/.ssh/`, `/etc/passwd`    |
-
-### Scoring System
-
-- **90-100 (✅ Safe)**: Safe to use
-- **70-89 (⚠️ Low Risk)**: Minor risk, recommend checking details
-- **50-69 (⚠️ Medium Risk)**: Certain risk, use with caution
-- **30-49 (🔴 High Risk)**: High risk, not recommended for installation
-- **0-29 (🚨 Critical Risk)**: Serious threat, installation prohibited
 
 ### Disclaimer
 
