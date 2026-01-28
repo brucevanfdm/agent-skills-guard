@@ -272,6 +272,7 @@ pub fn run() {
             commands::cancel_skill_update,
             commands::auto_scan_unscanned_repositories,
             commands::plugins::get_plugins,
+            commands::plugins::get_plugins_cached,
             commands::plugins::prepare_plugin_installation,
             commands::plugins::confirm_plugin_installation,
             commands::plugins::cancel_plugin_installation,

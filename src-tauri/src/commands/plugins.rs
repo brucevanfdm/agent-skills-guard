@@ -63,6 +63,14 @@ pub async fn get_plugins(
     state.db.get_plugins().map_err(|e| e.to_string())
 }
 
+/// 获取 plugins（不触发 CLI 同步，仅读取 DB）
+#[tauri::command]
+pub async fn get_plugins_cached(
+    state: State<'_, AppState>,
+) -> Result<Vec<Plugin>, String> {
+    state.db.get_plugins().map_err(|e| e.to_string())
+}
+
 /// 准备安装 plugin：下载并扫描 marketplace repo
 #[tauri::command]
 pub async fn prepare_plugin_installation(
@@ -311,11 +319,12 @@ pub async fn scan_installed_plugin(
     locale: String,
     claude_command: Option<String>,
     scan_id: Option<String>,
+    skip_sync: Option<bool>,
 ) -> Result<String, String> {
     let locale = validate_locale(&locale);
 
     // 尝试同步 installPath（不强制成功）
-    {
+    if !skip_sync.unwrap_or(false) {
         let manager = state.plugin_manager.lock().await;
         if let Err(e) = manager.sync_claude_installed_state(claude_command).await {
             log::debug!("同步 Claude plugins 状态失败: {}", e);

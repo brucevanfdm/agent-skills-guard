@@ -97,39 +97,25 @@ export function OverviewPage() {
       }));
       let localSkillsCount = 0;
       let installedPluginsCount = 0;
-      let marketplaceCount = 0;
       let scannedPluginsCount = 0;
       let installedSkillsCount = 0;
-
-      try {
-        const localSkills = await api.scanLocalSkills();
-        localSkillsCount = localSkills.length;
-        const installedSkillsNow = await api.getInstalledSkills();
-        installedSkillsCount = installedSkillsNow.length;
-        await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
-        await queryClient.refetchQueries({ queryKey: ["skills"] });
-      } catch (error: any) {
-        console.error("扫描本地技能失败:", error);
-        appToast.error(t("overview.scan.localSkillsFailed", { error: error.message }), {
-          duration: 4000,
-        });
-      }
-
-      let installedPlugins: Plugin[] = [];
-      try {
-        const latestPlugins = await api.getPlugins(i18n.language);
-        installedPlugins = latestPlugins.filter((p) => p.installed);
-        installedPluginsCount = installedPlugins.length;
-        await queryClient.refetchQueries({ queryKey: ["plugins"] });
-      } catch (error: any) {
-        console.error("扫描本地插件失败:", error);
-      }
 
       let installedSkills: Skill[] = [];
       try {
         installedSkills = await api.getInstalledSkills();
-      } catch {
-        installedSkills = [];
+        installedSkillsCount = installedSkills.length;
+        localSkillsCount = installedSkillsCount;
+      } catch (error: any) {
+        console.error("获取已安装技能失败:", error);
+      }
+
+      let installedPlugins: Plugin[] = [];
+      try {
+        const latestPlugins = await api.getPluginsCached();
+        installedPlugins = latestPlugins.filter((p) => p.installed);
+        installedPluginsCount = installedPlugins.length;
+      } catch (error: any) {
+        console.error("获取已安装插件失败:", error);
       }
 
       const scanConcurrency = getScanConcurrency();
@@ -163,17 +149,9 @@ export function OverviewPage() {
       }));
 
       try {
-        const latestMarketplaces = await api.getClaudeMarketplaces();
-        marketplaceCount = latestMarketplaces.length;
-        await queryClient.refetchQueries({ queryKey: ["claudeMarketplaces"] });
-      } catch (error: any) {
-        console.error("扫描 Marketplace 失败:", error);
-      }
-
-      try {
         await runWithConcurrency(installedPlugins, scanConcurrency, async (plugin) => {
           try {
-            await api.scanInstalledPlugin(plugin.id, i18n.language);
+            await api.scanInstalledPlugin(plugin.id, i18n.language, undefined, undefined, true);
             scannedPluginsCount += 1;
           } catch (e) {
             console.error("扫描插件失败:", plugin.name, e);
@@ -190,7 +168,6 @@ export function OverviewPage() {
             });
           }
         });
-        await queryClient.refetchQueries({ queryKey: ["plugins"] });
       } catch (error: any) {
         console.error("安全扫描插件失败:", error);
       }
@@ -224,11 +201,10 @@ export function OverviewPage() {
         results,
         localSkillsCount,
         installedPluginsCount,
-        marketplaceCount,
         scannedPluginsCount,
       };
     },
-    onSuccess: ({ results, localSkillsCount, installedPluginsCount, marketplaceCount, scannedPluginsCount }) => {
+    onSuccess: ({ results, localSkillsCount, installedPluginsCount, scannedPluginsCount }) => {
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
@@ -239,7 +215,6 @@ export function OverviewPage() {
           localCount: localSkillsCount,
           scannedCount: results.length,
           pluginCount: installedPluginsCount,
-          marketplaceCount,
           scannedPluginsCount,
         }),
         { duration: 4000 }

@@ -182,6 +182,10 @@ export const api = {
     return invoke("get_claude_marketplaces", { claudeCommand: claudeCommand || null });
   },
 
+  async getPluginsCached(): Promise<Plugin[]> {
+    return invoke("get_plugins_cached");
+  },
+
   async checkPluginsUpdates(claudeCommand?: string): Promise<Array<[string, string]>> {
     return invoke("check_plugins_updates", { claudeCommand: claudeCommand || null });
   },
@@ -230,13 +234,15 @@ export const api = {
     pluginId: string,
     locale: string,
     claudeCommand?: string,
-    scanId?: string
+    scanId?: string,
+    skipSync?: boolean
   ): Promise<string> {
     return invoke("scan_installed_plugin", {
       pluginId,
       locale,
       claudeCommand: claudeCommand || null,
       scanId: scanId || null,
+      skipSync: skipSync ?? null,
     });
   },
 
