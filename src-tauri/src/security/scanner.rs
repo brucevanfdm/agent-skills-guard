@@ -54,6 +54,58 @@ impl SecurityScanner {
             .map(|s| s.to_ascii_lowercase())
     }
 
+    fn is_shell_ext(ext: Option<&str>) -> bool {
+        matches!(
+            ext,
+            Some("sh")
+                | Some("bash")
+                | Some("zsh")
+                | Some("ksh")
+                | Some("fish")
+                | Some("csh")
+                | Some("tcsh")
+        )
+    }
+
+    fn is_script_or_code_ext(ext: Option<&str>) -> bool {
+        Self::is_shell_ext(ext)
+            || matches!(
+                ext,
+                Some("py")
+                    | Some("pyw")
+                    | Some("pyi")
+                    | Some("js")
+                    | Some("jsx")
+                    | Some("ts")
+                    | Some("tsx")
+                    | Some("mjs")
+                    | Some("cjs")
+                    | Some("php")
+                    | Some("phtml")
+                    | Some("php3")
+                    | Some("php4")
+                    | Some("php5")
+                    | Some("php7")
+                    | Some("php8")
+                    | Some("rb")
+                    | Some("rake")
+                    | Some("gemspec")
+                    | Some("ru")
+                    | Some("go")
+                    | Some("java")
+                    | Some("kt")
+                    | Some("kts")
+                    | Some("groovy")
+                    | Some("cs")
+                    | Some("csx")
+                    | Some("ps1")
+                    | Some("psm1")
+                    | Some("psd1")
+                    | Some("bat")
+                    | Some("cmd")
+            )
+    }
+
     fn rule_applies_to_extension(rule_id: &str, ext: Option<&str>) -> bool {
         match rule_id {
             // Python
@@ -88,6 +140,37 @@ impl SecurityScanner {
             | "POWERSHELL_START_PROCESS" => matches!(ext, Some("ps1") | Some("psm1") | Some("psd1")),
             // Windows batch / cmd / PowerShell scripts
             "CMD_WRAPPER" => matches!(ext, Some("bat") | Some("cmd") | Some("ps1")),
+            // Shell / OS command patterns
+            "CURL_PIPE_SH" | "WGET_PIPE_SH" | "BASE64_EXEC" | "REVERSE_SHELL" | "CURL_POST" | "NETCAT" | "FTP_PROTOCOL" => {
+                Self::is_script_or_code_ext(ext)
+            }
+            // Privilege / persistence commonly in scripts
+            "SUDO" | "CHMOD_777" | "SUDOERS" | "CRONTAB" | "SSH_KEYS" | "STARTUP_FOLDER_PERSISTENCE" | "SCHTASKS_CREATE" => {
+                Self::is_script_or_code_ext(ext)
+            }
+            "REG_RUN_KEY_ADD" => matches!(ext, Some("bat") | Some("cmd") | Some("ps1") | Some("reg")),
+            // Sensitive file access patterns should be in scripts/tools, not docs
+            "READ_SSH_PRIVATE_KEY"
+            | "READ_AWS_CREDENTIALS"
+            | "READ_ENV_FILE"
+            | "READ_PASSWD"
+            | "READ_SHADOW"
+            | "READ_GIT_CREDENTIALS"
+            | "READ_WINDOWS_SAM"
+            | "READ_WINDOWS_CREDENTIALS"
+            | "READ_POWERSHELL_HISTORY"
+            | "READ_CHROME_LOGIN_DATA"
+            | "READ_EDGE_LOGIN_DATA"
+            | "READ_FIREFOX_LOGINS"
+            | "READ_DOCKER_CONFIG"
+            | "READ_NPMRC"
+            | "READ_PYPIRC"
+            | "READ_NETRC" => Self::is_script_or_code_ext(ext),
+            // WebSocket/HTTP usage likely in code, not docs
+            "WEBSOCKET_CONNECT" => matches!(
+                ext,
+                Some("js") | Some("jsx") | Some("ts") | Some("tsx") | Some("mjs") | Some("cjs") | Some("py") | Some("rb")
+            ),
             // 默认：所有文件类型适用
             _ => true,
         }
