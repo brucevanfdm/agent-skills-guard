@@ -580,7 +580,8 @@
     "title": "APPLICATION_SETTINGS",
     "language": {
       "title": "LANGUAGE",
-      "label": "INTERFACE_LANGUAGE"
+      "label": "INTERFACE_LANGUAGE",
+      "description": "Switch the UI language. Changes apply immediately."
     },
     "appInfo": {
       "title": "APPLICATION_INFO",

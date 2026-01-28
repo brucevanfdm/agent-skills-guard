@@ -456,7 +456,12 @@ export function SettingsPage() {
               <div className="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center">
                 <Languages className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-medium">{t("settings.language.label")}</span>
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{t("settings.language.label")}</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("settings.language.description")}
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
