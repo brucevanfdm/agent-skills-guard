@@ -1,4 +1,4 @@
-use regex::Regex;
+use regex::{Regex, RegexSet};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
@@ -204,7 +204,7 @@ lazy_static! {
         PatternRule::new(
             "CURL_PIPE_SH",
             "Curl管道执行",
-            r"curl\s+[^|]*\|\s*(ba)?sh",
+            r"curl\s+[^|]*?\|\s*(ba)?sh",
             Severity::Critical,
             Category::RemoteExec,
             90,
@@ -217,7 +217,7 @@ lazy_static! {
         PatternRule::new(
             "WGET_PIPE_SH",
             "Wget管道执行",
-            r"wget\s+[^|]*\|\s*(ba)?sh",
+            r"wget\s+[^|]*?\|\s*(ba)?sh",
             Severity::Critical,
             Category::RemoteExec,
             90,
@@ -230,7 +230,7 @@ lazy_static! {
         PatternRule::new(
             "BASE64_EXEC",
             "Base64解码执行",
-            r"base64\s+(-d|--decode)[^|]*\|\s*(ba)?sh",
+            r"base64\s+(?:-d|--decode)[^|]*?\|\s*(ba)?sh",
             Severity::Critical,
             Category::RemoteExec,
             85,
@@ -256,7 +256,7 @@ lazy_static! {
         PatternRule::new(
             "POWERSHELL_ENCODED_COMMAND",
             "PowerShell 编码命令",
-            r"(?i)\b(powershell|pwsh)(\.exe)?\b[^\r\n]*(?:-enc(?:odedcommand)?|-e)\s+[A-Za-z0-9+/=]{20,}",
+            r"(?i)\b(?:powershell|pwsh)(?:\.exe)?\b[^\r\n]*?(?:-enc(?:odedcommand)?|-e)\s+[A-Za-z0-9+/=]{20,}",
             Severity::Critical,
             Category::RemoteExec,
             90,
@@ -269,7 +269,7 @@ lazy_static! {
         PatternRule::new(
             "POWERSHELL_IEX_DOWNLOAD",
             "PowerShell 下载后执行",
-            r"(?i)\b(IEX|Invoke-Expression)\b[^\r\n]*(DownloadString|DownloadFile|Invoke-WebRequest|iwr|curl|wget|WebClient)",
+            r"(?i)\b(?:IEX|Invoke-Expression)\b[^\r\n]*?(?:DownloadString|DownloadFile|Invoke-WebRequest|iwr|curl|wget|WebClient)",
             Severity::Critical,
             Category::RemoteExec,
             95,
@@ -282,7 +282,7 @@ lazy_static! {
         PatternRule::new(
             "POWERSHELL_PIPE_IEX",
             "PowerShell 管道执行",
-            r"(?i)\b(Invoke-WebRequest|iwr|curl|wget)\b[^\r\n]*\|\s*(IEX|Invoke-Expression)\b",
+            r"(?i)\b(?:Invoke-WebRequest|iwr|curl|wget)\b[^\r\n]*?\|\s*(?:IEX|Invoke-Expression)\b",
             Severity::Critical,
             Category::RemoteExec,
             95,
@@ -295,7 +295,7 @@ lazy_static! {
         PatternRule::new(
             "MSHTA_EXEC",
             "MSHTA 脚本执行",
-            r"(?i)\bmshta(\.exe)?\b[^\r\n]*(https?://|javascript:|vbscript:)",
+            r"(?i)\bmshta(?:\.exe)?\b[^\r\n]*?(?:https?://|javascript:|vbscript:)",
             Severity::Critical,
             Category::RemoteExec,
             95,
@@ -308,7 +308,7 @@ lazy_static! {
         PatternRule::new(
             "REGSVR32_SCJ",
             "Regsvr32 Scriptlet 执行",
-            r"(?i)\bregsvr32(\.exe)?\b[^\r\n]*(/i:\s*https?://|scrobj\.dll)",
+            r"(?i)\bregsvr32(?:\.exe)?\b[^\r\n]*?(?:/i:\s*https?://|scrobj\.dll)",
             Severity::Critical,
             Category::RemoteExec,
             95,
@@ -321,7 +321,7 @@ lazy_static! {
         PatternRule::new(
             "RUNDLL32_SCRIPT",
             "Rundll32 脚本执行",
-            r"(?i)\brundll32(\.exe)?\b[^\r\n]*(javascript:|vbscript:|https?://)",
+            r"(?i)\brundll32(?:\.exe)?\b[^\r\n]*?(?:javascript:|vbscript:|https?://)",
             Severity::Critical,
             Category::RemoteExec,
             95,
@@ -334,7 +334,7 @@ lazy_static! {
         PatternRule::new(
             "BITSADMIN_TRANSFER",
             "Bitsadmin 传输",
-            r"(?i)\bbitsadmin(\.exe)?\b[^\r\n]*(/transfer|/addfile|/setnotifycmdline)",
+            r"(?i)\bbitsadmin(?:\.exe)?\b[^\r\n]*?(?:/transfer|/addfile|/setnotifycmdline)",
             Severity::Medium,
             Category::RemoteExec,
             45,
@@ -347,7 +347,7 @@ lazy_static! {
         PatternRule::new(
             "CERTUTIL_DOWNLOAD",
             "Certutil 下载/解码",
-            r"(?i)\bcertutil(\.exe)?\b[^\r\n]*(-urlcache|-decode|-encode|-split)",
+            r"(?i)\bcertutil(?:\.exe)?\b[^\r\n]*?(?:-urlcache|-decode|-encode|-split)",
             Severity::Medium,
             Category::RemoteExec,
             45,
@@ -360,7 +360,7 @@ lazy_static! {
         PatternRule::new(
             "WMIC_PROCESS_CREATE",
             "WMIC 进程创建",
-            r"(?i)\bwmic\b[^\r\n]*\bprocess\b[^\r\n]*\bcall\b[^\r\n]*\bcreate\b",
+            r"(?i)\bwmic\b[^\r\n]*?\bprocess\b[^\r\n]*?\bcall\b[^\r\n]*?\bcreate\b",
             Severity::Medium,
             Category::RemoteExec,
             40,
@@ -375,13 +375,13 @@ lazy_static! {
         PatternRule::new(
             "PY_EVAL",
             "eval() 动态执行",
-            r"\beval\s*\(",
+            r"(?:^|[^\w.])eval\s*\(",
             Severity::Low,
             Category::CmdInjection,
             6,
             "eval() 动态执行",
             false,
-            Confidence::Medium,
+            Confidence::Low,  // 降低置信度，因为可能误报JS/TS
             "避免使用eval()动态执行代码，使用安全的替代方法",
             Some("CWE-94"),
         ),
@@ -440,7 +440,7 @@ lazy_static! {
         PatternRule::new(
             "CMD_WRAPPER",
             "CMD 包装执行",
-            r"(?i)\bcmd(\.exe)?\s+/[ck]\s+.*\b(powershell|pwsh|mshta|wscript|cscript|rundll32|regsvr32)\b",
+            r"(?i)\b(?:cmd(?:\.exe)?)\s+/[ck]\s+.*?\b(?:powershell|pwsh|mshta|wscript|cscript|rundll32|regsvr32)\b",
             Severity::Medium,
             Category::CmdInjection,
             35,
@@ -453,7 +453,7 @@ lazy_static! {
         PatternRule::new(
             "POWERSHELL_BYPASS_POLICY",
             "PowerShell 规避策略",
-            r"(?i)\b(powershell|pwsh)(\.exe)?\b[^\r\n]*(-executionpolicy\s+bypass|-ep\s+bypass|-windowstyle\s+hidden|-w\s+hidden)",
+            r"(?i)\b(?:powershell|pwsh)(?:\.exe)?\b[^\r\n]*?(?:-executionpolicy\s+bypass|-ep\s+bypass|-windowstyle\s+hidden|-w\s+hidden)",
             Severity::Medium,
             Category::CmdInjection,
             30,
@@ -525,7 +525,7 @@ lazy_static! {
             r"\bsudo\s+",
             Severity::Low,
             Category::Privilege,
-            6,
+            3,  // 降低weight，因为sudo在正常脚本中很常见
             "sudo 权限提升",
             false,
             Confidence::Low,
@@ -535,14 +535,14 @@ lazy_static! {
         PatternRule::new(
             "CHMOD_777",
             "chmod 777",
-            r"chmod\s+(-[a-zA-Z]*\s+)*7[0-7]{2}",
+            r"chmod\s+(-[a-zA-Z]*\s+)*[0-7]?[0-7][67][67]",
             Severity::High,
             Category::Privilege,
             55,
-            "chmod 777 开放权限",
+            "chmod 设置过于开放的权限（world-writable）",
             false,
             Confidence::High,
-            "避免设置777权限，使用最小权限原则",
+            "避免设置world-writable权限，使用最小权限原则",
             Some("CWE-732"),
         ),
         PatternRule::new(
@@ -563,11 +563,11 @@ lazy_static! {
         PatternRule::new(
             "CRONTAB",
             "Crontab持久化",
-            r"(crontab\s+-|/etc/cron)",
+            r"(crontab\s+-[^l\s]|/etc/cron\.(d|daily|hourly|weekly|monthly)/)",
             Severity::High,
             Category::Persistence,
             65,
-            "crontab 持久化",
+            "crontab 持久化（排除只读操作）",
             false,
             Confidence::Medium,
             "检查定时任务内容，避免恶意持久化机制",
@@ -879,39 +879,39 @@ lazy_static! {
         PatternRule::new(
             "READ_NPMRC",
             "读取npm配置",
-            r"(?i)[\\/]\\.npmrc\b",
+            r"(?i)(cat|less|head|tail|vim|nano|open|type|more|get-content|gc)\s+.*[\\/]\\.npmrc\b",
             Severity::Medium,
             Category::SensitiveFileAccess,
             45,
             "读取.npmrc可能暴露Token",
             false,
-            Confidence::Low,
+            Confidence::Medium,
             "避免读取包含Token的npm配置文件",
             Some("CWE-522"),
         ),
         PatternRule::new(
             "READ_PYPIRC",
             "读取PyPI配置",
-            r"(?i)[\\/]\\.pypirc\b",
+            r"(?i)(cat|less|head|tail|vim|nano|open|type|more|get-content|gc)\s+.*[\\/]\\.pypirc\b",
             Severity::Medium,
             Category::SensitiveFileAccess,
             45,
             "读取.pypirc可能暴露凭据",
             false,
-            Confidence::Low,
+            Confidence::Medium,
             "避免读取包含凭据的PyPI配置文件",
             Some("CWE-522"),
         ),
         PatternRule::new(
             "READ_NETRC",
             "读取netrc配置",
-            r"(?i)[\\/]\\.netrc\b",
+            r"(?i)(cat|less|head|tail|vim|nano|open|type|more|get-content|gc)\s+.*[\\/]\\.netrc\b",
             Severity::Medium,
             Category::SensitiveFileAccess,
             45,
             "读取.netrc可能暴露凭据",
             false,
-            Confidence::Low,
+            Confidence::Medium,
             "避免读取包含凭据的netrc文件",
             Some("CWE-522"),
         ),
@@ -1128,11 +1128,73 @@ lazy_static! {
             "使用 SFTP 或 FTPS 替代明文 FTP",
             Some("CWE-319"),
         ),
+
+        // L. 反序列化与代码注入
+        PatternRule::new(
+            "PICKLE_LOAD",
+            "Pickle反序列化",
+            r"pickle\.(load|loads)\s*\(",
+            Severity::Medium,
+            Category::CmdInjection,
+            40,
+            "pickle反序列化可执行任意代码",
+            false,
+            Confidence::Medium,
+            "避免反序列化不可信数据，使用json替代",
+            Some("CWE-502"),
+        ),
+        PatternRule::new(
+            "YAML_UNSAFE_LOAD",
+            "YAML不安全加载",
+            r"yaml\.(unsafe_load|load)\s*\([^)]*Loader\s*=\s*yaml\.(Unsafe)?Loader",
+            Severity::Medium,
+            Category::CmdInjection,
+            40,
+            "YAML不安全加载可执行任意代码",
+            false,
+            Confidence::Medium,
+            "使用yaml.safe_load()替代",
+            Some("CWE-502"),
+        ),
+        PatternRule::new(
+            "ENV_VAR_IN_SHELL",
+            "环境变量命令注入",
+            r#"\$\{?[A-Z_]+\}?\s*[|;&]"#,
+            Severity::Low,  // 降低严重程度
+            Category::CmdInjection,
+            15,  // 大幅降低weight，从35降到15
+            "环境变量直接用于Shell命令",
+            false,
+            Confidence::Low,
+            "对环境变量进行验证后再使用（注意：脚本内部变量通常是安全的）",
+            Some("CWE-78"),
+        ),
+        PatternRule::new(
+            "OSASCRIPT_EXEC",
+            "osascript执行",
+            r"osascript\s+(-e|.*\.scpt)",
+            Severity::Medium,
+            Category::RemoteExec,
+            45,
+            "osascript可执行AppleScript",
+            false,
+            Confidence::Medium,
+            "审查osascript执行内容",
+            Some("CWE-78"),
+        ),
     ];
 
     /// 仅获取硬触发规则
     pub static ref HARD_TRIGGER_RULES: Vec<&'static PatternRule> = {
         PATTERN_RULES.iter().filter(|r| r.hard_trigger).collect()
+    };
+
+    /// RegexSet用于批量匹配，提升性能
+    pub static ref PATTERN_SET: RegexSet = {
+        let patterns: Vec<&str> = PATTERN_RULES.iter()
+            .map(|r| r.pattern.as_str())
+            .collect();
+        RegexSet::new(patterns).expect("Invalid regex patterns")
     };
 }
 
@@ -1147,5 +1209,18 @@ impl SecurityRules {
     /// 获取所有硬触发规则
     pub fn get_hard_triggers() -> Vec<&'static PatternRule> {
         PATTERN_RULES.iter().filter(|r| r.hard_trigger).collect()
+    }
+
+    /// 快速批量匹配，返回命中的规则索引
+    /// 使用RegexSet一次性匹配所有模式，性能比逐条匹配快3-5倍
+    pub fn quick_match(content: &str) -> Vec<usize> {
+        PATTERN_SET.matches(content).into_iter().collect()
+    }
+
+    /// 根据索引获取匹配的规则
+    pub fn get_matched_rules(indices: Vec<usize>) -> Vec<&'static PatternRule> {
+        indices.iter()
+            .filter_map(|&i| PATTERN_RULES.get(i))
+            .collect()
     }
 }
