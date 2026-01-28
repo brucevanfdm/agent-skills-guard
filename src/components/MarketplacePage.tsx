@@ -104,6 +104,12 @@ export function MarketplacePage({
   const { pendingInstall, preparingSkillId, installingSkillId, installingPluginId, scanPromptPlugin } =
     installStatus;
 
+  const isInstallInProgress =
+    installMutation.isPending ||
+    preparingSkillId !== null ||
+    installingSkillId !== null ||
+    installingPluginId !== null;
+
   const isLoading = isSkillsLoading || isPluginsLoading;
 
   useEffect(() => {
@@ -272,7 +278,7 @@ export function MarketplacePage({
                 <h1 className="text-headline text-foreground">{t("nav.marketplace")}</h1>
                 <button
                   onClick={refreshMarketplace}
-                  disabled={isLoading || isRefreshing}
+                  disabled={isLoading || isRefreshing || isInstallInProgress}
                   className="apple-button-primary h-10 px-4 flex items-center gap-2 disabled:opacity-50"
                 >
                   {isRefreshing ? (
@@ -430,14 +436,13 @@ export function MarketplacePage({
                           result.plugin_statuses.some((status) => status.status === "failed");
                         if (hasFailed) {
                           appToast.error(t("plugins.toast.installFailed"));
+                        } else if (getPluginScanPromptEnabled()) {
+                          setInstallStatus((prev) => ({
+                            ...prev,
+                            scanPromptPlugin: entry.item,
+                          }));
                         } else {
                           appToast.success(t("plugins.toast.installed"));
-                          if (getPluginScanPromptEnabled()) {
-                            setInstallStatus((prev) => ({
-                              ...prev,
-                              scanPromptPlugin: entry.item,
-                            }));
-                          }
                         }
                       } catch (error: any) {
                         appToast.error(
