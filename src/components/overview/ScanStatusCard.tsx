@@ -49,9 +49,7 @@ export function ScanStatusCard({
   };
 
   const status = getStatusInfo();
-  const countClass = isScanning
-    ? "text-base font-semibold text-muted-foreground tabular-nums"
-    : "text-2xl font-semibold text-foreground tabular-nums";
+  const countClass = "text-2xl font-semibold text-foreground tabular-nums";
   const labelClass = isScanning ? "text-[11px] text-muted-foreground" : "text-xs text-muted-foreground";
 
   return (

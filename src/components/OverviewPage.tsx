@@ -143,6 +143,7 @@ export function OverviewPage() {
         }));
 
         const results: SkillScanResult[] = [];
+        let extraLocalScannedCount = 0;
 
         try {
           await runWithConcurrency(pendingPluginsSnapshot, scanConcurrency, async (plugin) => {
@@ -192,14 +193,59 @@ export function OverviewPage() {
           console.error("补扫技能失败:", error);
         }
 
-        localSkillsCount = installedSkills.length;
-        installedPluginsCount = plugins.filter((p) => p.installed).length;
+        // 等待后台任务完成并刷新数据
+        const backgroundLocalSkills = api.scanLocalSkills().catch((error) => {
+          console.error("本地技能发现失败:", error);
+          return [] as Skill[];
+        });
+
+        const backgroundPluginsSync = api.getPlugins(i18n.language).catch((error) => {
+          console.error("插件 CLI 同步失败:", error);
+          return [] as Plugin[];
+        });
+
+        const backgroundMarketplaces = api.getClaudeMarketplaces().catch((error) => {
+          console.error("Marketplace 同步失败:", error);
+          return [];
+        });
+
+        const [localSkills] = await Promise.all([
+          backgroundLocalSkills,
+          backgroundPluginsSync,
+          backgroundMarketplaces,
+        ]);
+        const scannedSkillIds = new Set(results.map((result) => result.skill_id));
+        extraLocalScannedCount = localSkills.filter((skill) => !scannedSkillIds.has(skill.id)).length;
+        await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
+        await queryClient.refetchQueries({ queryKey: ["skills"] });
+        await queryClient.refetchQueries({ queryKey: ["plugins"] });
+        await queryClient.refetchQueries({ queryKey: ["claudeMarketplaces"] });
+
+        // 获取最新的数据
+        let updatedSkills: Skill[] = [];
+        try {
+          updatedSkills = await api.getInstalledSkills();
+        } catch (error: any) {
+          console.error("刷新已安装技能失败:", error);
+        }
+
+        let updatedPlugins: Plugin[] = [];
+        try {
+          const latestPlugins = await api.getPluginsCached();
+          updatedPlugins = latestPlugins.filter((p) => p.installed);
+        } catch (error: any) {
+          console.error("刷新已安装插件失败:", error);
+        }
+
+        localSkillsCount = updatedSkills.length;
+        installedPluginsCount = updatedPlugins.length;
 
         return {
           results,
           localSkillsCount,
           installedPluginsCount,
           scannedPluginsCount,
+          extraLocalScannedCount,
         };
       }
 
@@ -294,7 +340,11 @@ export function OverviewPage() {
         console.error("安全扫描技能失败:", error);
       }
 
-      await Promise.allSettled([backgroundLocalSkills, backgroundPluginsSync, backgroundMarketplaces]);
+      const [localSkills] = await Promise.all([
+        backgroundLocalSkills,
+        backgroundPluginsSync,
+        backgroundMarketplaces,
+      ]);
       await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
       await queryClient.refetchQueries({ queryKey: ["skills"] });
       await queryClient.refetchQueries({ queryKey: ["plugins"] });
@@ -319,14 +369,24 @@ export function OverviewPage() {
       installedPluginsCount = updatedPlugins.length;
       localSkillsCount = installedSkillsCount;
 
+      const scannedSkillIds = new Set(results.map((result) => result.skill_id));
+      const extraLocalScannedCount = localSkills.filter((skill) => !scannedSkillIds.has(skill.id)).length;
+
       return {
         results,
         localSkillsCount,
         installedPluginsCount,
         scannedPluginsCount,
+        extraLocalScannedCount,
       };
     },
-    onSuccess: ({ results, localSkillsCount, installedPluginsCount, scannedPluginsCount }) => {
+    onSuccess: ({
+      results,
+      localSkillsCount,
+      installedPluginsCount,
+      scannedPluginsCount,
+      extraLocalScannedCount,
+    }) => {
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
@@ -335,7 +395,7 @@ export function OverviewPage() {
       appToast.success(
         t("overview.scan.allCompleted", {
           localCount: localSkillsCount,
-          scannedCount: results.length,
+          scannedCount: results.length + extraLocalScannedCount,
           pluginCount: installedPluginsCount,
           scannedPluginsCount,
         }),

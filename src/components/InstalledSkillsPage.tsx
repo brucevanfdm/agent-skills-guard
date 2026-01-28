@@ -1303,7 +1303,9 @@ export function InstalledSkillsPage() {
             <button
               onClick={async () => {
                 if (!pendingMarketplaceRemove) return;
-                const { marketplaceName, marketplaceRepo } = pendingMarketplaceRemove;
+                const { marketplaceName, marketplaceRepo, installedPluginNames } =
+                  pendingMarketplaceRemove;
+                const installedCount = installedPluginNames.length;
                 setInstalledOps((prev) => ({
                   ...prev,
                   removingMarketplaceName: marketplaceName,
@@ -1316,7 +1318,7 @@ export function InstalledSkillsPage() {
                   });
                   if (result.success) {
                     appToast.success(
-                      t("plugins.toast.marketplaceRemoved", { count: result.removed_plugins_count })
+                      t("plugins.toast.marketplaceRemoved", { count: installedCount })
                     );
                   } else {
                     appToast.error(t("plugins.toast.marketplaceRemoveFailed"));
