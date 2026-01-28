@@ -1,6 +1,6 @@
 <div align="center">
 
-<a name="readme-top"></a>
+`<a name="readme-top"></a>`
 
 # 🛡️ Agent Skills Guard
 
@@ -53,10 +53,9 @@ Manage Claude Code skills like managing mobile apps, from discovery, installatio
 **Covering 8 major risk categories with 22 hard-trigger protections**, making skill use more secure.
 
 - 🔍 **8 risk categories**: Destructive operations, remote code execution, command injection, data exfiltration, privilege escalation, persistence, sensitive information leakage, sensitive file access
-- 🚫 **22 hard-trigger rules**: Directly block high-risk operations, no冒险
+- 🚫 **22 hard-trigger rules**: Directly block high-risk operations, no risk taking
 - 🔗 **Symbolic link detection**: Prevent symlink attacks
 - ⚡ **Parallel scanning acceleration**: Parallel scanning technology greatly improves detection speed
-- 🎯 **Rule optimization**: 3-5x performance improvement, ~30% reduction in false positives, new high-risk rules added
 - 📊 **Security scoring system**: 0-100 score intuitive display
 - 📝 **Detailed scan reports**: Tell you where the risk is, why it's risky, how to fix it
 - 🎯 **Confidence grading**: High/Medium/Low three-level confidence, reduce false positives
@@ -113,29 +112,22 @@ Visit [GitHub Releases](https://github.com/brucevanfdm/agent-skills-guard/releas
 
 ### 🎯 First Time Use
 
-**Step 1: Configure Repositories**
-
-Open the app and you'll see built-in featured skills repositories. You can also:
-
-- Click "Repository Configuration" to add your favorite GitHub repositories
-- Wait for automatic scan to complete (manual refresh supported)
-
-**Step 2: Browse and Install**
+**Step 1: Browse and Install**
 
 - Browse and search skills in "Skills Marketplace"
 - Click "Install", system will automatically perform security scan
 - Check security score and scan report, install with peace of mind
 
-**Step 3: Manage Installed Skills**
+**Step 2: Manage Installed Skills**
 
 - One-click scan all skills' security status in "Overview" page
 - View details, update or uninstall in "My Skills"
 
 ## 💎 Interface Showcase
 
-### 📊 Overview Page - One-Click Security Scan
+### 📊 Overview Page
 
-See all skills' security status at a glance, risk classification statistics, problem details一览无余.
+See all skills' security status at a glance, risk category statistics, and issue details clearly.
 
 ![Overview](screen-shot/overview.png)
 
@@ -150,6 +142,7 @@ Detailed scan results, including security score, risk level, problem list.
 View all installed skills, support multi-path management, batch update and uninstall.
 
 ![My skills](screen-shot/myskills.png)
+![Skills update](screen-shot/skillsupdate.png)
 
 ### 🛒 Skills Marketplace
 
@@ -159,11 +152,9 @@ Explore and install community skills from featured repositories.
 
 ### 🗄️ Repository Configuration
 
-Add and manage skill sources, built-in featured repositories auto-update.
+Add and manage skill sources, built-in featured marketplace and GitHub repositories, updated regularly.
 
 ![Repositories](screen-shot/repositories.png)
-![Featured repositories](screen-shot/featuredrepositories.png)
-![Skills update](screen-shot/skillsupdate.png)
 
 ---
 
@@ -174,11 +165,9 @@ Add and manage skill sources, built-in featured repositories auto-update.
 Our security scanning engine analyzes every file of skill code to detect potential risks:
 
 - **Parallel scanning acceleration**: Parallel scanning technology greatly improves scan speed for local installed skills/plugins
-- **Rule optimization**: Security scan rules achieve 3-5x performance improvement, ~30% reduction in false positives
-- **File scanning strategy**: Skip large directories like `node_modules`, `target`, limit scan depth and file count
 - **Symbolic link detection**: Immediately hard-block on symlink discovery, prevent attacks
 - **Multi-format support**: Support `.js`, `.ts`, `.py`, `.sh`, `.rs` and other code formats
-- **Platform adaptation**: Enhanced UTF-16 decoding and text validation, extended Windows/multi-language support
+- **Platform adaptation**: Added UTF-16 decoding and text confidence validation, extended Windows/multi-language support
 
 ### Scoring System Principles
 
@@ -335,15 +324,6 @@ A: By default installed to `~/.claude/skills/`, and you can also choose custom p
 ## 📝 Changelog
 
 [View full changelog](https://github.com/brucevanfdm/agent-skills-guard/releases)
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Same-name skills management: Intelligently handle same-name skill compatibility
-- [ ] Enhanced security scanning: More dimensions of security detection
-- [ ] Skills rating system: Community ratings and usage statistics
-- [ ] More new features
 
 ---
 
