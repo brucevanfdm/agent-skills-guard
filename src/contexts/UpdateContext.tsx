@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import {
   checkForUpdate,
   type UpdateInfo,
@@ -52,6 +45,7 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
 
   const isCheckingRef = useRef(false);
   const updatePhaseRef = useRef<UpdaterPhase>("idle");
+  const didScheduleAutoCheckRef = useRef(false);
 
   const setUpdatePhaseSafe = useCallback((phase: UpdaterPhase) => {
     updatePhaseRef.current = phase;
@@ -124,8 +118,8 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
     }
 
     setError(null);
-      setUpdatePhaseSafe("downloading");
-      setUpdateProgress({ total: 0, downloaded: 0, percent: 0 });
+    setUpdatePhaseSafe("downloading");
+    setUpdateProgress({ total: 0, downloaded: 0, percent: 0 });
 
     try {
       await updateHandle.downloadAndInstall((progress) => {
@@ -182,6 +176,9 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
 
   // 应用启动时自动检查（延迟1秒避免阻塞）
   useEffect(() => {
+    if (didScheduleAutoCheckRef.current) return;
+    didScheduleAutoCheckRef.current = true;
+
     const timer = setTimeout(() => {
       checkUpdate().catch(console.error);
     }, 1000);
@@ -204,9 +201,7 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
     resetDismiss,
   };
 
-  return (
-    <UpdateContext.Provider value={value}>{children}</UpdateContext.Provider>
-  );
+  return <UpdateContext.Provider value={value}>{children}</UpdateContext.Provider>;
 }
 
 export function useUpdate() {

@@ -9,7 +9,7 @@ pub mod services;
 
 use commands::security::{get_scan_results, scan_all_installed_skills, scan_skill_archive};
 use commands::AppState;
-use services::{Database, SkillManager};
+use services::{Database, PluginManager, SkillManager};
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder};
@@ -168,6 +168,10 @@ pub fn run() {
             let skill_manager = SkillManager::new(Arc::clone(&db));
             let skill_manager = Arc::new(Mutex::new(skill_manager));
 
+            // 初始化 PluginManager
+            let plugin_manager = PluginManager::new(Arc::clone(&db));
+            let plugin_manager = Arc::new(Mutex::new(plugin_manager));
+
             // 初始化 GitHub 服务
             let github = Arc::new(services::GitHubService::new());
 
@@ -175,6 +179,7 @@ pub fn run() {
             app.manage(AppState {
                 db,
                 skill_manager,
+                plugin_manager,
                 github,
             });
 
@@ -256,13 +261,34 @@ pub fn run() {
             commands::select_custom_install_path,
             commands::get_featured_repositories,
             commands::refresh_featured_repositories,
+            commands::import_featured_repositories,
+            commands::featured_marketplaces::get_featured_marketplaces,
+            commands::featured_marketplaces::refresh_featured_marketplaces,
+            commands::reset_app_data,
             commands::is_repository_added,
             commands::check_skills_updates,
             commands::prepare_skill_update,
             commands::confirm_skill_update,
             commands::cancel_skill_update,
             commands::auto_scan_unscanned_repositories,
+            commands::plugins::get_plugins,
+            commands::plugins::get_plugins_cached,
+            commands::plugins::prepare_plugin_installation,
+            commands::plugins::confirm_plugin_installation,
+            commands::plugins::cancel_plugin_installation,
+            commands::plugins::uninstall_plugin,
+            commands::plugins::remove_marketplace,
+            commands::plugins::get_claude_marketplaces,
+            commands::plugins::check_plugins_updates,
+            commands::plugins::update_plugin,
+            commands::plugins::check_marketplaces_updates,
+            commands::plugins::update_marketplace,
+            commands::plugins::get_skill_plugin_upgrade_candidates,
+            commands::plugins::scan_all_installed_plugins,
+            commands::plugins::scan_installed_plugin,
             scan_all_installed_skills,
+            commands::security::scan_installed_skill,
+            commands::security::count_scan_files,
             get_scan_results,
             scan_skill_archive,
         ])

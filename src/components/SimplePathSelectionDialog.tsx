@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -8,8 +8,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
-import { InstallPathSelector } from './InstallPathSelector';
+} from "@/components/ui/alert-dialog";
+import { InstallPathSelector } from "./InstallPathSelector";
 
 interface SimplePathSelectionDialogProps {
   open: boolean;
@@ -25,17 +25,15 @@ export function SimplePathSelectionDialog({
   onConfirm,
 }: SimplePathSelectionDialogProps) {
   const { t } = useTranslation();
-  const [selectedPath, setSelectedPath] = useState<string>('');
+  const [selectedPath, setSelectedPath] = useState<string>("");
 
   return (
     <AlertDialog open={open} onOpenChange={onClose}>
       <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t('skills.pathSelection.selectInstallPath')}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{t("skills.pathSelection.selectInstallPath")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('skills.pathSelection.selectPathDescription', { skillName })}
+            {t("skills.pathSelection.selectPathDescription", { skillName })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -46,14 +44,14 @@ export function SimplePathSelectionDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>
-            {t('skills.pathSelection.cancel')}
+            {t("skills.pathSelection.cancel")}
           </AlertDialogCancel>
           <button
             onClick={() => onConfirm(selectedPath)}
             disabled={!selectedPath}
             className="macos-button-primary disabled:opacity-50"
           >
-            {t('skills.pathSelection.confirm')}
+            {t("skills.pathSelection.confirm")}
           </button>
         </AlertDialogFooter>
       </AlertDialogContent>

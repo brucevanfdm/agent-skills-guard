@@ -4,12 +4,61 @@
     "subtitle": "一站式技能安全管理"
   },
   "nav": {
-    "overview": "系统概览",
-    "installed": "我的技能",
-    "marketplace": "技能市场",
-    "featuredRepositories": "精选仓库",
-    "repositories": "仓库配置",
-    "settings": "应用设置"
+    "overview": "概览",
+    "marketplace": "市场",
+    "installed": "已安装",
+    "repositories": "仓库",
+    "settings": "设置"
+  },
+  "market": {
+    "search": "搜索技能/插件...",
+    "refresh": "立即同步",
+    "refreshing": "同步中",
+    "installed": "已安装",
+    "clearFilters": "清除筛选",
+    "noResults": "没有找到包含\"{{query}}\"的内容",
+    "noItemsInFilter": "当前筛选条件下没有内容",
+    "empty": "市场暂无内容",
+    "scanningRepositories": "正在后台扫描仓库，请稍候...",
+    "goToRepositories": "前往仓库页面",
+    "tabs": {
+      "all": "全部 ({{count}})",
+      "skills": "技能 ({{count}})",
+      "plugins": "插件 ({{count}})"
+    }
+  },
+  "installed": {
+    "tabs": {
+      "all": "全部 ({{count}})",
+      "skills": "技能 ({{count}})",
+      "plugins": "插件 ({{count}})",
+      "marketplaces": "市场 ({{count}})"
+    },
+    "search": "搜索已安装的技能/插件/市场...",
+    "checkUpdatesSummary": "检查更新完成：技能 {{skills}} 个、插件 {{plugins}} 个、市场 {{marketplaces}} 个可更新",
+    "checkUpdatesAllUpToDate": "已是最新版本",
+    "checkUpdatesFailed": "检查更新失败：{{targets}}",
+    "checkUpdatesTargets": {
+      "skills": "技能",
+      "plugins": "插件",
+      "marketplaces": "市场"
+    },
+    "plugins": {
+      "empty": "暂无已安装插件"
+    },
+    "marketplaces": {
+      "search": "搜索市场...",
+      "empty": "暂无已安装市场",
+      "source": "仓库：",
+      "pluginsCount": "插件数量（已安装/总数）：",
+      "dependentPlugins": "将同时卸载以下插件：",
+      "andMore": "... 还有 {{count}} 个"
+    },
+    "empty": {
+      "all": "暂无已安装内容",
+      "noResults": "没有找到包含\"{{query}}\"的内容",
+      "clearFilters": "清除筛选"
+    }
   },
   "footer": {
     "version": "版本",
@@ -28,7 +77,7 @@
     "all": "全部",
     "installed": "已安装",
     "available": "可用",
-    "loading": "加载技能数据库中",
+    "loading": "加载数据中",
     "install": "安装",
     "installToOther": "新增",
     "uninstall": "卸载",
@@ -45,7 +94,7 @@
     "openFolder": "打开文件夹",
     "empty": "[ 空 ]",
     "noSkillsFound": "未发现技能",
-    "navigateToRepo": "前往仓库配置以扫描仓库",
+    "navigateToRepo": "前往仓库页面以扫描仓库",
     "noDescription": "[未提供描述]",
     "repo": "仓库：",
     "path": "路径：",
@@ -63,6 +112,7 @@
     "medRisk": "中风险",
     "highRisk": "高风险",
     "notScanned": "未扫描",
+    "badge": "技能",
     "viewSecurityReport": "在概览页面查看完整安全报告",
     "safe": "[安全]",
     "lowRiskLabel": "[低风险]",
@@ -78,6 +128,7 @@
     "moreIssues": "更多问题",
     "installWarning": "安装此技能可能会危及系统安全。请在继续之前验证源的真实性。",
     "abort": "中止",
+    "cancel": "取消",
     "proceedAnyway": "仍然继续",
     "marketplace": {
       "found": "找到 {{count}} 个技能",
@@ -91,6 +142,8 @@
       "goToRepositories": "前往仓库页面",
       "localRepo": "本地",
       "allRepos": "全部",
+      "allSources": "全部来源",
+      "allTypes": "全部类型",
       "install": {
         "scanResult": "安全扫描结果",
         "preparingInstall": "准备安装",
@@ -135,7 +188,19 @@
       "conflictDetected": "检测到文件冲突",
       "conflictDescription": "以下文件在本地已被修改，更新将覆盖这些修改：",
       "forceOverwrite": "我了解风险，强制覆盖本地修改",
-      "andMore": "还有 {{count}} 个..."
+      "andMore": "还有 {{count}} 个...",
+      "upgradeBadge": "可升级为插件",
+      "upgradeToPlugin": "升级为插件",
+      "upgradeDialog": {
+        "title": "可升级为 Claude Code Plugin",
+        "description": "检测到该技能也提供 Claude Code Plugin 版本。建议以插件方式安装以获得完整功能（命令/工具等）。",
+        "plugin": "插件：",
+        "marketplaceRepo": "市场仓库：",
+        "commands": "命令：",
+        "copy": "复制命令",
+        "copied": "已复制到剪贴板",
+        "copyFailed": "复制失败：{{error}}"
+      }
     },
     "folder": {
       "opened": "已打开文件夹",
@@ -164,11 +229,121 @@
       "updateFailed": "[错误] 更新失败"
     }
   },
+  "plugins": {
+    "title": "插件市场",
+    "loading": "加载插件中...",
+    "search": "搜索插件...",
+    "hideInstalled": "隐藏已安装",
+    "clearFilters": "清除筛选",
+    "noPlugins": "暂无插件",
+    "installed": "已安装",
+    "unsupported": "需要手动安装",
+    "install": "安装",
+    "installing": "安装中",
+    "uninstall": "卸载",
+    "uninstalling": "卸载中",
+    "badge": "插件",
+    "scanning": "扫描中",
+    "noDescription": "暂无描述",
+    "marketplace": "市场",
+    "repo": "仓库:",
+    "version": "版本",
+    "installedVersion": "已安装版本",
+    "updates": {
+      "check": "检查更新",
+      "checking": "检查更新中...",
+      "checked": "检查更新完成（{{count}} 个可更新）",
+      "checkFailed": "检查更新失败：{{error}}",
+      "available": "可更新 {{version}}",
+      "update": "更新",
+      "updating": "更新中...",
+      "updated": "插件已更新（重启后生效）",
+      "alreadyLatest": "插件已是最新版本",
+      "updateFailed": "插件更新失败",
+      "updateFailedWithError": "插件更新失败：{{error}}"
+    },
+    "marketplaces": {
+      "updates": {
+        "check": "检查更新",
+        "checking": "检查更新中...",
+        "checked": "检查更新完成（{{count}} 个可更新）",
+        "checkFailed": "检查更新失败：{{error}}",
+        "available": "可更新 {{version}}",
+        "update": "更新",
+        "updating": "更新中...",
+        "updated": "市场已更新",
+        "updateFailed": "市场更新失败",
+        "updateFailedWithError": "市场更新失败：{{error}}"
+      }
+    },
+    "installDialog": {
+      "scanResult": "安全扫描结果",
+      "preparingInstall": "准备安装",
+      "securityScore": "安全评分",
+      "issuesDetected": "发现问题",
+      "critical": "严重",
+      "highRisk": "高风险",
+      "mediumRisk": "中风险",
+      "cancel": "取消",
+      "confirmInstall": "确认安装",
+      "installAnyway": "仍然安装",
+      "warningTitle": "强烈不建议安装该插件！",
+      "warningMessage": "检测到严重安全风险，可能危害系统或数据。"
+    },
+    "scanPrompt": {
+      "title": "安装完成，开始安全扫描？",
+      "description": "插件「{{name}}」已安装。请前往「概览」页点击「一键扫描」进行安全检查。",
+      "confirm": "前往概览",
+      "cancel": "稍后再说"
+    },
+    "status": {
+      "label": "状态：",
+      "installed": "已安装",
+      "alreadyInstalled": "已安装",
+      "failed": "失败",
+      "unsupported": "需要手动安装",
+      "blocked": "已阻止",
+      "uninstalled": "已卸载",
+      "uninstallFailed": "卸载失败",
+      "unknown": "未知"
+    },
+    "viewLog": "查看日志",
+    "logTitle": "安装日志：{{name}}",
+    "noLog": "暂无日志",
+    "close": "关闭",
+    "removeMarketplace": "移除",
+    "removingMarketplace": "移除中",
+    "confirmRemoveTitle": "确认移除市场",
+    "confirmRemoveMessage": "确定要移除市场 \"{{name}}\" 吗？已安装的插件将被卸载（共 {{count}} 个）。",
+    "toast": {
+      "installed": "插件安装成功",
+      "scanHint": "安装完成，可在「概览」页进行安全扫描",
+      "installFailed": "插件安装失败",
+      "scanFailed": "扫描失败",
+      "uninstalled": "插件卸载成功",
+      "uninstallFailed": "插件卸载失败",
+      "marketplaceRemoved": "市场移除成功（已删除 {{count}} 个插件）",
+      "marketplaceRemoveFailed": "市场移除失败"
+    }
+  },
   "repositories": {
-    "title": "仓库配置",
+    "title": "仓库",
+    "tabs": {
+      "featuredMarketplaces": "精选市场",
+      "featured": "精选仓库",
+      "my": "我的仓库 ({{count}})"
+    },
+    "preview": {
+      "title": "已添加仓库：{{name}}",
+      "foundTitle": "发现以下内容：",
+      "foundSummary": "技能 {{skills}}",
+      "goToMarket": "查看全部",
+      "close": "关闭",
+      "loadFailed": "加载预览失败: {{error}}"
+    },
     "addRepo": "添加仓库",
     "cancel": "取消",
-    "newRepository": "新仓库",
+    "newRepository": "新仓库（不建议Plugin通过此方式安装，可以通过issue提交录入申请）",
     "repoName": "仓库名称：",
     "githubUrl": "GitHub 链接：",
     "urlHint": "输入完整的 GitHub 仓库链接",
@@ -228,6 +403,17 @@
       "refreshing": "刷新中",
       "refreshed": "精选仓库已更新",
       "refreshFailed": "刷新失败: {{error}}"
+    },
+    "featuredMarketplaces": {
+      "title": "精选插件市场",
+      "refresh": "刷新推荐",
+      "refreshing": "刷新中",
+      "refreshed": "精选插件市场已更新",
+      "refreshFailed": "刷新失败: {{error}}",
+      "loading": "加载中...",
+      "empty": "暂无精选插件市场",
+      "pluginsCount": "插件数量：{{count}}",
+      "viewMarketplace": "前往"
     }
   },
   "language": {
@@ -274,6 +460,9 @@
     "detail": {
       "scanTime": "扫描时间",
       "securityScore": "安全评分",
+      "partialScan": "扫描未完整",
+      "skippedFiles": "跳过 {{count}} 个文件",
+      "skippedExamples": "示例：{{files}}",
       "close": "关闭",
       "recommendations": "建议",
       "lineNumber": "行号",
@@ -296,6 +485,8 @@
     },
     "statistics": {
       "installedSkills": "已安装技能",
+      "installedPlugins": "已安装插件",
+      "marketplaces": "已配置市场",
       "repositories": "已添加仓库",
       "scannedSkills": "已扫描技能"
     },
@@ -304,10 +495,15 @@
       "scanned": "已扫描",
       "of": "/",
       "skills": "个技能",
+      "items": "个技能插件",
+      "files": "个文件",
       "scanAll": "一键扫描",
+      "scanContinue": "继续扫描",
+      "preparing": "准备扫描（统计文件中）",
       "scanning": "正在扫描",
+      "scanningWithProgress": "正在扫描{{scanned}}/{{total}}{{label}}...",
       "completed": "扫描完成，发现 {{count}} 个问题",
-      "noIssues": "扫描完成，未发现问题",
+      "noIssues": "扫描完成，未发现问题（已扫描 {{scanned}}/{{total}} {{label}}）",
       "never": "从未扫描"
     },
     "scan": {
@@ -315,7 +511,7 @@
       "localSkillsFailed": "扫描本地技能失败：{{error}}",
       "completed": "安全扫描完成，已扫描 {{count}} 个技能",
       "failed": "安全扫描失败：{{error}}",
-      "allCompleted": "扫描完成：发现 {{localCount}} 个技能，安全扫描 {{scannedCount}} 个"
+      "allCompleted": "扫描完成：发现 {{localCount}} 个技能， {{pluginCount}} 个插件，安全扫描 {{scannedCount}} 个技能， {{scannedPluginsCount}} 个插件"
     },
     "riskLevels": {
       "critical": "严重",
@@ -365,11 +561,27 @@
     "failed": "更新失败，请稍后重试",
     "checkFailed": "检查更新失败"
   },
+  "onboarding": {
+    "importFeatured": {
+      "title": "导入推荐仓库？",
+      "description": "首次使用建议导入「官方推荐」与「社区精选」的全部仓库，并自动扫描以填充市场内容。你也可以稍后在「仓库」页面手动添加。",
+      "cancel": "暂不导入",
+      "confirm": "导入并开始扫描",
+      "importing": "导入中...",
+      "toast": {
+        "added": "已添加 {{added}}/{{total}} 个推荐仓库（已存在 {{skipped}} 个）",
+        "nothingToAdd": "推荐仓库已存在，无需重复添加",
+        "scanning": "正在后台扫描仓库，稍后可在市场中浏览",
+        "failed": "导入失败：{{error}}"
+      }
+    }
+  },
   "settings": {
     "title": "应用设置",
     "language": {
       "title": "语言设置",
-      "label": "界面语言"
+      "label": "界面语言",
+      "description": "切换应用界面显示语言，立即生效。"
     },
     "appInfo": {
       "title": "应用信息",
@@ -377,8 +589,33 @@
       "repository": "GitHub 仓库",
       "updates": "检查更新"
     },
+    "reset": {
+      "title": "重置",
+      "label": "重置本地数据",
+      "description": "将清除应用配置、缓存与本地数据库（不会删除已安装插件/技能）。",
+      "button": "重置",
+      "confirmTitle": "确定要重置所有本地数据吗？",
+      "confirmDescription": "该操作会删除本地配置、缓存与数据库内容。应用将重启，并表现得像全新安装。",
+      "confirmCancel": "取消",
+      "confirmConfirm": "重置并重启",
+      "working": "重置中...",
+      "success": "重置完成，正在重启...",
+      "failed": "重置失败"
+    },
     "preferences": {
       "title": "偏好设置",
+      "scanPrompt": {
+        "title": "安装后弹窗提示一键扫描",
+        "description": "插件扫描采取后置逻辑，安装完成后弹窗引导前往「概览」页手动执行扫描。",
+        "enabled": "已开启",
+        "disabled": "已关闭"
+      },
+      "scanConcurrency": {
+        "title": "安全扫描并发数",
+        "description": "同时扫描的插件/技能数量（1-{{max}}，默认 {{default}}）。",
+        "decrease": "减少并行数",
+        "increase": "增加并行数"
+      },
       "comingSoon": "更多设置项即将推出..."
     }
   }

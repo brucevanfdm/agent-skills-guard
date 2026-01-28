@@ -12,8 +12,7 @@ export function useAddRepository() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ url, name }: { url: string; name: string }) =>
-      api.addRepository(url, name),
+    mutationFn: ({ url, name }: { url: string; name: string }) => api.addRepository(url, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
     },
@@ -28,6 +27,7 @@ export function useDeleteRepository() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
     },
   });
 }
@@ -39,6 +39,7 @@ export function useScanRepository() {
     mutationFn: (repoId: string) => api.scanRepository(repoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
       queryClient.invalidateQueries({ queryKey: ["repositories"] });
       queryClient.invalidateQueries({ queryKey: ["cache-stats"] });
     },

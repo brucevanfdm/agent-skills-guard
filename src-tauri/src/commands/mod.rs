@@ -1,7 +1,9 @@
 pub mod security;
+pub mod plugins;
+pub mod featured_marketplaces;
 
 use crate::models::{Repository, Skill, FeaturedRepositoriesConfig};
-use crate::services::{Database, GitHubService, SkillManager};
+use crate::services::{Database, GitHubService, PluginManager, SkillManager};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::Manager;
@@ -11,6 +13,7 @@ use tokio::sync::Mutex;
 pub struct AppState {
     pub db: Arc<Database>,
     pub skill_manager: Arc<Mutex<SkillManager>>,
+    pub plugin_manager: Arc<Mutex<PluginManager>>,
     pub github: Arc<GitHubService>,
 }
 
@@ -57,6 +60,11 @@ pub async fn delete_repository(
 
     log::info!("删除仓库 {} 的 {} 个未安装技能", repo.name, deleted_skills_count);
 
+    let deleted_plugins_count = state.db.delete_uninstalled_plugins_by_repository_url(&repository_url)
+        .map_err(|e| e.to_string())?;
+
+    log::info!("删除仓库 {} 的 {} 个未安装插件", repo.name, deleted_plugins_count);
+
     // 3. 清理缓存目录（失败不中断）
     if let Some(cache_path_str) = cache_path {
         let cache_path_buf = std::path::PathBuf::from(&cache_path_str);
@@ -100,14 +108,12 @@ pub async fn scan_repository(
         .join("agent-skills-guard")
         .join("repositories");
 
-    let skills = if let Some(cache_path) = &repo.cache_path {
+    let cache_path_for_scan = if let Some(cache_path) = &repo.cache_path {
         // 使用缓存扫描(0次API请求)
-        log::info!("使用本地缓存扫描仓库: {}", repo.name);
-
         let cache_path_buf = std::path::PathBuf::from(cache_path);
         if cache_path_buf.exists() && cache_path_buf.is_dir() {
-            state.github.scan_cached_repository(&cache_path_buf, &repo.url, repo.scan_subdirs)
-                .map_err(|e| format!("扫描缓存失败: {}", e))?
+            log::info!("使用本地缓存扫描仓库: {}", repo.name);
+            cache_path_buf
         } else {
             // 缓存路径不存在，重新下载
             log::warn!("缓存路径不存在，重新下载: {:?}", cache_path_buf);
@@ -124,8 +130,7 @@ pub async fn scan_repository(
                 Some(&commit_sha),
             ).map_err(|e| e.to_string())?;
 
-            state.github.scan_cached_repository(&extract_dir, &repo.url, repo.scan_subdirs)
-                .map_err(|e| format!("扫描缓存失败: {}", e))?
+            extract_dir
         }
     } else {
         // 首次扫描: 下载压缩包并缓存(1次API请求)
@@ -144,10 +149,12 @@ pub async fn scan_repository(
             Some(&commit_sha),
         ).map_err(|e| e.to_string())?;
 
-        // 扫描本地缓存
-        state.github.scan_cached_repository(&extract_dir, &repo.url, repo.scan_subdirs)
-            .map_err(|e| format!("扫描缓存失败: {}", e))?
+        extract_dir
     };
+
+    let skills = state.github
+        .scan_cached_repository(&cache_path_for_scan, &repo.url, repo.scan_subdirs)
+        .map_err(|e| format!("扫描缓存失败: {}", e))?;
 
     // 保存到数据库
     for skill in &skills {
@@ -159,6 +166,13 @@ pub async fn scan_repository(
 
         state.db.save_skill(skill)
             .map_err(|e| e.to_string())?;
+    }
+
+    let deleted_plugins_count = state.db
+        .delete_uninstalled_plugins_by_repository_url(&repo.url)
+        .map_err(|e| e.to_string())?;
+    if deleted_plugins_count > 0 {
+        log::info!("清理仓库 {} 的 {} 个未安装插件", repo.name, deleted_plugins_count);
     }
 
     Ok(skills)
@@ -553,8 +567,8 @@ pub async fn select_custom_install_path(app: tauri::AppHandle) -> Result<Option<
 }
 
 const FEATURED_REPOSITORIES_REMOTE_URL: &str =
-    "https://raw.githubusercontent.com/brucevanfdm/agent-skills-guard/main/featured-repositories.yaml";
-const DEFAULT_FEATURED_REPOSITORIES_YAML: &str = include_str!("../../../featured-repositories.yaml");
+    "https://raw.githubusercontent.com/brucevanfdm/agent-skills-guard/main/featured-marketplace.yaml";
+const DEFAULT_FEATURED_REPOSITORIES_YAML: &str = include_str!("../../../featured-marketplace.yaml");
 
 fn featured_repositories_cache_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let app_dir = app
@@ -565,7 +579,24 @@ fn featured_repositories_cache_path(app: &tauri::AppHandle) -> Result<PathBuf, S
     std::fs::create_dir_all(&app_dir)
         .map_err(|e| format!("Failed to create app data directory: {}", e))?;
 
-    Ok(app_dir.join("featured-repositories.yaml"))
+    Ok(app_dir.join("featured-marketplace.yaml"))
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct FeaturedRepositoriesWrapper {
+    #[serde(default, alias = "featured_repositories")]
+    repositories: Option<FeaturedRepositoriesConfig>,
+}
+
+fn parse_featured_repositories_yaml(yaml_content: &str) -> Result<FeaturedRepositoriesConfig, String> {
+    let wrapper: FeaturedRepositoriesWrapper = serde_yaml::from_str(yaml_content)
+        .map_err(|e| format!("Failed to parse featured repositories wrapper: {}", e))?;
+    if let Some(config) = wrapper.repositories {
+        return Ok(config);
+    }
+
+    serde_yaml::from_str::<FeaturedRepositoriesConfig>(yaml_content)
+        .map_err(|e| format!("Failed to parse featured repositories: {}", e))
 }
 
 /// 获取精选仓库列表
@@ -574,7 +605,7 @@ pub async fn get_featured_repositories(app: tauri::AppHandle) -> Result<Featured
     // 1) 优先读取 app_data_dir 下的缓存文件（支持在线刷新后持久化）
     let cache_path = featured_repositories_cache_path(&app)?;
     if let Ok(cached_yaml) = std::fs::read_to_string(&cache_path) {
-        match serde_yaml::from_str::<FeaturedRepositoriesConfig>(&cached_yaml) {
+        match parse_featured_repositories_yaml(&cached_yaml) {
             Ok(config) => return Ok(config),
             Err(e) => {
                 log::warn!(
@@ -587,8 +618,7 @@ pub async fn get_featured_repositories(app: tauri::AppHandle) -> Result<Featured
     }
 
     // 2) 回退到编译期内置的默认 YAML（用于首次启动/离线/打包环境）
-    serde_yaml::from_str::<FeaturedRepositoriesConfig>(DEFAULT_FEATURED_REPOSITORIES_YAML)
-        .map_err(|e| format!("Failed to parse default featured repositories: {}", e))
+    parse_featured_repositories_yaml(DEFAULT_FEATURED_REPOSITORIES_YAML)
 }
 
 /// 刷新精选仓库列表（从 GitHub 下载最新 YAML 并写入 app_data_dir 缓存）
@@ -611,7 +641,7 @@ pub async fn refresh_featured_repositories(
         .map_err(|e| format!("Failed to read featured repositories content: {}", e))?;
 
     // 先校验解析成功，再落盘
-    let config: FeaturedRepositoriesConfig = serde_yaml::from_str(&yaml_content)
+    let config = parse_featured_repositories_yaml(&yaml_content)
         .map_err(|e| format!("Failed to parse downloaded featured repositories: {}", e))?;
 
     let cache_path = featured_repositories_cache_path(&app)?;
@@ -633,6 +663,116 @@ pub async fn refresh_featured_repositories(
         .map_err(|e| format!("Failed to persist featured repositories cache: {}", e))?;
 
     Ok(config)
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ImportFeaturedRepositoriesResult {
+    pub total_count: usize,
+    pub added_count: usize,
+    pub skipped_count: usize,
+}
+
+/// 导入精选仓库到「我的仓库」
+///
+/// - 默认导入 `official` + `community`
+/// - 会跳过已存在的仓库 URL，避免覆盖已有记录/扫描状态
+#[tauri::command]
+pub async fn import_featured_repositories(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    category_ids: Option<Vec<String>>,
+) -> Result<ImportFeaturedRepositoriesResult, String> {
+    let category_ids = category_ids.unwrap_or_else(|| vec!["official".to_string(), "community".to_string()]);
+
+    let config = get_featured_repositories(app).await?;
+    let mut existing_urls: std::collections::HashSet<String> = state
+        .db
+        .get_repositories()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|r| r.url)
+        .collect();
+
+    let mut total_count = 0usize;
+    let mut added_count = 0usize;
+    let mut skipped_count = 0usize;
+
+    for category in config.categories.into_iter().filter(|c| category_ids.contains(&c.id)) {
+        for repo in category.repositories {
+            total_count += 1;
+
+            if existing_urls.contains(&repo.url) {
+                skipped_count += 1;
+                continue;
+            }
+
+            let new_repo = Repository::new(repo.url.clone(), repo.name);
+            state
+                .db
+                .add_repository(&new_repo)
+                .map_err(|e| e.to_string())?;
+            existing_urls.insert(repo.url);
+            added_count += 1;
+        }
+    }
+
+    Ok(ImportFeaturedRepositoriesResult {
+        total_count,
+        added_count,
+        skipped_count,
+    })
+}
+
+/// 重置应用的本地数据（数据库 + 缓存 + 配置文件）
+///
+/// 注意：不会删除用户自定义的技能安装目录中的文件，只会清空应用自身的索引/缓存。
+#[tauri::command]
+pub async fn reset_app_data(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    // 1) 清空数据库内容（保留表结构与迁移）
+    state
+        .db
+        .reset_all_data()
+        .map_err(|e| format!("Failed to reset database: {}", e))?;
+
+    // 2) 清理 app_data_dir 下除数据库文件外的内容（如精选仓库缓存、可能的设置文件）
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    if let Ok(entries) = std::fs::read_dir(&app_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+
+            // 数据库相关文件保持在位（连接仍在使用中；内容已在上方清空）
+            if file_name.starts_with("agent-skills.db") {
+                continue;
+            }
+
+            if path.is_dir() {
+                if let Err(e) = std::fs::remove_dir_all(&path) {
+                    log::warn!("清理 app data 子目录失败: {:?}, 错误: {}", path, e);
+                }
+            } else if path.exists() {
+                if let Err(e) = std::fs::remove_file(&path) {
+                    log::warn!("清理 app data 文件失败: {:?}, 错误: {}", path, e);
+                }
+            }
+        }
+    }
+
+    // 3) 清理 cache_dir 下的应用缓存（仓库压缩包、staging、备份等）
+    if let Some(cache_dir) = dirs::cache_dir() {
+        let cache_root = cache_dir.join("agent-skills-guard");
+        if cache_root.exists() {
+            if let Err(e) = std::fs::remove_dir_all(&cache_root) {
+                log::warn!("清理 cache_dir 失败: {:?}, 错误: {}", cache_root, e);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// 检查仓库是否已添加

@@ -4,7 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getPlatform, type Platform } from "../lib/platform";
 
 export function WindowControls() {
-  const [platform, setPlatform] = useState<Platform>('unknown');
+  const [platform, setPlatform] = useState<Platform>("unknown");
 
   useEffect(() => {
     getPlatform().then(setPlatform);
@@ -85,10 +85,10 @@ export function WindowControls() {
 
   return (
     <>
-      {platform === 'macos' && renderMacButtons()}
-      {platform === 'windows' && renderWindowsButtons()}
-      {platform === 'linux' && renderWindowsButtons()}
-      {platform === 'unknown' && renderWindowsButtons()}
+      {platform === "macos" && renderMacButtons()}
+      {platform === "windows" && renderWindowsButtons()}
+      {platform === "linux" && renderWindowsButtons()}
+      {platform === "unknown" && renderWindowsButtons()}
     </>
   );
 }

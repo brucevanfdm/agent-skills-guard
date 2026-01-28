@@ -1,4 +1,7 @@
-import { Skill } from "../types";
+type RepositoryTagged = {
+  repository_owner?: string;
+  repository_url: string;
+};
 
 /**
  * 从 repository_url 解析仓库所有者
@@ -14,8 +17,8 @@ export function parseRepositoryOwner(repositoryUrl: string): string {
 /**
  * 格式化显示仓库标识
  */
-export function formatRepositoryTag(skill: Skill): string {
-  const owner = skill.repository_owner || parseRepositoryOwner(skill.repository_url);
+export function formatRepositoryTag(entry: RepositoryTagged): string {
+  const owner = entry.repository_owner || parseRepositoryOwner(entry.repository_url);
   return owner === "local" ? "本地" : `@${owner}`;
 }
 

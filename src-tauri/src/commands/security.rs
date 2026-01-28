@@ -1,18 +1,39 @@
 use crate::commands::AppState;
 use crate::models::security::{SecurityReport, SkillScanResult, SecurityLevel};
 use crate::models::Skill;
-use crate::security::SecurityScanner;
+use crate::security::{ScanOptions, SecurityScanner};
 use crate::i18n::validate_locale;
 use anyhow::Result;
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use rust_i18n::t;
+use serde::Serialize;
 use std::path::PathBuf;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
+
+#[derive(Serialize, Clone)]
+struct ScanProgressEvent {
+    scan_id: String,
+    kind: String,
+    item_id: String,
+    file_path: String,
+}
+
+const DEFAULT_SCAN_PARALLELISM: usize = 3;
+const MAX_SCAN_PARALLELISM: usize = 8;
+
+fn clamp_scan_parallelism(scan_parallelism: Option<usize>) -> usize {
+    scan_parallelism
+        .unwrap_or(DEFAULT_SCAN_PARALLELISM)
+        .clamp(1, MAX_SCAN_PARALLELISM)
+}
 
 /// 扫描所有已安装的 skills
 #[tauri::command]
 pub async fn scan_all_installed_skills(
     state: State<'_, AppState>,
     locale: String,
+    scan_parallelism: Option<usize>,
 ) -> Result<Vec<SkillScanResult>, String> {
     let locale = validate_locale(&locale);
     let skills = state.db.get_skills().map_err(|e| e.to_string())?;
@@ -20,63 +41,196 @@ pub async fn scan_all_installed_skills(
         .filter(|s| s.installed && s.local_path.is_some())
         .collect();
 
-    let scanner = SecurityScanner::new();
-    let mut results = Vec::new();
+    let parallelism = clamp_scan_parallelism(scan_parallelism);
+    let db = state.db.clone();
+    let locale_owned = locale.to_string();
 
-    for mut skill in installed_skills {
-        if let Some(local_path) = &skill.local_path {
-            // local_path 是目录路径，扫描整个目录
-            let path = PathBuf::from(local_path);
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(parallelism)
+        .build()
+        .map_err(|e| e.to_string())?;
 
-            // 检查目录是否存在
-            if !path.exists() || !path.is_dir() {
-                eprintln!("Skill directory does not exist: {:?}", path);
-                continue;
-            }
+    let mut results = pool.install(|| {
+        installed_skills
+            .par_iter()
+            .enumerate()
+            .filter_map(|(index, skill)| {
+                let Some(local_path) = &skill.local_path else { return None };
+                let path = PathBuf::from(local_path);
+                if !path.exists() || !path.is_dir() {
+                    log::warn!("Skill directory does not exist: {:?}", path);
+                    return None;
+                }
 
-            match scanner.scan_directory(
-                path.to_str().unwrap_or(""),
-                &skill.id,
-                &locale
-            ) {
-                Ok(report) => {
-                    // 更新 skill 的安全信息
-                    skill.security_score = Some(report.score);
-                    skill.security_level = Some(report.level.as_str().to_string());
-                    skill.security_issues = Some(
-                        report.issues.iter()
-                            .map(|i| {
-                                let file_info = i.file_path.as_ref()
-                                    .map(|f| format!("[{}] ", f))
-                                    .unwrap_or_default();
-                                format!("{}{:?}: {}", file_info, i.severity, i.description)
-                            })
-                            .collect()
-                    );
-                    skill.scanned_at = Some(chrono::Utc::now());
-
-                    // 保存到数据库
-                    if let Err(e) = state.db.save_skill(&skill) {
-                        eprintln!("Failed to save skill {}: {}", skill.name, e);
+                let scanner = SecurityScanner::new();
+                let report = match scanner.scan_directory_with_options(
+                    path.to_str().unwrap_or(""),
+                    &skill.id,
+                    &locale_owned,
+                    ScanOptions { skip_readme: true },
+                    None,
+                ) {
+                    Ok(report) => report,
+                    Err(e) => {
+                        log::warn!("Failed to scan skill {}: {}", skill.name, e);
+                        return None;
                     }
+                };
 
-                    results.push(SkillScanResult {
-                        skill_id: skill.id.clone(),
-                        skill_name: skill.name.clone(),
+                let mut updated = skill.clone();
+                updated.security_score = Some(report.score);
+                updated.security_level = Some(report.level.as_str().to_string());
+                updated.security_issues = Some(
+                    report
+                        .issues
+                        .iter()
+                        .map(|i| {
+                            let file_info = i
+                                .file_path
+                                .as_ref()
+                                .map(|f| format!("[{}] ", f))
+                                .unwrap_or_default();
+                            format!("{}{:?}: {}", file_info, i.severity, i.description)
+                        })
+                        .collect(),
+                );
+                updated.scanned_at = Some(chrono::Utc::now());
+
+                if let Err(e) = db.save_skill(&updated) {
+                    log::warn!("Failed to save skill {}: {}", updated.name, e);
+                }
+
+                Some((
+                    index,
+                    SkillScanResult {
+                        skill_id: updated.id.clone(),
+                        skill_name: updated.name.clone(),
                         score: report.score,
                         level: report.level.as_str().to_string(),
                         scanned_at: chrono::Utc::now().to_rfc3339(),
                         report,
-                    });
-                }
-                Err(e) => {
-                    eprintln!("Failed to scan skill {}: {}", skill.name, e);
-                }
-            }
-        }
+                    },
+                ))
+            })
+            .collect::<Vec<(usize, SkillScanResult)>>()
+    });
+
+    results.sort_by_key(|(index, _)| *index);
+    Ok(results.into_iter().map(|(_, result)| result).collect())
+}
+
+/// 扫描单个已安装 skill（用于前端展示扫描进度）
+#[tauri::command]
+pub async fn scan_installed_skill(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    skill_id: String,
+    locale: String,
+    scan_id: Option<String>,
+) -> Result<SkillScanResult, String> {
+    let locale = validate_locale(&locale);
+    let mut skill = state
+        .db
+        .get_skills()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find(|s| s.id == skill_id)
+        .ok_or_else(|| "Skill not found".to_string())?;
+
+    if !skill.installed || skill.local_path.is_none() {
+        return Err("Skill is not installed".to_string());
     }
 
-    Ok(results)
+    let local_path = skill.local_path.clone().unwrap_or_default();
+    let path = PathBuf::from(&local_path);
+    if !path.exists() || !path.is_dir() {
+        return Err(format!("Skill directory does not exist: {}", local_path));
+    }
+
+    let scanner = SecurityScanner::new();
+    let report = if let Some(scan_id) = scan_id.filter(|id| !id.is_empty()) {
+        let app_handle = app.clone();
+        let item_id = skill.id.clone();
+        let kind = "skill".to_string();
+        let mut progress_cb = |file_path: &str| {
+            let payload = ScanProgressEvent {
+                scan_id: scan_id.clone(),
+                kind: kind.clone(),
+                item_id: item_id.clone(),
+                file_path: file_path.to_string(),
+            };
+            let _ = app_handle.emit("scan-progress", payload);
+        };
+        scanner
+            .scan_directory_with_options(
+                path.to_str().unwrap_or(""),
+                &skill.id,
+                &locale,
+                ScanOptions { skip_readme: true },
+                Some(&mut progress_cb),
+            )
+            .map_err(|e| e.to_string())?
+    } else {
+        scanner
+            .scan_directory_with_options(
+                path.to_str().unwrap_or(""),
+                &skill.id,
+                &locale,
+                ScanOptions { skip_readme: true },
+                None,
+            )
+            .map_err(|e| e.to_string())?
+    };
+
+    skill.security_score = Some(report.score);
+    skill.security_level = Some(report.level.as_str().to_string());
+    skill.security_issues = Some(
+        report
+            .issues
+            .iter()
+            .map(|i| {
+                let file_info = i
+                    .file_path
+                    .as_ref()
+                    .map(|f| format!("[{}] ", f))
+                    .unwrap_or_default();
+                format!("{}{:?}: {}", file_info, i.severity, i.description)
+            })
+            .collect(),
+    );
+    skill.scanned_at = Some(chrono::Utc::now());
+
+    state
+        .db
+        .save_skill(&skill)
+        .map_err(|e| format!("Failed to save skill: {}", e))?;
+
+    Ok(SkillScanResult {
+        skill_id: skill.id.clone(),
+        skill_name: skill.name.clone(),
+        score: report.score,
+        level: report.level.as_str().to_string(),
+        scanned_at: chrono::Utc::now().to_rfc3339(),
+        report,
+    })
+}
+
+/// 统计目录内可扫描的文件数量（用于前端进度条预估）
+#[tauri::command]
+pub async fn count_scan_files(dir_path: String, skip_readme: Option<bool>) -> Result<usize, String> {
+    let path = PathBuf::from(&dir_path);
+    if !path.exists() || !path.is_dir() {
+        return Err(format!("Directory does not exist: {}", dir_path));
+    }
+
+    let scanner = SecurityScanner::new();
+    let options = ScanOptions {
+        skip_readme: skip_readme.unwrap_or(true),
+    };
+
+    scanner
+        .count_scan_files(path.to_str().unwrap_or(""), options)
+        .map_err(|e| e.to_string())
 }
 
 /// 获取缓存的扫描结果
@@ -164,6 +318,8 @@ pub async fn get_scan_results(
                 blocked: false,
                 hard_trigger_issues: vec![],
                 scanned_files: vec![], // 缓存结果中没有扫描文件列表
+                partial_scan: false,
+                skipped_files: vec![],
             };
 
             SkillScanResult {

@@ -42,8 +42,7 @@ export async function getCurrentVersion(): Promise<string> {
 export async function checkForUpdate(
   opts: UpdaterCheckOptions = {}
 ): Promise<
-  | { status: "up-to-date" }
-  | { status: "available"; info: UpdateInfo; update: UpdateHandle }
+  { status: "up-to-date" } | { status: "available"; info: UpdateInfo; update: UpdateHandle }
 > {
   const currentVersion = await getCurrentVersion();
   const runCheck = (options: UpdaterCheckOptions) => check({ ...options });

@@ -1,6 +1,6 @@
 {
   "productName": "Agent Skills Guard",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "identifier": "com.agent-skills-guard.app",
   "plugins": {
     "updater": {

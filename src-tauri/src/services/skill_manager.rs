@@ -1,5 +1,5 @@
 use crate::models::Skill;
-use crate::security::SecurityScanner;
+use crate::security::{ScanOptions, SecurityScanner};
 use crate::services::{Database, GitHubService};
 use anyhow::{Result, Context};
 use std::path::PathBuf;
@@ -202,10 +202,12 @@ impl SkillManager {
         }
 
         // 扫描整个技能目录
-        let scan_report = self.scanner.scan_directory(
+        let scan_report = self.scanner.scan_directory_with_options(
             skill_dir.to_str().context("技能目录路径无效")?,
             &skill.id,
-            "zh"
+            "zh",
+            ScanOptions { skip_readme: true },
+            None,
         )?;
 
         log::info!("Security scan completed: score={}, scanned {} files",
@@ -330,10 +332,12 @@ impl SkillManager {
         log::info!("在缓存中找到技能目录: {:?}", skill_cache_dir);
 
         // 直接扫描缓存中的技能目录
-        let scan_report = self.scanner.scan_directory(
+        let scan_report = self.scanner.scan_directory_with_options(
             skill_cache_dir.to_str().context("技能目录路径无效")?,
             &skill.id,
-            locale
+            locale,
+            ScanOptions { skip_readme: true },
+            None,
         )?;
 
         log::info!("Security scan completed: score={}, scanned {} files",
@@ -789,10 +793,12 @@ impl SkillManager {
                             }
 
                             // 命中已有 local_path：刷新安全扫描信息，避免安全结果陈旧
-                            let report = self.scanner.scan_directory(
+                            let report = self.scanner.scan_directory_with_options(
                                 path.to_str().unwrap_or(""),
                                 &existing_skill.id,
                                 "zh",
+                                ScanOptions { skip_readme: true },
+                                None,
                             )?;
 
                             existing_skill.security_score = Some(report.score);
@@ -828,10 +834,12 @@ impl SkillManager {
                         let skill_id = format!("local::{}", checksum[..16].to_string());
 
                         // 扫描整个技能目录
-                        let report = self.scanner.scan_directory(
+                        let report = self.scanner.scan_directory_with_options(
                             path.to_str().unwrap_or(""),
                             &skill_id,
-                            "zh"
+                            "zh",
+                            ScanOptions { skip_readme: true },
+                            None,
                         )?;
 
                         log::info!("Scanned local skill '{}': score={}, files={:?}",
@@ -1060,10 +1068,12 @@ impl SkillManager {
         )?;
 
         // 扫描最新版本
-        let scan_report = self.scanner.scan_directory(
+        let scan_report = self.scanner.scan_directory_with_options(
             staging_skill_dir.to_str().context("技能目录路径无效")?,
             &skill.id,
-            locale
+            locale,
+            ScanOptions { skip_readme: true },
+            None,
         )?;
 
         log::info!("Security scan completed: score={}, scanned {} files",

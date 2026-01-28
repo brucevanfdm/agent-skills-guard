@@ -1,6 +1,6 @@
 [package]
 name = "agent-skills-guard"
-version = "0.9.8"
+version = "0.9.9"
 description = "A secure manager for agent skills"
 authors = ["@brucevanfdm"]
 edition = "2021"
@@ -35,6 +35,9 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 
 # 异步运行时
 tokio = { version = "1.40", features = ["full"] }
+
+# 并行计算
+rayon = "1.10"
 
 # 错误处理
 thiserror = "2.0"
@@ -74,6 +77,10 @@ tauri-plugin-os = "2.0"
 
 # 国际化
 rust-i18n = "3"
+
+# PTY 驱动 Claude Code CLI
+portable-pty = "0.8"
+which = "6.0"
 
 
 [features]

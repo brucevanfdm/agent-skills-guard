@@ -1,4 +1,4 @@
-use crate::models::{Repository, Skill};
+use crate::models::{Plugin, Repository, Skill};
 use anyhow::{Result, Context};
 use rusqlite::{Connection, params, OptionalExtension};
 use std::path::PathBuf;
@@ -25,6 +25,32 @@ impl Database {
 
         db.initialize_schema()?;
         Ok(db)
+    }
+
+    /// 重置数据库中的所有业务数据（保留表结构与迁移）
+    pub fn reset_all_data(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute_batch(
+            r#"
+            PRAGMA foreign_keys=OFF;
+            BEGIN IMMEDIATE;
+            DELETE FROM installations;
+            DELETE FROM plugins;
+            DELETE FROM skills;
+            DELETE FROM repositories;
+            COMMIT;
+            PRAGMA foreign_keys=ON;
+            "#,
+        )?;
+
+        // 若启用了 WAL，尽量将 WAL 截断，避免残留旧页面
+        let _ = conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
+
+        // 尽量释放空间（不影响正确性）
+        let _ = conn.execute_batch("VACUUM;");
+
+        Ok(())
     }
 
     /// 初始化数据库架构
@@ -66,6 +92,39 @@ impl Database {
         )?;
 
         conn.execute(
+            "CREATE TABLE IF NOT EXISTS plugins (
+                id TEXT PRIMARY KEY,
+                claude_id TEXT,
+                name TEXT NOT NULL,
+                description TEXT,
+                version TEXT,
+                installed_version TEXT,
+                author TEXT,
+                repository_url TEXT NOT NULL,
+                repository_owner TEXT,
+                marketplace_name TEXT NOT NULL,
+                source TEXT NOT NULL,
+                discovery_source TEXT,
+                marketplace_add_command TEXT,
+                plugin_install_command TEXT,
+                installed INTEGER NOT NULL DEFAULT 0,
+                installed_at TEXT,
+                claude_scope TEXT,
+                claude_enabled INTEGER,
+                claude_install_path TEXT,
+                claude_last_updated TEXT,
+                security_score INTEGER,
+                security_issues TEXT,
+                security_level TEXT,
+                scanned_at TEXT,
+                staging_path TEXT,
+                install_log TEXT,
+                install_status TEXT
+            )",
+            [],
+        )?;
+
+        conn.execute(
             "CREATE TABLE IF NOT EXISTS installations (
                 skill_id TEXT PRIMARY KEY,
                 installed_at TEXT NOT NULL,
@@ -86,9 +145,56 @@ impl Database {
         self.migrate_add_security_enhancement_fields()?;
         self.migrate_add_local_paths()?;
         self.migrate_add_installed_commit_sha()?;
+        self.migrate_add_plugin_claude_fields()?;
+        self.migrate_add_plugin_install_commands()?;
 
-        // 初始化默认仓库（忽略返回值，因为在这个阶段我们只是初始化数据库）
-        let _ = self.initialize_default_repositories()?;
+        Ok(())
+    }
+
+    /// 保存 plugin
+    pub fn save_plugin(&self, plugin: &Plugin) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        let security_issues_json = plugin.security_issues.as_ref()
+            .map(|issues| serde_json::to_string(issues).unwrap());
+
+        conn.execute(
+            "INSERT OR REPLACE INTO plugins
+            (id, claude_id, name, description, version, installed_version, author, repository_url, repository_owner,
+             marketplace_name, source, discovery_source, marketplace_add_command, plugin_install_command, installed,
+             installed_at, claude_scope, claude_enabled, claude_install_path, claude_last_updated, security_score,
+             security_issues, security_level, scanned_at, staging_path, install_log, install_status)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)",
+            params![
+                plugin.id,
+                plugin.claude_id,
+                plugin.name,
+                plugin.description,
+                plugin.version,
+                plugin.installed_version,
+                plugin.author,
+                plugin.repository_url,
+                plugin.repository_owner,
+                plugin.marketplace_name,
+                plugin.source,
+                plugin.discovery_source,
+                plugin.marketplace_add_command,
+                plugin.plugin_install_command,
+                plugin.installed as i32,
+                plugin.installed_at.as_ref().map(|d| d.to_rfc3339()),
+                plugin.claude_scope,
+                plugin.claude_enabled.map(|v| if v { 1 } else { 0 }),
+                plugin.claude_install_path,
+                plugin.claude_last_updated.as_ref().map(|d| d.to_rfc3339()),
+                plugin.security_score,
+                security_issues_json,
+                plugin.security_level,
+                plugin.scanned_at.as_ref().map(|d| d.to_rfc3339()),
+                plugin.staging_path,
+                plugin.install_log,
+                plugin.install_status,
+            ],
+        )?;
 
         Ok(())
     }
@@ -272,6 +378,60 @@ impl Database {
         Ok(skills)
     }
 
+    /// 获取所有 plugins
+    pub fn get_plugins(&self) -> Result<Vec<Plugin>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, claude_id, name, description, version, installed_version, author, repository_url, repository_owner,
+                    marketplace_name, source, discovery_source, marketplace_add_command, plugin_install_command,
+                    installed, installed_at, claude_scope, claude_enabled, claude_install_path, claude_last_updated,
+                    security_score, security_issues, security_level, scanned_at, staging_path, install_log, install_status
+             FROM plugins"
+        )?;
+
+        let plugins = stmt.query_map([], |row| {
+            let security_issues: Option<String> = row.get(21)?;
+            let security_issues = security_issues
+                .and_then(|s| serde_json::from_str(&s).ok());
+
+            Ok(Plugin {
+                id: row.get(0)?,
+                claude_id: row.get(1)?,
+                name: row.get(2)?,
+                description: row.get(3)?,
+                version: row.get(4)?,
+                installed_version: row.get(5)?,
+                author: row.get(6)?,
+                repository_url: row.get(7)?,
+                repository_owner: row.get(8)?,
+                marketplace_name: row.get(9)?,
+                source: row.get(10)?,
+                discovery_source: row.get(11)?,
+                marketplace_add_command: row.get(12)?,
+                plugin_install_command: row.get(13)?,
+                installed: row.get::<_, i32>(14)? != 0,
+                installed_at: row.get::<_, Option<String>>(15)?
+                    .and_then(|s| s.parse().ok()),
+                claude_scope: row.get(16)?,
+                claude_enabled: row.get::<_, Option<i32>>(17)?.map(|v| v != 0),
+                claude_install_path: row.get(18)?,
+                claude_last_updated: row.get::<_, Option<String>>(19)?
+                    .and_then(|s| s.parse().ok()),
+                security_score: row.get(20)?,
+                security_issues,
+                security_level: row.get(22)?,
+                scanned_at: row.get::<_, Option<String>>(23)?
+                    .and_then(|s| s.parse().ok()),
+                staging_path: row.get(24)?,
+                install_log: row.get(25)?,
+                install_status: row.get(26)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(plugins)
+    }
+
     /// 删除仓库
     pub fn delete_repository(&self, repo_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
@@ -289,11 +449,28 @@ impl Database {
         Ok(deleted_count)
     }
 
+    /// 删除指定仓库的所有未安装插件
+    pub fn delete_uninstalled_plugins_by_repository_url(&self, repository_url: &str) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let deleted_count = conn.execute(
+            "DELETE FROM plugins WHERE repository_url = ?1 AND installed = 0",
+            params![repository_url]
+        )?;
+        Ok(deleted_count)
+    }
+
     /// 删除 skill
     pub fn delete_skill(&self, skill_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM skills WHERE id = ?1", params![skill_id])?;
         conn.execute("DELETE FROM installations WHERE skill_id = ?1", params![skill_id])?;
+        Ok(())
+    }
+
+    /// 删除 plugin 记录
+    pub fn delete_plugin(&self, plugin_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM plugins WHERE id = ?1", params![plugin_id])?;
         Ok(())
     }
 
@@ -417,6 +594,46 @@ impl Database {
         Ok(())
     }
 
+    /// 数据库迁移：为 plugins 增加 Claude CLI 同步字段
+    fn migrate_add_plugin_claude_fields(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_id TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN installed_version TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN discovery_source TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_scope TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_enabled INTEGER", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_install_path TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_last_updated TEXT", []);
+
+        // 填充缺失字段，保证旧数据可被新逻辑识别
+        let _ = conn.execute(
+            "UPDATE plugins
+             SET claude_id = name || '@' || marketplace_name
+             WHERE claude_id IS NULL",
+            [],
+        );
+
+        let _ = conn.execute(
+            "UPDATE plugins
+             SET discovery_source = 'repository_scan'
+             WHERE discovery_source IS NULL",
+            [],
+        );
+
+        Ok(())
+    }
+
+    /// 数据库迁移：为 plugins 增加 marketplace/plugin 安装指令字段
+    fn migrate_add_plugin_install_commands(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN marketplace_add_command TEXT", []);
+        let _ = conn.execute("ALTER TABLE plugins ADD COLUMN plugin_install_command TEXT", []);
+
+        Ok(())
+    }
+
     /// 获取单个仓库信息
     pub fn get_repository(&self, repo_id: &str) -> Result<Option<Repository>> {
         let conn = self.conn.lock().unwrap();
@@ -447,77 +664,6 @@ impl Database {
         }).optional()?;
 
         Ok(repo)
-    }
-
-    /// 初始化默认仓库
-    /// 返回是否添加了新仓库（用于判断是否需要自动扫描）
-    fn initialize_default_repositories(&self) -> Result<bool> {
-        let conn = self.conn.lock().unwrap();
-
-        // 检查是否已有仓库
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM repositories",
-            [],
-            |row| row.get(0),
-        )?;
-
-        // 如果已有仓库，跳过初始化
-        if count > 0 {
-            return Ok(false);
-        }
-
-        // 添加默认仓库
-        let default_repos = vec![
-            (
-                "https://github.com/anthropics/skills".to_string(),
-                "anthropics".to_string(),
-            ),
-            (
-                "https://github.com/obra/superpowers".to_string(),
-                "obra".to_string(),
-            ),
-        ];
-
-        // 释放之前的锁，重新获取锁用于插入操作
-        drop(conn);
-        let conn = self.conn.lock().unwrap();
-
-        let mut added = false;
-        for (url, name) in default_repos {
-            let repo = Repository::new(url, name);
-            // 使用 INSERT OR IGNORE 避免重复
-            match conn.execute(
-                "INSERT OR IGNORE INTO repositories
-                (id, url, name, description, enabled, scan_subdirs, added_at, last_scanned, cache_path, cached_at, cached_commit_sha)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-                params![
-                    repo.id,
-                    repo.url,
-                    repo.name,
-                    repo.description,
-                    repo.enabled as i32,
-                    repo.scan_subdirs as i32,
-                    repo.added_at.to_rfc3339(),
-                    repo.last_scanned.as_ref().map(|d| d.to_rfc3339()),
-                    repo.cache_path,
-                    repo.cached_at.as_ref().map(|d| d.to_rfc3339()),
-                    repo.cached_commit_sha,
-                ],
-            ) {
-                Ok(rows_affected) => {
-                    if rows_affected > 0 {
-                        log::info!("成功添加默认仓库: {}", repo.name);
-                        added = true;
-                    }
-                }
-                Err(e) => {
-                    log::warn!("添加默认仓库 {} 失败: {}", repo.name, e);
-                    // 继续添加下一个仓库，不中断流程
-                }
-            }
-        }
-
-        Ok(added)
     }
 
     /// 获取所有未扫描的仓库ID列表

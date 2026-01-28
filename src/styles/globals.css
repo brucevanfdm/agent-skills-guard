@@ -50,7 +50,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
     font-size: 14px;
     line-height: 1.47059;
     letter-spacing: -0.022em;
@@ -65,13 +66,25 @@
 
   /* Apple 风格动画 - 流畅、克制 */
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.97); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 }
 
@@ -112,7 +125,9 @@
   .apple-button-primary {
     @apply apple-button text-white;
     background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .apple-button-primary:hover {
@@ -153,11 +168,21 @@
   }
 
   /* 兼容旧类名 */
-  .macos-button { @apply apple-button; }
-  .macos-button-primary { @apply apple-button-primary; }
-  .macos-button-secondary { @apply apple-button-secondary; }
-  .macos-button-destructive { @apply apple-button-destructive; }
-  .macos-button-ghost { @apply apple-button-ghost; }
+  .macos-button {
+    @apply apple-button;
+  }
+  .macos-button-primary {
+    @apply apple-button-primary;
+  }
+  .macos-button-secondary {
+    @apply apple-button-secondary;
+  }
+  .macos-button-destructive {
+    @apply apple-button-destructive;
+  }
+  .macos-button-ghost {
+    @apply apple-button-ghost;
+  }
 
   /* Apple 风格输入框 */
   .apple-input {
@@ -167,7 +192,9 @@
     @apply placeholder:text-muted-foreground;
   }
 
-  .macos-input { @apply apple-input; }
+  .macos-input {
+    @apply apple-input;
+  }
 
   /* Apple 风格分组标题 - 更大、更粗 */
   .apple-section-title {
@@ -175,7 +202,9 @@
     letter-spacing: -0.01em;
   }
 
-  .macos-section-title { @apply apple-section-title; }
+  .macos-section-title {
+    @apply apple-section-title;
+  }
 
   /* Apple 风格状态标签 - 药丸形状 */
   .apple-badge {
@@ -201,9 +230,15 @@
   }
 
   /* 兼容旧类名 */
-  .status-safe { @apply apple-badge-success; }
-  .status-medium { @apply apple-badge-warning; }
-  .status-critical { @apply apple-badge-danger; }
+  .status-safe {
+    @apply apple-badge-success;
+  }
+  .status-medium {
+    @apply apple-badge-warning;
+  }
+  .status-critical {
+    @apply apple-badge-danger;
+  }
 
   /* Apple 风格侧边栏导航 */
   .sidebar-item {
@@ -241,11 +276,90 @@
   /* Apple 风格进度条 */
   .apple-progress {
     @apply h-1 bg-secondary rounded-full overflow-hidden;
+    position: relative;
   }
 
   .apple-progress-bar {
     @apply h-full rounded-full transition-all duration-500;
     background: linear-gradient(90deg, #34c759 0%, #30d158 100%);
+  }
+
+  @keyframes progressSheen {
+    0% {
+      transform: translate3d(-120%, 0, 0);
+      opacity: 0;
+    }
+    12% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 0.85;
+    }
+    88% {
+      opacity: 0.6;
+    }
+    100% {
+      transform: translate3d(120%, 0, 0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes progressIndeterminate {
+    0% {
+      transform: translate3d(-60%, 0, 0);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate3d(160%, 0, 0);
+      opacity: 0;
+    }
+  }
+
+  .apple-progress-active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.35) 45%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(255, 255, 255, 0.35) 55%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    opacity: 0;
+    animation: progressSheen 2.2s linear infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  .apple-progress-indeterminate::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(
+      90deg,
+      rgba(59, 130, 246, 0) 0%,
+      rgba(59, 130, 246, 0.55) 50%,
+      rgba(59, 130, 246, 0) 100%
+    );
+    opacity: 0;
+    animation: progressIndeterminate 1.4s linear infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  .apple-progress-bar-active {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+      0 2px 10px rgba(0, 0, 0, 0.12);
   }
 
   /* Apple 风格分割线 */
@@ -264,6 +378,11 @@
 
   .apple-list-item:not(:last-child) {
     @apply border-b border-border;
+  }
+
+  .apple-tooltip {
+    @apply pointer-events-none absolute left-0 top-full z-30 mt-2 w-max max-w-xs rounded-xl bg-card/95 px-3 py-2 text-xs leading-5 text-foreground ring-1 ring-black/5 backdrop-blur-md opacity-0 translate-y-1 transition-all duration-150 whitespace-normal break-words;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
   }
 }
 

@@ -57,14 +57,6 @@ categories:
         tags: ["community", "methodology", "experts", "framework"]
         featured: true
 
-      - url: "https://github.com/huangserva/skill-prompt-generator"
-        name: "huangserva"
-        description:
-          en: "AI portrait prompt generator with 1140+ elements library and 12 specialized domain skills"
-          zh: "AI 人像 Prompt 生成系统，包含 1140+ 元素库和 12 个专业领域技能"
-        tags: ["community", "prompt", "ai-art", "portrait", "generator"]
-        featured: true
-
       - url: "https://github.com/JimLiu/baoyu-skills"
         name: "JimLiu"
         description:

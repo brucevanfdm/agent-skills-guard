@@ -24,8 +24,7 @@ export function useInstallSkill() {
   const queryClient = useQueryClient();
 
   return useMutation<unknown, Error, InstallSkillVariables>({
-    mutationFn: ({ skillId, installPath }) =>
-      api.installSkill(skillId, installPath),
+    mutationFn: ({ skillId, installPath }) => api.installSkill(skillId, installPath),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });

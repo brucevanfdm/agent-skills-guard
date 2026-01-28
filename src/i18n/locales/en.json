@@ -5,11 +5,60 @@
   },
   "nav": {
     "overview": "OVERVIEW",
+    "marketplace": "MARKET",
     "installed": "INSTALLED",
-    "marketplace": "MARKETPLACE",
-    "featuredRepositories": "FEATURED_REPOS",
-    "repositories": "REPO_CONFIG",
+    "repositories": "REPOSITORIES",
     "settings": "SETTINGS"
+  },
+  "market": {
+    "search": "SEARCH_SKILLS_PLUGINS...",
+    "refresh": "REFRESH",
+    "refreshing": "REFRESHING",
+    "installed": "INSTALLED",
+    "clearFilters": "CLEAR_FILTERS",
+    "noResults": "No items found containing \"{{query}}\"",
+    "noItemsInFilter": "No items match current filters",
+    "empty": "MARKET_IS_EMPTY",
+    "scanningRepositories": "Scanning repositories in background, please wait...",
+    "goToRepositories": "GO_TO_REPOSITORIES",
+    "tabs": {
+      "all": "ALL ({{count}})",
+      "skills": "SKILLS ({{count}})",
+      "plugins": "PLUGINS ({{count}})"
+    }
+  },
+  "installed": {
+    "tabs": {
+      "all": "ALL ({{count}})",
+      "skills": "SKILLS ({{count}})",
+      "plugins": "PLUGINS ({{count}})",
+      "marketplaces": "MARKETPLACES ({{count}})"
+    },
+    "search": "SEARCH_INSTALLED_ITEMS...",
+    "checkUpdatesSummary": "Update check complete: {{skills}} skills, {{plugins}} plugins, {{marketplaces}} marketplaces available",
+    "checkUpdatesAllUpToDate": "All items are up to date",
+    "checkUpdatesFailed": "Update check failed: {{targets}}",
+    "checkUpdatesTargets": {
+      "skills": "skills",
+      "plugins": "plugins",
+      "marketplaces": "marketplaces"
+    },
+    "plugins": {
+      "empty": "NO_INSTALLED_PLUGINS"
+    },
+    "marketplaces": {
+      "search": "SEARCH_MARKETPLACES...",
+      "empty": "NO_INSTALLED_MARKETPLACES",
+      "source": "SOURCE_REPO:",
+      "pluginsCount": "PLUGINS (INSTALLED/TOTAL):",
+      "dependentPlugins": "Will also uninstall these plugins:",
+      "andMore": "... and {{count}} more"
+    },
+    "empty": {
+      "all": "NO_INSTALLED_ITEMS",
+      "noResults": "No items found containing \"{{query}}\"",
+      "clearFilters": "CLEAR_FILTERS"
+    }
   },
   "footer": {
     "version": "v",
@@ -45,7 +94,7 @@
     "openFolder": "OPEN_FOLDER",
     "empty": "[ EMPTY ]",
     "noSkillsFound": "NO_SKILLS_FOUND",
-    "navigateToRepo": "Navigate to REPO_CONFIG to scan repositories",
+    "navigateToRepo": "Navigate to Repositories to scan repositories",
     "noDescription": "[NO_DESCRIPTION_PROVIDED]",
     "repo": "REPO:",
     "path": "PATH:",
@@ -63,6 +112,7 @@
     "medRisk": "MEDRISK",
     "highRisk": "HIGHRISK",
     "notScanned": "NOT_SCANNED",
+    "badge": "SKILL",
     "viewSecurityReport": "View full security report in Overview",
     "safe": "[SAFE]",
     "lowRiskLabel": "[LOW_RISK]",
@@ -78,6 +128,7 @@
     "moreIssues": "MORE_ISSUES",
     "installWarning": "Installing this skill may compromise system security. Verify source authenticity before proceeding.",
     "abort": "ABORT",
+    "cancel": "Cancel",
     "proceedAnyway": "PROCEED_ANYWAY",
     "marketplace": {
       "found": "FOUND_{{count}}_SKILLS",
@@ -91,6 +142,8 @@
       "goToRepositories": "GO_TO_REPOSITORIES",
       "localRepo": "LOCAL",
       "allRepos": "ALL",
+      "allSources": "ALL_SOURCES",
+      "allTypes": "ALL_TYPES",
       "install": {
         "scanResult": "Security Scan Result",
         "preparingInstall": "Preparing to install",
@@ -135,7 +188,19 @@
       "conflictDetected": "File Conflicts Detected",
       "conflictDescription": "The following files have been modified locally and will be overwritten by the update:",
       "forceOverwrite": "I understand the risks, force overwrite local changes",
-      "andMore": "and {{count}} more..."
+      "andMore": "and {{count}} more...",
+      "upgradeBadge": "UPGRADE_TO_PLUGIN_AVAILABLE",
+      "upgradeToPlugin": "UPGRADE_TO_PLUGIN",
+      "upgradeDialog": {
+        "title": "Plugin Version Available",
+        "description": "This skill also has a Claude Code Plugin version. Installing it as a plugin enables the full feature set (commands/tools).",
+        "plugin": "PLUGIN:",
+        "marketplaceRepo": "MARKETPLACE_REPO:",
+        "commands": "COMMANDS:",
+        "copy": "COPY_COMMANDS",
+        "copied": "COPIED",
+        "copyFailed": "COPY_FAILED: {{error}}"
+      }
     },
     "folder": {
       "opened": "FOLDER_OPENED",
@@ -164,11 +229,121 @@
       "updateFailed": "[ERROR] UPDATE_FAILED"
     }
   },
+  "plugins": {
+    "title": "PLUGIN_MARKETPLACE",
+    "loading": "LOADING_PLUGINS",
+    "search": "SEARCH_PLUGINS...",
+    "hideInstalled": "HIDE_INSTALLED",
+    "clearFilters": "CLEAR_FILTERS",
+    "noPlugins": "NO_PLUGINS_FOUND",
+    "installed": "INSTALLED",
+    "unsupported": "MANUAL_INSTALL_REQUIRED",
+    "install": "INSTALL",
+    "installing": "INSTALLING",
+    "uninstall": "UNINSTALL",
+    "uninstalling": "UNINSTALLING",
+    "badge": "PLUGIN",
+    "scanning": "SCANNING",
+    "noDescription": "[NO_DESCRIPTION_PROVIDED]",
+    "marketplace": "MARKETPLACE",
+    "repo": "REPO:",
+    "version": "VERSION",
+    "installedVersion": "INSTALLED_VERSION",
+    "updates": {
+      "check": "CHECK_UPDATES",
+      "checking": "CHECKING_UPDATES...",
+      "checked": "UPDATES_CHECKED ({{count}} available)",
+      "checkFailed": "CHECK_UPDATES_FAILED: {{error}}",
+      "available": "UPDATE_AVAILABLE {{version}}",
+      "update": "UPDATE",
+      "updating": "UPDATING...",
+      "updated": "PLUGIN_UPDATED (restart required)",
+      "alreadyLatest": "ALREADY_LATEST",
+      "updateFailed": "UPDATE_FAILED",
+      "updateFailedWithError": "UPDATE_FAILED: {{error}}"
+    },
+    "marketplaces": {
+      "updates": {
+        "check": "CHECK_UPDATES",
+        "checking": "CHECKING_UPDATES...",
+        "checked": "UPDATES_CHECKED ({{count}} available)",
+        "checkFailed": "CHECK_UPDATES_FAILED: {{error}}",
+        "available": "UPDATE_AVAILABLE {{version}}",
+        "update": "UPDATE",
+        "updating": "UPDATING...",
+        "updated": "MARKETPLACE_UPDATED",
+        "updateFailed": "UPDATE_FAILED",
+        "updateFailedWithError": "UPDATE_FAILED: {{error}}"
+      }
+    },
+    "installDialog": {
+      "scanResult": "Security Scan Result",
+      "preparingInstall": "Preparing to install",
+      "securityScore": "Security Score",
+      "issuesDetected": "Issues Detected",
+      "critical": "Critical",
+      "highRisk": "High Risk",
+      "mediumRisk": "Medium Risk",
+      "cancel": "Cancel",
+      "confirmInstall": "Confirm Install",
+      "installAnyway": "Install Anyway",
+      "warningTitle": "Strongly Recommended NOT to Install This Plugin!",
+      "warningMessage": "Severe security threats detected that may harm your system or data."
+    },
+    "scanPrompt": {
+      "title": "Installation complete — run a security scan?",
+      "description": "Plugin \"{{name}}\" is installed. Go to Overview and click \"Scan all\" for a security check.",
+      "confirm": "Go to Overview",
+      "cancel": "Later"
+    },
+    "status": {
+      "label": "STATUS:",
+      "installed": "INSTALLED",
+      "alreadyInstalled": "ALREADY_INSTALLED",
+      "failed": "FAILED",
+      "unsupported": "MANUAL_INSTALL_REQUIRED",
+      "blocked": "BLOCKED",
+      "uninstalled": "UNINSTALLED",
+      "uninstallFailed": "UNINSTALL_FAILED",
+      "unknown": "UNKNOWN"
+    },
+    "viewLog": "VIEW_LOG",
+    "logTitle": "Install Log: {{name}}",
+    "noLog": "NO_LOG_AVAILABLE",
+    "close": "Close",
+    "removeMarketplace": "REMOVE_MARKETPLACE",
+    "removingMarketplace": "REMOVING...",
+    "confirmRemoveTitle": "Confirm Remove Marketplace",
+    "confirmRemoveMessage": "Remove Marketplace \"{{name}}\"? Installed plugins will be uninstalled ({{count}}).",
+    "toast": {
+      "installed": "[SUCCESS] PLUGIN_INSTALLED",
+      "scanHint": "[INFO] Run a security scan from Overview after installation",
+      "installFailed": "[ERROR] INSTALL_FAILED",
+      "scanFailed": "[ERROR] SCAN_FAILED",
+      "uninstalled": "[SUCCESS] PLUGIN_UNINSTALLED",
+      "uninstallFailed": "[ERROR] UNINSTALL_FAILED",
+      "marketplaceRemoved": "[SUCCESS] MARKETPLACE_REMOVED ({{count}} plugins deleted)",
+      "marketplaceRemoveFailed": "[ERROR] MARKETPLACE_REMOVE_FAILED"
+    }
+  },
   "repositories": {
-    "title": "Repository_Config",
+    "title": "REPOSITORIES",
+    "tabs": {
+      "featuredMarketplaces": "FEATURED_MARKETPLACES",
+      "featured": "FEATURED_REPOSITORIES",
+      "my": "MY_REPOS ({{count}})"
+    },
+    "preview": {
+      "title": "Repository Added: {{name}}",
+      "foundTitle": "Discovered:",
+      "foundSummary": "Skills {{skills}}",
+      "goToMarket": "GO_TO_MARKET",
+      "close": "CLOSE",
+      "loadFailed": "Failed to load preview: {{error}}"
+    },
     "addRepo": "ADD_REPO",
     "cancel": "CANCEL",
-    "newRepository": "NEW_REPOSITORY",
+    "newRepository": "NEW_REPOSITORY(It is not recommended to install plugins in this way. submit issue to apply for inclusion instead.)",
     "repoName": "repo_name:",
     "githubUrl": "github_url:",
     "urlHint": "Enter the full GitHub repository URL",
@@ -228,6 +403,17 @@
       "refreshing": "REFRESHING",
       "refreshed": "FEATURED_REPOSITORIES_UPDATED",
       "refreshFailed": "REFRESH_FAILED: {{error}}"
+    },
+    "featuredMarketplaces": {
+      "title": "FEATURED_MARKETPLACES",
+      "refresh": "REFRESH",
+      "refreshing": "REFRESHING",
+      "refreshed": "FEATURED_MARKETPLACES_UPDATED",
+      "refreshFailed": "REFRESH_FAILED: {{error}}",
+      "loading": "LOADING",
+      "empty": "NO_FEATURED_MARKETPLACES",
+      "pluginsCount": "PLUGINS: {{count}}",
+      "viewMarketplace": "GO_TO_MARKETPLACE"
     }
   },
   "language": {
@@ -274,6 +460,9 @@
     "detail": {
       "scanTime": "Scan Time",
       "securityScore": "Security Score",
+      "partialScan": "Partial scan",
+      "skippedFiles": "Skipped {{count}} files",
+      "skippedExamples": "Examples: {{files}}",
       "close": "Close",
       "recommendations": "Recommendations",
       "lineNumber": "Line",
@@ -296,26 +485,33 @@
     },
     "statistics": {
       "installedSkills": "INSTALLED_SKILLS",
+      "installedPlugins": "INSTALLED_PLUGINS",
+      "marketplaces": "CONFIG_MARKET",
       "repositories": "REPOSITORIES",
       "scannedSkills": "SCANNED_SKILLS"
     },
     "scanStatus": {
-      "lastScan": "LAST_SCAN",
-      "scanned": "SCANNED",
+      "lastScan": "Last scan",
+      "scanned": "Scanned",
       "of": "/",
-      "skills": "SKILLS",
-      "scanAll": "SCAN_ALL",
-      "scanning": "SCANNING...",
-      "completed": "SCAN_COMPLETE: {{count}} ISSUES_FOUND",
-      "noIssues": "SCAN_COMPLETE: NO_ISSUES",
-      "never": "NEVER_SCANNED"
+      "skills": "skills",
+      "items": "items",
+      "files": "files",
+      "scanAll": "Scan all",
+      "scanContinue": "Continue scan",
+      "preparing": "Preparing scan (counting files)",
+      "scanning": "Scanning",
+      "scanningWithProgress": "Scanning {{scanned}}/{{total}} {{label}}...",
+      "completed": "Scan complete — {{count}} issues found",
+      "noIssues": "Scan complete — no issues found (scanned {{scanned}}/{{total}} {{label}})",
+      "never": "Never scanned"
     },
     "scan": {
       "localSkillsFound": "FOUND {{count}} LOCAL_SKILLS",
       "localSkillsFailed": "LOCAL_SCAN_FAILED: {{error}}",
       "completed": "SECURITY_SCAN_COMPLETE: {{count}} SKILLS_SCANNED",
       "failed": "SECURITY_SCAN_FAILED: {{error}}",
-      "allCompleted": "SCAN_COMPLETE: {{localCount}} LOCAL_SKILLS_FOUND, {{scannedCount}} SCANNED"
+      "allCompleted": "SCAN_COMPLETE: {{localCount}} LOCAL_SKILLS_FOUND, PLUGINS {{pluginCount}}, {{scannedCount}} SKILLS_SCANNED, {{scannedPluginsCount}} PLUGINS_SCANNED"
     },
     "riskLevels": {
       "critical": "CRITICAL",
@@ -326,7 +522,7 @@
     },
     "riskFilters": {
       "Severe": "SEVERE_RISK",
-      "MidHigh": "MID_HIGH_RISK",
+      "MidHigh": "MID_RISK",
       "Safe": "SAFE"
     },
     "issues": {
@@ -365,11 +561,27 @@
     "failed": "Update failed, please try again later",
     "checkFailed": "Failed to check for updates"
   },
+  "onboarding": {
+    "importFeatured": {
+      "title": "Import recommended repositories?",
+      "description": "For a better first run experience, import all repositories from Official + Community picks and scan them to populate the Marketplace. You can also add them later in Repositories.",
+      "cancel": "Not now",
+      "confirm": "Import & scan",
+      "importing": "Importing...",
+      "toast": {
+        "added": "Added {{added}}/{{total}} recommended repositories ({{skipped}} already existed)",
+        "nothingToAdd": "Recommended repositories already exist",
+        "scanning": "Scanning repositories in background. Browse them in Marketplace soon.",
+        "failed": "Import failed: {{error}}"
+      }
+    }
+  },
   "settings": {
     "title": "APPLICATION_SETTINGS",
     "language": {
       "title": "LANGUAGE",
-      "label": "INTERFACE_LANGUAGE"
+      "label": "INTERFACE_LANGUAGE",
+      "description": "Switch the UI language. Changes apply immediately."
     },
     "appInfo": {
       "title": "APPLICATION_INFO",
@@ -377,8 +589,33 @@
       "repository": "GITHUB_REPOSITORY",
       "updates": "CHECK_UPDATES"
     },
+    "reset": {
+      "title": "RESET",
+      "label": "Reset local data",
+      "description": "Clears app settings, caches, and local database (does not delete your installed skill files). The app will restart.",
+      "button": "Reset",
+      "confirmTitle": "Reset all local data?",
+      "confirmDescription": "This will delete local configuration, caches, and database contents. The app will relaunch and behave like a fresh install.",
+      "confirmCancel": "Cancel",
+      "confirmConfirm": "Reset & Restart",
+      "working": "Resetting...",
+      "success": "Reset complete. Restarting...",
+      "failed": "Reset failed"
+    },
     "preferences": {
       "title": "PREFERENCES",
+      "scanPrompt": {
+        "title": "Show scan prompt after installation",
+        "description": "After a plugin is installed, show a dialog that guides you to Overview for a one-click security scan.",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "scanConcurrency": {
+        "title": "Parallel scan slots",
+        "description": "Number of plugins/skills scanned at the same time (1-{{max}}, default {{default}}).",
+        "decrease": "Decrease parallel scan slots",
+        "increase": "Increase parallel scan slots"
+      },
       "comingSoon": "More settings coming soon..."
     }
   }

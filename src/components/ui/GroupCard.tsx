@@ -9,12 +9,8 @@ interface GroupCardProps {
 export function GroupCard({ title, children, className = "" }: GroupCardProps) {
   return (
     <div className={className}>
-      {title && (
-        <div className="apple-section-title">{title}</div>
-      )}
-      <div className="apple-card overflow-hidden">
-        {children}
-      </div>
+      {title && <div className="apple-section-title">{title}</div>}
+      <div className="apple-card overflow-hidden">{children}</div>
     </div>
   );
 }
@@ -27,7 +23,9 @@ interface GroupCardItemProps {
 
 export function GroupCardItem({ children, className = "", noBorder = false }: GroupCardItemProps) {
   return (
-    <div className={`px-5 py-4 ${noBorder ? "" : "border-b border-border/60 last:border-b-0"} ${className}`}>
+    <div
+      className={`px-5 py-4 ${noBorder ? "" : "border-b border-border/60 last:border-b-0"} ${className}`}
+    >
       {children}
     </div>
   );
