@@ -1367,6 +1367,41 @@ impl PluginManager {
         if which(&cli_command).is_err() {
             anyhow::bail!("未找到 Claude Code CLI: {}", cli_command);
         }
+
+        if let Err(e) = self
+            .sync_claude_installed_state(Some(cli_command.clone()))
+            .await
+        {
+            log::warn!("同步 Claude plugins 状态失败（移除 marketplace 时）: {}", e);
+        }
+
+        let all_plugins = self.db.get_plugins()?;
+        let target_plugins: Vec<Plugin> = all_plugins
+            .into_iter()
+            .filter(|plugin| plugin.marketplace_name == marketplace_name)
+            .collect();
+        let installed_plugins: Vec<Plugin> = target_plugins
+            .iter()
+            .filter(|plugin| plugin.installed)
+            .cloned()
+            .collect();
+        let mut uninstall_results: HashMap<String, bool> = HashMap::new();
+
+        for plugin in &installed_plugins {
+            match self
+                .uninstall_plugin(&plugin.id, Some(cli_command.clone()))
+                .await
+            {
+                Ok(result) => {
+                    uninstall_results.insert(plugin.id.clone(), result.success);
+                }
+                Err(e) => {
+                    log::warn!("卸载 marketplace 插件失败: {} ({})", plugin.name, e);
+                    uninstall_results.insert(plugin.id.clone(), false);
+                }
+            }
+        }
+
         let claude_cli = ClaudeCli::new(cli_command);
 
         let commands = vec![
@@ -1392,10 +1427,9 @@ impl PluginManager {
         // 移除成功后，删除该 marketplace 下的所有 plugin 记录
         let mut removed_count = 0;
         if outcome.success {
-            let all_plugins = self.db.get_plugins()?;
-            for plugin in all_plugins {
-                if plugin.marketplace_name == marketplace_name {
-                    // 从数据库删除 plugin 记录
+            for plugin in target_plugins {
+                let uninstall_ok = uninstall_results.get(&plugin.id).copied().unwrap_or(true);
+                if uninstall_ok {
                     self.db.delete_plugin(&plugin.id)?;
                     removed_count += 1;
                 }
@@ -1405,7 +1439,7 @@ impl PluginManager {
         Ok(MarketplaceRemoveResult {
             marketplace_name: marketplace_name.to_string(),
             marketplace_repo: marketplace_repo.to_string(),
-            success: outcome.success,
+            success: outcome.success && uninstall_results.values().all(|ok| *ok),
             removed_plugins_count: removed_count,
             raw_log: cli_result.raw_log,
         })
