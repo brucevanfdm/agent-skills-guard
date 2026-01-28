@@ -47,6 +47,52 @@ impl SecurityScanner {
         Self
     }
 
+    fn normalized_extension(file_path: &str) -> Option<String> {
+        std::path::Path::new(file_path)
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())
+    }
+
+    fn rule_applies_to_extension(rule_id: &str, ext: Option<&str>) -> bool {
+        match rule_id {
+            // Python
+            "PY_EVAL" | "PY_EXEC" | "OS_SYSTEM" | "SUBPROCESS_SHELL" | "SUBPROCESS_CALL" | "PY_URLLIB" | "HTTP_REQUEST" => {
+                matches!(ext, Some("py") | Some("pyw") | Some("pyi"))
+            }
+            // Node.js / JS / TS
+            "NODE_CHILD_EXEC" | "NODE_VM_RUN" | "NODE_CHILD_SPAWN" => {
+                matches!(ext, Some("js") | Some("jsx") | Some("ts") | Some("tsx") | Some("mjs") | Some("cjs"))
+            }
+            // PHP
+            "PHP_EXEC" => {
+                matches!(
+                    ext,
+                    Some("php") | Some("phtml") | Some("php3") | Some("php4") | Some("php5") | Some("php7") | Some("php8")
+                )
+            }
+            // Ruby
+            "RUBY_SYSTEM_EXEC" => matches!(ext, Some("rb") | Some("rake") | Some("gemspec") | Some("ru")),
+            // Go
+            "GO_EXEC_COMMAND" => matches!(ext, Some("go")),
+            // Java / JVM
+            "JAVA_RUNTIME_EXEC" | "JAVA_PROCESS_BUILDER" => matches!(ext, Some("java") | Some("kt") | Some("kts") | Some("groovy")),
+            // C#
+            "CSHARP_PROCESS_START" => matches!(ext, Some("cs") | Some("csx")),
+            // PowerShell
+            "POWERSHELL_BYPASS_POLICY"
+            | "POWERSHELL_ENCODED_COMMAND"
+            | "POWERSHELL_IEX_DOWNLOAD"
+            | "POWERSHELL_PIPE_IEX"
+            | "POWERSHELL_RUN_KEY"
+            | "POWERSHELL_START_PROCESS" => matches!(ext, Some("ps1") | Some("psm1") | Some("psd1")),
+            // Windows batch / cmd / PowerShell scripts
+            "CMD_WRAPPER" => matches!(ext, Some("bat") | Some("cmd") | Some("ps1")),
+            // 默认：所有文件类型适用
+            _ => true,
+        }
+    }
+
     fn detect_utf16_encoding(buf: &[u8]) -> Option<(Utf16Encoding, usize)> {
         if buf.len() < 2 {
             return None;
@@ -431,11 +477,15 @@ impl SecurityScanner {
             }
 
             let content = content.unwrap_or_else(|| String::from_utf8_lossy(&buf).into_owned());
+            let file_ext = Self::normalized_extension(&rel_str);
             scanned_files.push(rel_str.clone());
             files_scanned += 1;
 
             for (line_num, line) in content.lines().enumerate() {
                 for rule in rules.iter() {
+                    if !Self::rule_applies_to_extension(rule.id, file_ext.as_deref()) {
+                        continue;
+                    }
                     if rule.pattern.is_match(line) {
                         let match_result = MatchResult {
                             _rule_id: rule.id.to_string(),
@@ -509,10 +559,14 @@ impl SecurityScanner {
         // 获取所有规则
         let rules = SecurityRules::get_all_patterns();
 
+        let file_ext = Self::normalized_extension(file_path);
         // 逐行扫描代码
         for (line_num, line) in content.lines().enumerate() {
             // 对每条规则进行匹配
             for rule in rules.iter() {
+                if !Self::rule_applies_to_extension(rule.id, file_ext.as_deref()) {
+                    continue;
+                }
                 if rule.pattern.is_match(line) {
                     matches.push(MatchResult {
                         _rule_id: rule.id.to_string(),
