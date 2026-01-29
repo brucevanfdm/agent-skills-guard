@@ -424,6 +424,7 @@ pub fn run() {
             commands::auto_scan_unscanned_repositories,
             commands::plugins::get_plugins,
             commands::plugins::get_plugins_cached,
+            commands::plugins::sync_featured_marketplace_plugins,
             commands::plugins::prepare_plugin_installation,
             commands::plugins::confirm_plugin_installation,
             commands::plugins::cancel_plugin_installation,

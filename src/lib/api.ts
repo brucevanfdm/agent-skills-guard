@@ -141,6 +141,10 @@ export const api = {
     return invoke("get_plugins", { locale: locale || null });
   },
 
+  async syncFeaturedMarketplacePlugins(locale: string): Promise<Plugin[]> {
+    return invoke("sync_featured_marketplace_plugins", { locale });
+  },
+
   async preparePluginInstallation(pluginId: string, locale: string): Promise<SecurityReport> {
     return invoke("prepare_plugin_installation", { pluginId, locale });
   },

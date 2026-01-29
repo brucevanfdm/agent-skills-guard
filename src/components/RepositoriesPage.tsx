@@ -25,7 +25,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { appToast } from "../lib/toast";
 import { FeaturedRepositories } from "./FeaturedRepositories";
-import type { Skill } from "../types";
+import type { FeaturedMarketplacesConfig, Skill } from "../types";
 import type { SecurityReport } from "../types/security";
 import { invoke } from "@tauri-apps/api/core";
 import { InstallPathSelector } from "./InstallPathSelector";
@@ -60,6 +60,18 @@ function formatDate(dateStr: string, t: (key: string, options?: any) => string):
   if (days < 7) return t("repositories.date.daysAgo", { days });
 
   return date.toLocaleDateString();
+}
+
+function hasFeaturedMarketplacesChanged(
+  previous: FeaturedMarketplacesConfig | undefined,
+  next: FeaturedMarketplacesConfig
+): boolean {
+  if (!previous) return true;
+  try {
+    return JSON.stringify(previous.marketplace) !== JSON.stringify(next.marketplace);
+  } catch {
+    return true;
+  }
 }
 
 interface RepositoriesPageProps {
@@ -133,9 +145,23 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
 
   const refreshFeaturedMarketplacesMutation = useMutation({
     mutationFn: api.refreshFeaturedMarketplaces,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      const previousConfig = queryClient.getQueryData<FeaturedMarketplacesConfig>([
+        "featured-marketplaces",
+      ]);
       queryClient.setQueryData(["featured-marketplaces"], data);
       appToast.success(t("repositories.featuredMarketplaces.refreshed"));
+      if (hasFeaturedMarketplacesChanged(previousConfig, data)) {
+        try {
+          const plugins = await api.syncFeaturedMarketplacePlugins(i18n.language);
+          queryClient.setQueryData(["plugins", i18n.language], plugins);
+        } catch (error) {
+          console.debug(
+            "Failed to refresh plugins after featured marketplaces update:",
+            error
+          );
+        }
+      }
     },
     onError: (error: any) => {
       appToast.error(

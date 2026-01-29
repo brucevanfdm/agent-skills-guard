@@ -41,7 +41,10 @@ pub async fn get_plugins(
     // 同步失败不阻塞 UI：回退到 DB 缓存
     if let Ok(manager) = state.plugin_manager.try_lock() {
         if let Some(config) = &featured_config {
-            if let Err(e) = manager.sync_featured_marketplaces(config, &locale, None).await {
+            if let Err(e) = manager
+                .sync_featured_marketplaces(config, &locale, None, true)
+                .await
+            {
                 log::warn!("同步精选插件清单失败: {}", e);
             }
         }
@@ -51,7 +54,10 @@ pub async fn get_plugins(
     } else {
         let manager = state.plugin_manager.lock().await;
         if let Some(config) = &featured_config {
-            if let Err(e) = manager.sync_featured_marketplaces(config, &locale, None).await {
+            if let Err(e) = manager
+                .sync_featured_marketplaces(config, &locale, None, true)
+                .await
+            {
                 log::warn!("同步精选插件清单失败: {}", e);
             }
         }
@@ -68,6 +74,27 @@ pub async fn get_plugins(
 pub async fn get_plugins_cached(
     state: State<'_, AppState>,
 ) -> Result<Vec<Plugin>, String> {
+    state.db.get_plugins().map_err(|e| e.to_string())
+}
+
+/// 仅同步精选市场插件清单（不触发 Claude CLI）
+#[tauri::command]
+pub async fn sync_featured_marketplace_plugins(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    locale: String,
+) -> Result<Vec<Plugin>, String> {
+    let locale = validate_locale(&locale);
+    let featured_config = featured_marketplaces::get_featured_marketplaces(app)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let manager = state.plugin_manager.lock().await;
+    manager
+        .sync_featured_marketplaces(&featured_config, &locale, None, false)
+        .await
+        .map_err(|e| e.to_string())?;
+
     state.db.get_plugins().map_err(|e| e.to_string())
 }
 

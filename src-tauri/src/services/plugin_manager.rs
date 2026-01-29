@@ -896,6 +896,7 @@ impl PluginManager {
         config: &FeaturedMarketplacesConfig,
         locale: &str,
         claude_command: Option<String>,
+        sync_installed_marketplaces: bool,
     ) -> Result<()> {
         let locale = validate_locale(locale);
         let existing_plugins = self.db.get_plugins().unwrap_or_default();
@@ -904,9 +905,12 @@ impl PluginManager {
             .cloned()
             .map(|plugin| (plugin.id.clone(), plugin))
             .collect();
-        let installed_marketplace_plugins = self
-            .load_installed_featured_marketplace_plugins(config, claude_command)
-            .await;
+        let installed_marketplace_plugins = if sync_installed_marketplaces {
+            self.load_installed_featured_marketplace_plugins(config, claude_command)
+                .await
+        } else {
+            HashMap::new()
+        };
 
         let mut featured_ids: HashSet<String> = HashSet::new();
 
