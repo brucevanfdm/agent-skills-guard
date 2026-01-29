@@ -15,6 +15,7 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder};
 use tauri::Manager;
 use tokio::sync::Mutex;
+use std::path::PathBuf;
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const MENU_SHOW: &str = "show";
@@ -132,6 +133,154 @@ fn handle_tray_event(tray: &tauri::tray::TrayIcon<tauri::Wry>, event: tauri::tra
     }
 }
 
+fn ensure_cli_path() {
+    let mut paths: Vec<PathBuf> = std::env::var_os("PATH")
+        .map(|value| std::env::split_paths(&value).collect())
+        .unwrap_or_default();
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    #[cfg(target_os = "macos")]
+    {
+        candidates.extend([
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+        ].iter().map(PathBuf::from));
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        candidates.extend([
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+        ].iter().map(PathBuf::from));
+    }
+
+    if let Some(home) = dirs::home_dir() {
+        candidates.push(home.join(".local").join("bin"));
+        candidates.push(home.join(".npm-global").join("bin"));
+        candidates.push(home.join(".npm").join("bin"));
+        candidates.push(home.join(".claude").join("bin"));
+        candidates.push(home.join("bin"));
+
+        // nvm: 扫描 ~/.nvm/versions/node/*/bin
+        let nvm_versions = home.join(".nvm").join("versions").join("node");
+        if nvm_versions.is_dir() {
+            if let Ok(entries) = std::fs::read_dir(&nvm_versions) {
+                for entry in entries.flatten() {
+                    let bin_path = entry.path().join("bin");
+                    if bin_path.is_dir() {
+                        candidates.push(bin_path);
+                    }
+                }
+            }
+        }
+
+        // fnm (macOS)
+        #[cfg(target_os = "macos")]
+        {
+            let fnm_versions = home
+                .join("Library")
+                .join("Application Support")
+                .join("fnm")
+                .join("node-versions");
+            if fnm_versions.is_dir() {
+                if let Ok(entries) = std::fs::read_dir(&fnm_versions) {
+                    for entry in entries.flatten() {
+                        let bin_path = entry.path().join("installation").join("bin");
+                        if bin_path.is_dir() {
+                            candidates.push(bin_path);
+                        }
+                    }
+                }
+            }
+        }
+
+        // fnm (Linux)
+        #[cfg(target_os = "linux")]
+        {
+            let fnm_versions = home.join(".local").join("share").join("fnm").join("node-versions");
+            if fnm_versions.is_dir() {
+                if let Ok(entries) = std::fs::read_dir(&fnm_versions) {
+                    for entry in entries.flatten() {
+                        let bin_path = entry.path().join("installation").join("bin");
+                        if bin_path.is_dir() {
+                            candidates.push(bin_path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(appdata) = std::env::var_os("APPDATA") {
+            candidates.push(PathBuf::from(appdata).join("npm"));
+            candidates.push(PathBuf::from(appdata).join("nvm"));
+        }
+        if let Some(local_appdata) = std::env::var_os("LOCALAPPDATA") {
+            candidates.push(PathBuf::from(local_appdata).join("Programs").join("nodejs"));
+        }
+        if let Some(program_files) = std::env::var_os("ProgramFiles") {
+            candidates.push(PathBuf::from(program_files).join("nodejs"));
+        }
+        if let Some(program_files_x86) = std::env::var_os("ProgramFiles(x86)") {
+            candidates.push(PathBuf::from(program_files_x86).join("nodejs"));
+        }
+        if let Some(program_data) = std::env::var_os("ProgramData") {
+            candidates.push(PathBuf::from(program_data).join("chocolatey").join("bin"));
+        }
+        if let Some(userprofile) = std::env::var_os("USERPROFILE") {
+            candidates.push(PathBuf::from(userprofile).join("scoop").join("shims"));
+        }
+        if let Some(nvm_home) = std::env::var_os("NVM_HOME") {
+            candidates.push(PathBuf::from(nvm_home));
+        }
+        if let Some(nvm_symlink) = std::env::var_os("NVM_SYMLINK") {
+            candidates.push(PathBuf::from(nvm_symlink));
+        }
+    }
+
+    let mut added: Vec<PathBuf> = Vec::new();
+    for candidate in candidates {
+        if !candidate.exists() {
+            continue;
+        }
+        if paths.iter().any(|p| p == &candidate) {
+            continue;
+        }
+        paths.push(candidate.clone());
+        added.push(candidate);
+    }
+
+    if added.is_empty() {
+        return;
+    }
+
+    match std::env::join_paths(paths) {
+        Ok(joined) => {
+            std::env::set_var("PATH", joined);
+            let list = added
+                .iter()
+                .map(|p| p.to_string_lossy())
+                .collect::<Vec<_>>()
+                .join(", ");
+            log::info!("已扩展 PATH，新增: {}", list);
+        }
+        Err(err) => {
+            log::warn!("扩展 PATH 失败: {}", err);
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "macos")]
@@ -139,6 +288,7 @@ pub fn run() {
 
     // 初始化日志
     env_logger::init();
+    ensure_cli_path();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
