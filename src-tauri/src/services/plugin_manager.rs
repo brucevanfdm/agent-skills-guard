@@ -17,6 +17,8 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
@@ -1908,7 +1910,15 @@ fn default_marketplace_install_location(name: &str) -> Option<String> {
 }
 
 fn git_output(args: &[&str]) -> Result<String> {
-    let out = Command::new("git").args(args).output().context("执行 git 命令失败")?;
+    let mut cmd = Command::new("git");
+    cmd.args(args);
+    #[cfg(windows)]
+    {
+        // 避免 GUI 程序在 Windows 上弹出 git 控制台窗口
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let out = cmd.output().context("执行 git 命令失败")?;
     if !out.status.success() {
         anyhow::bail!("git 命令返回非零状态");
     }
