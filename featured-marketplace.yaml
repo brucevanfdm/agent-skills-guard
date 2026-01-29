@@ -291,6 +291,30 @@ marketplace:
             source: "./"
             tags: ["makepad", "rust", "ui"]
             featured: true
+      - marketplace_name: "claude-scientific-skills"
+        marketplace_repo: "K-Dense-AI/claude-scientific-skills"
+        repository_url: "https://github.com/K-Dense-AI/claude-scientific-skills"
+        marketplace_add_command: "/plugin marketplace add K-Dense-AI/claude-scientific-skills"
+        description:
+          en: "Claude scientific skills from K-Dense Inc"
+          zh: "K-Dense 提供的 Claude 科学技能合集"
+        owner:
+          name: "K-Dense Inc."
+          email: "contact@k-dense.ai"
+        tags: ["science", "research", "biology", "chemistry", "medicine", "data-analysis"]
+        featured: true
+        plugins:
+          - name: "scientific-skills"
+            install_command: "/plugin install scientific-skills@claude-scientific-skills"
+            description:
+              en: "Collection of scientific skills"
+              zh: "科学技能合集"
+            version: "2.18.0"
+            author:
+              name: "K-Dense Inc."
+            source: "./"
+            tags: ["science", "research", "datasets", "analysis"]
+            featured: true
 
 repositories:
   version: "1.0"
