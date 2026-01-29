@@ -5,7 +5,7 @@
 # 本文件包含为 Agent Skills Guard 用户推荐的精选 Marketplace 与插件。
 
 version: "1.0"
-last_updated: "2026-01-27"
+last_updated: "2026-01-29"
 
 marketplace:
   - id: "official"
@@ -267,6 +267,29 @@ marketplace:
               name: "Supabase"
             source: "./"
             tags: ["supabase", "postgres", "performance", "database", "best-practices"]
+            featured: true
+      - marketplace_name: "makepad-skills-marketplace"
+        marketplace_repo: "ZhangHanDong/makepad-skills"
+        repository_url: "https://github.com/ZhangHanDong/makepad-skills"
+        marketplace_add_command: "/plugin marketplace add ZhangHanDong/makepad-skills"
+        description:
+          en: "Agent skills for building cross-platform UI applications with the Makepad framework in Rust"
+          zh: "面向 Rust 的 Makepad 跨平台 UI 应用构建技能合集"
+        owner:
+          name: "ZhangHanDong"
+        tags: ["makepad", "rust", "ui"]
+        featured: true
+        plugins:
+          - name: "makepad-skills"
+            install_command: "/plugin install makepad-skills@makepad-skills-marketplace"
+            description:
+              en: "Comprehensive Makepad UI framework assistant with auto-routing, widget patterns, shaders, animations, and production-ready Robius patterns from Robrix/Moly codebases"
+              zh: "覆盖自动路由、组件模式、着色器、动画与 Robrix/Moly 生产实践的 Makepad UI 框架助手"
+            version: "2.0.0"
+            author:
+              name: "ZhangHanDong"
+            source: "./"
+            tags: ["makepad", "rust", "ui"]
             featured: true
 
 repositories:
