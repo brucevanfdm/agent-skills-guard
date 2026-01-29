@@ -223,8 +223,9 @@ fn ensure_cli_path() {
     #[cfg(target_os = "windows")]
     {
         if let Some(appdata) = std::env::var_os("APPDATA") {
-            candidates.push(PathBuf::from(appdata).join("npm"));
-            candidates.push(PathBuf::from(appdata).join("nvm"));
+            let appdata = PathBuf::from(appdata);
+            candidates.push(appdata.join("npm"));
+            candidates.push(appdata.join("nvm"));
         }
         if let Some(local_appdata) = std::env::var_os("LOCALAPPDATA") {
             candidates.push(PathBuf::from(local_appdata).join("Programs").join("nodejs"));
