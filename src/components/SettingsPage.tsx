@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Info, Github, RefreshCw, ExternalLink, Hash, Languages, Trash2, ShieldCheck, Gauge } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { appToast } from "@/lib/toast";
 import { useUpdate } from "../contexts/UpdateContext";
 import { GroupCard, GroupCardItem } from "./ui/GroupCard";
@@ -111,6 +111,35 @@ function parseSimpleMarkdown(markdown: string): MarkdownBlock[] {
   return blocks;
 }
 
+function renderInlineMarkdown(text: string) {
+  if (!text.includes("**")) {
+    return text;
+  }
+
+  const nodes: ReactNode[] = [];
+  const regex = /\*\*(.+?)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    nodes.push(
+      <strong key={`bold-${match.index}-${match[1].length}`} className="font-semibold text-foreground">
+        {match[1]}
+      </strong>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
 function renderUpdateNotes(markdown: string) {
   const blocks = parseSimpleMarkdown(markdown);
   return (
@@ -120,7 +149,7 @@ function renderUpdateNotes(markdown: string) {
           const HeadingTag = block.level <= 2 ? "h3" : "h4";
           return (
             <HeadingTag key={`heading-${index}`} className="text-sm font-semibold text-foreground">
-              {block.text}
+              {renderInlineMarkdown(block.text)}
             </HeadingTag>
           );
         }
@@ -129,7 +158,7 @@ function renderUpdateNotes(markdown: string) {
           return (
             <ol key={`list-${index}`} className="list-decimal pl-5 space-y-1">
               {block.items.map((item, itemIndex) => (
-                <li key={`item-${index}-${itemIndex}`}>{item}</li>
+                <li key={`item-${index}-${itemIndex}`}>{renderInlineMarkdown(item)}</li>
               ))}
             </ol>
           );
@@ -139,7 +168,7 @@ function renderUpdateNotes(markdown: string) {
           return (
             <ul key={`list-${index}`} className="list-disc pl-5 space-y-1">
               {block.items.map((item, itemIndex) => (
-                <li key={`item-${index}-${itemIndex}`}>{item}</li>
+                <li key={`item-${index}-${itemIndex}`}>{renderInlineMarkdown(item)}</li>
               ))}
             </ul>
           );
@@ -147,7 +176,7 @@ function renderUpdateNotes(markdown: string) {
 
         return (
           <p key={`para-${index}`} className="whitespace-pre-line">
-            {block.text}
+            {renderInlineMarkdown(block.text)}
           </p>
         );
       })}
@@ -348,7 +377,10 @@ export function SettingsPage() {
       </GroupCard>
 
       {updateContext.hasUpdate && updateContext.updateInfo && (
-        <GroupCard title={t("update.newVersionAvailable")}>
+        <GroupCard>
+          <GroupCardItem className="py-3">
+            <div className="apple-section-title mb-0">{t("update.newVersionAvailable")}</div>
+          </GroupCardItem>
           <GroupCardItem noBorder>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -360,7 +392,7 @@ export function SettingsPage() {
                 </span>
               </div>
               {updateContext.updateInfo.notes && (
-                <div className="text-sm text-muted-foreground max-h-40 overflow-y-auto p-3 bg-secondary/50 rounded-xl">
+                <div className="text-sm text-muted-foreground p-3 bg-secondary/50 rounded-xl">
                   {renderUpdateNotes(updateContext.updateInfo.notes)}
                 </div>
               )}
