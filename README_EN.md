@@ -1,6 +1,6 @@
 <div align="center">
 
-`<a name="readme-top"></a>`
+<a name="readme-top"></a>
 
 # 🛡️ Agent Skills Guard
 
