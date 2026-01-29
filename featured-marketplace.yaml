@@ -315,6 +315,29 @@ marketplace:
             source: "./"
             tags: ["science", "research", "datasets", "analysis"]
             featured: true
+      - marketplace_name: "planning-with-files"
+        marketplace_repo: "OthmanAdi/planning-with-files"
+        repository_url: "https://github.com/OthmanAdi/planning-with-files"
+        marketplace_add_command: "/plugin marketplace add OthmanAdi/planning-with-files"
+        description:
+          en: "Manus-style persistent markdown files for planning, progress tracking, and knowledge storage"
+          zh: "以 Manus 风格的持久化 Markdown 文件，用于规划、进度追踪与知识沉淀"
+        owner:
+          name: "Ahmad Othman Ammar Adi"
+        tags: ["planning", "workflow", "markdown", "context-engineering", "task-management", "templates"]
+        featured: true
+        plugins:
+          - name: "planning-with-files"
+            install_command: "/plugin install planning-with-files@planning-with-files"
+            description:
+              en: "Manus-style persistent markdown files for planning, progress tracking, and knowledge storage. Now with hooks integration."
+              zh: "以 Manus 风格的持久化 Markdown 文件，用于规划、进度追踪与知识沉淀，并支持 hooks 集成。"
+            version: "2.13.0"
+            author:
+              name: "OthmanAdi"
+            source: "./"
+            tags: ["planning", "workflow", "markdown", "context-engineering"]
+            featured: true
 
 repositories:
   version: "1.0"
