@@ -1,6 +1,6 @@
 {
   "name": "agent-skills-guard",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "A secure manager for agent skills with safety checks and cross-platform support",
   "type": "module",
   "scripts": {
