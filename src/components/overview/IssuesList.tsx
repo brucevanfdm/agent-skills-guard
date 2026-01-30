@@ -13,6 +13,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import type { SkillScanResult } from "@/types/security";
+import type { Plugin } from "@/types";
 import { SecurityDetailDialog } from "../SecurityDetailDialog";
 import { api } from "@/lib/api";
 import { appToast } from "@/lib/toast";
@@ -86,8 +87,18 @@ export function IssuesList({ issues, onOpenDirectory }: IssuesListProps) {
 
   const uninstallPluginMutation = useMutation({
     mutationFn: async (pluginId: string) => api.uninstallPlugin(pluginId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["plugins"] });
+    onSuccess: (result, pluginId) => {
+      if (result.success) {
+        queryClient.setQueriesData<Plugin[]>({ queryKey: ["plugins"] }, (prev) => {
+          if (!prev) return prev;
+          return prev.map((plugin) =>
+            plugin.id === pluginId
+              ? { ...plugin, installed: false, installed_at: undefined, install_status: "uninstalled" }
+              : plugin
+          );
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["plugins"], refetchType: "active" });
       queryClient.invalidateQueries({ queryKey: ["scanResults"] });
       appToast.success(t("plugins.toast.uninstalled"), { duration: 3000 });
     },
