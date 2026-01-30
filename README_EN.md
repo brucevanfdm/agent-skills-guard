@@ -84,14 +84,14 @@ Say goodbye to command lines and enjoy the intuitive Apple minimalist interface.
 
 ## 🆚 Traditional Way vs Agent Skills Guard
 
-| Feature            | Traditional Way                   | Agent Skills Guard               |
-| ------------------ | --------------------------------- | -------------------------------- |
-| **Discover skills/plugins** | ❌ Aimlessly search GitHub      | ✅ Featured repo + plugin marketplace, one-click browse |
-| **Security check** | ❌ Manual code review, time-consuming | ✅ 8-category auto scan, 3-5x faster, instant results |
-| **Install skills** | ❌ Command line, error-prone    | ✅ Visual UI, plugin-style install, click to install  |
-| **Manage skills/plugins**  | ❌ Folder digging, unclear usage | ✅ Intuitive list, clear status |
-| **Update skills/plugins**  | ❌ Manual check, repetitive     | ✅ Auto detect, batch update    |
-| **Uninstall skills** | ❌ Manual delete, worried leftovers | ✅ One-click uninstall, auto cleanup |
+| Feature                           | Traditional Way                       | Agent Skills Guard                                      |
+| --------------------------------- | ------------------------------------- | ------------------------------------------------------- |
+| **Discover skills/plugins** | ❌ Aimlessly search GitHub            | ✅ Featured repo + plugin marketplace, one-click browse |
+| **Security check**          | ❌ Manual code review, time-consuming | ✅ 8-category auto scan, 3-5x faster, instant results   |
+| **Install skills**          | ❌ Command line, error-prone          | ✅ Visual UI, plugin-style install, click to install    |
+| **Manage skills/plugins**   | ❌ Folder digging, unclear usage      | ✅ Intuitive list, clear status                         |
+| **Update skills/plugins**   | ❌ Manual check, repetitive           | ✅ Auto detect, batch update                            |
+| **Uninstall skills**        | ❌ Manual delete, worried leftovers   | ✅ One-click uninstall, auto cleanup                    |
 
 ---
 
@@ -184,36 +184,37 @@ The security score uses a **100-point deduction mechanism**, starting from 100 p
 
 Assume the following risks are detected:
 
-| Risk Item                     | Weight | Description                       |
-| ----------------------------- | ------ | --------------------------------- |
-| `rm -rf /` (hard trigger)     | 100    | Installation prohibited directly   |
-| `curl \| bash`                | 90     | Deduct 90 points                  |
-| `eval()`                      | 6      | Deduct 6 points                   |
-| `os.system()`                 | 6      | Deduct 6 points                   |
-| Hardcoded API Key             | 60     | Deduct 60 points                  |
-| **Total Score**               | -      | 100 - 90 - 6 - 6 - 60 = **-62**  |
+| Risk Item                   | Weight | Description                         |
+| --------------------------- | ------ | ----------------------------------- |
+| `rm -rf /` (hard trigger) | 100    | Installation prohibited directly    |
+| `curl \| bash`             | 90     | Deduct 90 points                    |
+| `eval()`                  | 6      | Deduct 6 points                     |
+| `os.system()`             | 6      | Deduct 6 points                     |
+| Hardcoded API Key           | 60     | Deduct 60 points                    |
+| **Total Score**       | -      | 100 - 90 - 6 - 6 - 60 =**-0** |
 
 Due to the presence of hard-trigger rules, installation is directly blocked.
 
 #### Scoring Levels
 
 - **90-100 (✅ Safe)**: Safe to use
+
   - No or only very low-risk items
   - No hard-trigger rules detected
-
 - **70-89 (⚠️ Low Risk)**: Minor risk, recommend checking details
+
   - Few low-risk items
   - Decide whether to use based on needs
-
 - **50-69 (⚠️ Medium Risk)**: Certain risk, use with caution
+
   - Medium-risk items present
   - Recommend carefully reviewing code before use
-
 - **30-49 (🔴 High Risk)**: High risk, not recommended for installation
+
   - Multiple high-risk items
   - Strongly recommend finding alternatives
-
 - **0-29 (🚨 Critical Risk)**: Serious threat, installation prohibited
+
   - Hard-trigger rules triggered
   - System directly blocks installation
 
@@ -243,81 +244,20 @@ To reduce false positives, each risk is marked with a confidence level:
 
 ### Risk Classification
 
-| Category                  | Detection Content           | Examples                          |
-| ------------------------- | --------------------------- | --------------------------------- |
-| **Destructive Operations** | Delete system files, disk wipe | `rm -rf /`, `mkfs`           |
-| **Remote Code Execution**  | Pipe execution, deserialization | `curl \| bash`, `pickle.loads` |
-| **Command Injection**      | Dynamic command concatenation | `eval()`, `os.system()`       |
-| **Data Exfiltration**      | Data exfiltration to remote servers | `curl -d @file`             |
-| **Privilege Escalation**   | Escalation operations       | `sudo`, `chmod 777`           |
-| **Persistence**            | Backdoor implantation       | `crontab`, SSH key injection    |
-| **Sensitive Info Leakage** | Hardcoded keys, Tokens      | AWS Key, GitHub Token           |
-| **Sensitive File Access**  | Access system sensitive files | `~/.ssh/`, `/etc/passwd`    |
+| Category                         | Detection Content                   | Examples                          |
+| -------------------------------- | ----------------------------------- | --------------------------------- |
+| **Destructive Operations** | Delete system files, disk wipe      | `rm -rf /`, `mkfs`            |
+| **Remote Code Execution**  | Pipe execution, deserialization     | `curl \| bash`, `pickle.loads` |
+| **Command Injection**      | Dynamic command concatenation       | `eval()`, `os.system()`       |
+| **Data Exfiltration**      | Data exfiltration to remote servers | `curl -d @file`                 |
+| **Privilege Escalation**   | Escalation operations               | `sudo`, `chmod 777`           |
+| **Persistence**            | Backdoor implantation               | `crontab`, SSH key injection    |
+| **Sensitive Info Leakage** | Hardcoded keys, Tokens              | AWS Key, GitHub Token             |
+| **Sensitive File Access**  | Access system sensitive files       | `~/.ssh/`, `/etc/passwd`      |
 
 ### Disclaimer
 
 Security scanning is based on preset rules, designed to help identify potential risks, but cannot guarantee 100% accuracy, and false positives or false negatives may exist. It is recommended to carefully read the skill source code before installation and be extra cautious with skills from untrusted sources. Users assume all consequences of using this program.
-
----
-
-## 💡 Use Cases
-
-### Case 1: Discover New Skills
-
-You see a skill on GitHub that can automatically generate code comments, want to try but worried about security.
-
-**With Agent Skills Guard:**
-
-1. Search for this skill in "Skills Marketplace"
-2. Click "Install", system automatically scans
-3. See security score is 85, with 2 low-risk alerts
-4. Check details and find it acceptable, click "Install Anyway"
-5. ✅ Install successfully, use with peace of mind
-
-### Case 2: Regular Security Check
-
-Every month, you want to check the security status of installed skills.
-
-**With Agent Skills Guard:**
-
-1. Open "Overview" page
-2. Click "One-Click Scan"
-3. Check scan report, find a skill's security score dropped
-4. Check details and find the skill added network request code
-5. Decide to uninstall that skill or rollback to old version
-6. ✅ Skills library stays secure and controlled
-
-### Case 3: Skills Cleanup
-
-Your skills directory is full of various skills, want to clean up.
-
-**With Agent Skills Guard:**
-
-1. Open "My Skills" page
-2. Browse all skills and their descriptions
-3. See several skills you've forgotten their purpose
-4. Select these skills, click "Uninstall"
-5. ✅ Skills library refreshed
-
----
-
-## ❓ FAQ
-
-### Q: Can security scanning produce false positives?
-
-A: Yes. Scanning is based on rule matching and may mark harmless code as risky. It's recommended to check the code context in the scan report to determine if there's really a risk.
-
-### Q: Can I add my own skills repository?
-
-A: Yes! Add any GitHub repository on the "Repository Configuration" page, and the app will automatically scan and discover skills within it.
-
-### Q: Does the app auto-update?
-
-A: Yes, the app automatically detects updates and prompts you when a new version is available.
-
-### Q: Where are skills installed?
-
-A: By default installed to `~/.claude/skills/`, and you can also choose custom paths during installation, supporting installation to project folders.
 
 ---
 
