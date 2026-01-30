@@ -424,7 +424,7 @@ marketplace:
         featured: true
         plugins:
           - name: "cloudflare"
-            install_command: "/plugin install cloudflare@cloudflare/skills"
+            install_command: "/plugin install cloudflare@cloudflare"
             description:
               en: "Skills for the Cloudflare developer platform"
               zh: "面向 Cloudflare 开发者平台的技能"
@@ -446,7 +446,7 @@ marketplace:
         featured: true
         plugins:
           - name: "hugging-face-model-trainer"
-            install_command: "/plugin install hugging-face-model-trainer@huggingface/skills"
+            install_command: "/plugin install hugging-face-model-trainer@huggingface-skills"
             description:
               en: "Train or fine-tune language models using TRL on Hugging Face Jobs infrastructure. Covers SFT, DPO, GRPO and reward modeling training methods, plus GGUF conversion for local deployment. Includes hardware selection, cost estimation, Trackio monitoring, and Hub persistence."
               zh: "在 Hugging Face Jobs 上使用 TRL 训练或微调语言模型，涵盖 SFT、DPO、GRPO 与奖励模型训练，并包含 GGUF 本地部署转换、硬件选择、成本估算、Trackio 监控与 Hub 持久化。"
@@ -456,7 +456,7 @@ marketplace:
             tags: ["huggingface", "training", "trl", "jobs"]
             featured: true
           - name: "hugging-face-paper-publisher"
-            install_command: "/plugin install hugging-face-paper-publisher@huggingface/skills"
+            install_command: "/plugin install hugging-face-paper-publisher@huggingface-skills"
             description:
               en: "Publish and manage research papers on Hugging Face Hub. Supports creating paper pages, linking papers to models/datasets, claiming authorship, and generating professional markdown-based research articles."
               zh: "在 Hugging Face Hub 发布与管理研究论文，支持创建论文页面、关联模型/数据集、认领作者身份，并生成专业的 Markdown 研究文章。"
@@ -466,7 +466,7 @@ marketplace:
             tags: ["huggingface", "papers", "publishing"]
             featured: true
           - name: "hugging-face-datasets"
-            install_command: "/plugin install hugging-face-datasets@huggingface/skills"
+            install_command: "/plugin install hugging-face-datasets@huggingface-skills"
             description:
               en: "Create and manage datasets on Hugging Face Hub. Supports initializing repos, defining configs/system prompts, streaming row updates, and SQL-based dataset querying/transformation."
               zh: "在 Hugging Face Hub 创建与管理数据集，支持初始化仓库、定义配置/系统提示词、流式更新行数据，以及基于 SQL 的查询与转换。"
@@ -476,7 +476,7 @@ marketplace:
             tags: ["huggingface", "datasets", "sql"]
             featured: true
           - name: "hugging-face-evaluation"
-            install_command: "/plugin install hugging-face-evaluation@huggingface/skills"
+            install_command: "/plugin install hugging-face-evaluation@huggingface-skills"
             description:
               en: "Add and manage evaluation results in Hugging Face model cards. Supports extracting eval tables from README content, importing scores from Artificial Analysis API, and running custom evaluations with vLLM/lighteval."
               zh: "在 Hugging Face 模型卡中添加与管理评测结果，支持从 README 提取评测表格、从 Artificial Analysis API 导入分数，以及使用 vLLM/lighteval 进行自定义评测。"
@@ -486,7 +486,7 @@ marketplace:
             tags: ["huggingface", "evaluation", "model-cards"]
             featured: true
           - name: "hugging-face-tool-builder"
-            install_command: "/plugin install hugging-face-tool-builder@huggingface/skills"
+            install_command: "/plugin install hugging-face-tool-builder@huggingface-skills"
             description:
               en: "Build reusable scripts for Hugging Face API operations. Useful for chaining API calls or automating repeated tasks."
               zh: "构建可复用的 Hugging Face API 操作脚本，适合串联 API 调用或自动化重复任务。"
@@ -496,7 +496,7 @@ marketplace:
             tags: ["huggingface", "api", "automation"]
             featured: true
           - name: "hugging-face-cli"
-            install_command: "/plugin install hugging-face-cli@huggingface/skills"
+            install_command: "/plugin install hugging-face-cli@huggingface-skills"
             description:
               en: "Execute Hugging Face Hub operations using the hf CLI. Download models/datasets, upload files, manage repos, and run cloud compute jobs."
               zh: "使用 hf CLI 执行 Hugging Face Hub 操作，支持下载模型/数据集、上传文件、管理仓库与运行云端计算任务。"
@@ -506,7 +506,7 @@ marketplace:
             tags: ["huggingface", "cli", "hub"]
             featured: true
           - name: "hugging-face-jobs"
-            install_command: "/plugin install hugging-face-jobs@huggingface/skills"
+            install_command: "/plugin install hugging-face-jobs@huggingface-skills"
             description:
               en: "Run compute jobs on Hugging Face infrastructure. Execute Python scripts, manage scheduled jobs, and monitor job status."
               zh: "在 Hugging Face 基础设施上运行计算任务，支持执行 Python 脚本、管理定时任务与监控任务状态。"
@@ -516,7 +516,7 @@ marketplace:
             tags: ["huggingface", "jobs", "compute"]
             featured: true
           - name: "hugging-face-trackio"
-            install_command: "/plugin install hugging-face-trackio@huggingface/skills"
+            install_command: "/plugin install hugging-face-trackio@huggingface-skills"
             description:
               en: "Track and visualize ML training experiments with Trackio. Log metrics via Python API and retrieve them via CLI. Supports real-time dashboards synced to HF Spaces."
               zh: "使用 Trackio 跟踪与可视化训练实验，支持 Python API 记录指标与 CLI 获取数据，并可同步到 HF Spaces 的实时仪表盘。"
@@ -539,7 +539,7 @@ marketplace:
         featured: true
         plugins:
           - name: "ask-questions-if-underspecified"
-            install_command: "/plugin install ask-questions-if-underspecified@trailofbits/skills"
+            install_command: "/plugin install ask-questions-if-underspecified@trailofbit"
             description:
               en: "Clarify requirements before implementing. When doubting, ask questions."
               zh: "在实现前澄清需求；有疑问就先提问。"
@@ -552,7 +552,7 @@ marketplace:
             tags: ["requirements", "clarification", "workflow"]
             featured: true
           - name: "audit-context-building"
-            install_command: "/plugin install audit-context-building@trailofbits/skills"
+            install_command: "/plugin install audit-context-building@trailofbits"
             description:
               en: "Build deep architectural context through ultra-granular code analysis before vulnerability hunting"
               zh: "在漏洞挖掘前，通过超细粒度代码分析建立深度架构上下文"
@@ -563,7 +563,7 @@ marketplace:
             tags: ["audit", "context", "analysis"]
             featured: true
           - name: "building-secure-contracts"
-            install_command: "/plugin install building-secure-contracts@trailofbits/skills"
+            install_command: "/plugin install building-secure-contracts@trailofbits"
             description:
               en: "Comprehensive smart contract security toolkit based on Trail of Bits' Building Secure Contracts framework. Includes vulnerability scanners for 6 blockchains and 5 development guideline assistants."
               zh: "基于 Trail of Bits Building Secure Contracts 框架的智能合约安全工具包，包含 6 条链的漏洞扫描与 5 类开发指南助手。"
@@ -574,7 +574,7 @@ marketplace:
             tags: ["smart-contracts", "security", "toolkit"]
             featured: true
           - name: "burpsuite-project-parser"
-            install_command: "/plugin install burpsuite-project-parser@trailofbits/skills"
+            install_command: "/plugin install burpsuite-project-parser@trailofbits"
             description:
               en: "Search and extract data from Burp Suite project files (.burp) for use in Claude"
               zh: "从 Burp Suite 项目文件（.burp）中检索与提取数据供 Claude 使用"
@@ -585,7 +585,7 @@ marketplace:
             tags: ["burpsuite", "parser", "security"]
             featured: true
           - name: "constant-time-analysis"
-            install_command: "/plugin install constant-time-analysis@trailofbits/skills"
+            install_command: "/plugin install constant-time-analysis@trailofbits"
             description:
               en: "Detect compiler-induced timing side-channels in cryptographic code"
               zh: "检测加密代码中由编译器引入的时间侧信道"
@@ -597,7 +597,7 @@ marketplace:
             tags: ["crypto", "side-channel", "analysis"]
             featured: true
           - name: "culture-index"
-            install_command: "/plugin install culture-index@trailofbits/skills"
+            install_command: "/plugin install culture-index@trailofbits"
             description:
               en: "Interprets Culture Index survey results for individuals and teams"
               zh: "解读个人与团队的 Culture Index 调研结果"
@@ -608,7 +608,7 @@ marketplace:
             tags: ["culture", "survey", "analysis"]
             featured: true
           - name: "differential-review"
-            install_command: "/plugin install differential-review@trailofbits/skills"
+            install_command: "/plugin install differential-review@trailofbits"
             description:
               en: "Security-focused differential review of code changes with git history analysis and blast radius estimation"
               zh: "结合 Git 历史分析与影响面评估的安全差异评审"
@@ -619,7 +619,7 @@ marketplace:
             tags: ["code-review", "security", "git"]
             featured: true
           - name: "firebase-apk-scanner"
-            install_command: "/plugin install firebase-apk-scanner@trailofbits/skills"
+            install_command: "/plugin install firebase-apk-scanner@trailofbits"
             description:
               en: "Scan Android APKs for Firebase security misconfigurations including open databases, storage buckets, authentication issues, and exposed cloud functions. For authorized security research only."
               zh: "扫描 Android APK 的 Firebase 安全错误配置（开放数据库、存储桶、认证问题与暴露的云函数），仅限授权安全研究使用。"
@@ -630,7 +630,7 @@ marketplace:
             tags: ["android", "firebase", "scanner"]
             featured: true
           - name: "fix-review"
-            install_command: "/plugin install fix-review@trailofbits/skills"
+            install_command: "/plugin install fix-review@trailofbits"
             description:
               en: "Verify fix commits address audit findings without introducing bugs"
               zh: "验证修复提交是否解决审计问题且不引入新 bug"
@@ -642,7 +642,7 @@ marketplace:
             tags: ["audit", "fixes", "review"]
             featured: true
           - name: "dwarf-expert"
-            install_command: "/plugin install dwarf-expert@trailofbits/skills"
+            install_command: "/plugin install dwarf-expert@trailofbits"
             description:
               en: "Interact with and understand the DWARF debugging format"
               zh: "交互式理解与使用 DWARF 调试格式"
@@ -654,7 +654,7 @@ marketplace:
             tags: ["debugging", "dwarf", "analysis"]
             featured: true
           - name: "entry-point-analyzer"
-            install_command: "/plugin install entry-point-analyzer@trailofbits/skills"
+            install_command: "/plugin install entry-point-analyzer@trailofbits"
             description:
               en: "Analyzes smart contract codebases to identify state-changing entry points for security auditing. Detects externally callable functions that modify state, categorizes them by access level, and generates structured audit reports."
               zh: "分析智能合约代码库以识别更改状态的入口点，检测可外部调用的状态修改函数，按访问级别分类并生成结构化审计报告。"
@@ -667,7 +667,7 @@ marketplace:
             tags: ["smart-contracts", "audit", "analysis"]
             featured: true
           - name: "property-based-testing"
-            install_command: "/plugin install property-based-testing@trailofbits/skills"
+            install_command: "/plugin install property-based-testing@trailofbits"
             description:
               en: "Property-based testing guidance for multiple languages and smart contracts"
               zh: "面向多语言与智能合约的性质驱动测试指南"
@@ -679,7 +679,7 @@ marketplace:
             tags: ["testing", "property-based", "smart-contracts"]
             featured: true
           - name: "semgrep-rule-creator"
-            install_command: "/plugin install semgrep-rule-creator@trailofbits/skills"
+            install_command: "/plugin install semgrep-rule-creator@trailofbits"
             description:
               en: "Create custom Semgrep rules for detecting bug patterns and security vulnerabilities"
               zh: "创建用于检测 bug 模式与安全漏洞的自定义 Semgrep 规则"
@@ -690,7 +690,7 @@ marketplace:
             tags: ["semgrep", "rules", "security"]
             featured: true
           - name: "semgrep-rule-variant-creator"
-            install_command: "/plugin install semgrep-rule-variant-creator@trailofbits/skills"
+            install_command: "/plugin install semgrep-rule-variant-creator@trailofbits"
             description:
               en: "Creates language variants of existing Semgrep rules with proper applicability analysis and test-driven validation"
               zh: "基于适用性分析与测试驱动验证，为既有 Semgrep 规则生成语言变体"
@@ -702,7 +702,7 @@ marketplace:
             tags: ["semgrep", "rules", "analysis"]
             featured: true
           - name: "sharp-edges"
-            install_command: "/plugin install sharp-edges@trailofbits/skills"
+            install_command: "/plugin install sharp-edges@trailofbits"
             description:
               en: "Identify error-prone APIs, dangerous configurations, and footgun designs that enable security mistakes"
               zh: "识别易错 API、危险配置与“脚枪式”设计导致的安全错误"
@@ -715,7 +715,7 @@ marketplace:
             tags: ["security", "api", "configuration"]
             featured: true
           - name: "static-analysis"
-            install_command: "/plugin install static-analysis@trailofbits/skills"
+            install_command: "/plugin install static-analysis@trailofbits"
             description:
               en: "Static analysis toolkit with CodeQL, Semgrep, and SARIF parsing for security vulnerability detection"
               zh: "包含 CodeQL、Semgrep 与 SARIF 解析的静态分析工具包，用于安全漏洞检测"
@@ -726,7 +726,7 @@ marketplace:
             tags: ["static-analysis", "codeql", "sarif"]
             featured: true
           - name: "spec-to-code-compliance"
-            install_command: "/plugin install spec-to-code-compliance@trailofbits/skills"
+            install_command: "/plugin install spec-to-code-compliance@trailofbits"
             description:
               en: "Specification-to-code compliance checker for blockchain audits with evidence-based alignment analysis"
               zh: "用于区块链审计的规范-代码一致性检查器，提供基于证据的对齐分析"
@@ -737,7 +737,7 @@ marketplace:
             tags: ["blockchain", "compliance", "audit"]
             featured: true
           - name: "testing-handbook-skills"
-            install_command: "/plugin install testing-handbook-skills@trailofbits/skills"
+            install_command: "/plugin install testing-handbook-skills@trailofbits"
             description:
               en: "Skills from the Trail of Bits Application Security Testing Handbook (appsec.guide)"
               zh: "来自 Trail of Bits《应用安全测试手册》（appsec.guide）的技能"
@@ -748,7 +748,7 @@ marketplace:
             tags: ["appsec", "testing", "handbook"]
             featured: true
           - name: "variant-analysis"
-            install_command: "/plugin install variant-analysis@trailofbits/skills"
+            install_command: "/plugin install variant-analysis@trailofbits"
             description:
               en: "Find similar vulnerabilities and bugs across codebases using pattern-based analysis"
               zh: "通过模式分析在代码库间查找相似漏洞与 bug"
@@ -759,7 +759,7 @@ marketplace:
             tags: ["analysis", "vulnerabilities", "bugs"]
             featured: true
           - name: "modern-python"
-            install_command: "/plugin install modern-python@trailofbits/skills"
+            install_command: "/plugin install modern-python@trailofbits"
             description:
               en: "Modern Python best practices. Use when creating new Python projects, and writing Python scripts, or migrating existing projects from legacy tools."
               zh: "现代 Python 最佳实践，用于新项目、脚本编写或从旧工具迁移。"
@@ -772,7 +772,7 @@ marketplace:
             tags: ["python", "best-practices", "migration"]
             featured: true
           - name: "insecure-defaults"
-            install_command: "/plugin install insecure-defaults@trailofbits/skills"
+            install_command: "/plugin install insecure-defaults@trailofbits"
             description:
               en: "Detects and verifies insecure default configurations including hardcoded credentials, fallback secrets, weak authentication defaults, and dangerous configuration values that remain active in production"
               zh: "检测并验证不安全默认配置，包括硬编码凭据、后备密钥、弱认证默认值，以及生产环境仍启用的危险配置。"
