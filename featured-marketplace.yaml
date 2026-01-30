@@ -56,8 +56,8 @@ marketplace:
         repository_url: "https://github.com/obra/superpowers-marketplace"
         marketplace_add_command: "/plugin marketplace add obra/superpowers-marketplace"
         description:
-          en: "Marketplace for Superpowers plugins"
-          zh: "Superpowers 插件市场"
+          en: "Skills, workflows, and productivity tools"
+          zh: "技能、工作流与效率工具"
         owner:
           name: "Jesse Vincent"
           email: "jesse@fsck.com"
@@ -67,14 +67,86 @@ marketplace:
           - name: "superpowers"
             install_command: "/plugin install superpowers@superpowers-marketplace"
             description:
-              en: "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques"
-              zh: "Claude Code 核心技能库：TDD、调试与协作模式等工程实践"
-            version: "4.0.3"
+              en: "Core skills library: TDD, debugging, collaboration patterns, and proven techniques"
+              zh: "核心技能库：TDD、调试、协作模式与成熟实践"
+            version: "4.1.1"
             author:
               name: "Jesse Vincent"
               email: "jesse@fsck.com"
-            source: "./"
+            source: "https://github.com/obra/superpowers.git"
             tags: ["tdd", "workflow", "debugging"]
+            featured: true
+          - name: "superpowers-chrome"
+            install_command: "/plugin install superpowers-chrome@superpowers-marketplace"
+            description:
+              en: "BETA: VERY LIGHTLY TESTED - Direct Chrome DevTools Protocol access via 'browsing' skill. Skill mode (17 CLI commands) + MCP mode (single use_browser tool). Zero dependencies, auto-starts Chrome."
+              zh: "BETA：轻度测试 - 通过“browsing”技能直连 Chrome DevTools Protocol。支持技能模式（17 个 CLI 命令）与 MCP 模式（单个 use_browser 工具），零依赖并自动启动 Chrome。"
+            version: "1.6.3"
+            author:
+              name: "Jesse Vincent"
+              email: "jesse@fsck.com"
+            source: "https://github.com/obra/superpowers-chrome.git"
+            tags: ["browser", "cdp", "automation"]
+            featured: true
+          - name: "elements-of-style"
+            install_command: "/plugin install elements-of-style@superpowers-marketplace"
+            description:
+              en: "Writing guidance based on William Strunk Jr.'s The Elements of Style (1918) - foundational rules for clear, concise, grammatically correct writing"
+              zh: "基于 William Strunk Jr.《The Elements of Style》(1918) 的写作指南，强调清晰、简洁且语法正确的基础规则。"
+            version: "1.0.0"
+            author:
+              name: "Jesse Vincent"
+              email: "jesse@fsck.com"
+            source: "https://github.com/obra/the-elements-of-style.git"
+            tags: ["writing", "style", "guidance"]
+            featured: true
+          - name: "episodic-memory"
+            install_command: "/plugin install episodic-memory@superpowers-marketplace"
+            description:
+              en: "Semantic search for Claude Code conversations. Remember past discussions, decisions, and patterns across sessions. Gives you memory that persists between sessions."
+              zh: "对 Claude Code 对话进行语义搜索，记住跨会话的讨论、决策与模式，提供持久记忆。"
+            version: "1.0.15"
+            author:
+              name: "Jesse Vincent"
+              email: "jesse@fsck.com"
+            source: "https://github.com/obra/episodic-memory.git"
+            tags: ["memory", "search", "productivity"]
+            featured: true
+          - name: "superpowers-lab"
+            install_command: "/plugin install superpowers-lab@superpowers-marketplace"
+            description:
+              en: "Experimental skills for Superpowers: Control interactive CLI tools (vim, menuconfig, REPLs, git rebase -i) through tmux automation"
+              zh: "Superpowers 实验技能：通过 tmux 自动化控制交互式 CLI 工具（vim、menuconfig、REPL、git rebase -i）。"
+            version: "0.1.0"
+            author:
+              name: "Jesse Vincent"
+              email: "jesse@fsck.com"
+            source: "https://github.com/obra/superpowers-lab.git"
+            tags: ["tmux", "cli", "automation"]
+            featured: true
+          - name: "superpowers-developing-for-claude-code"
+            install_command: "/plugin install superpowers-developing-for-claude-code@superpowers-marketplace"
+            description:
+              en: "Skills and resources for developing Claude Code plugins, skills, MCP servers, and extensions. Includes comprehensive official documentation and self-update mechanism."
+              zh: "面向 Claude Code 插件、技能、MCP 服务器与扩展开发的技能与资源，包含完整官方文档与自更新机制。"
+            version: "0.3.1"
+            author:
+              name: "Jesse Vincent"
+              email: "jesse@fsck.com"
+            source: "https://github.com/obra/superpowers-developing-for-claude-code.git"
+            tags: ["development", "documentation", "mcp"]
+            featured: true
+          - name: "double-shot-latte"
+            install_command: "/plugin install double-shot-latte@superpowers-marketplace"
+            description:
+              en: "Stop 'Would you like me to continue?' interruptions. Automatically evaluates whether Claude should continue working using Claude-judged decision making."
+              zh: "停止“是否继续？”式打断，通过 Claude 判定自动决定是否继续工作。"
+            version: "1.1.5"
+            author:
+              name: "Jesse Vincent"
+              email: "jesse@fsck.com"
+            source: "https://github.com/obra/double-shot-latte.git"
+            tags: ["workflow", "automation", "productivity"]
             featured: true
 
   - id: "community"
@@ -343,47 +415,375 @@ marketplace:
         repository_url: "https://github.com/cloudflare/skills"
         marketplace_add_command: "/plugin marketplace add cloudflare/skills"
         description:
-          en: "Agent skills for building on Cloudflare, Workers, the Agents SDK, and the Cloudflare Developer Platform"
-          zh: "面向 Cloudflare、Workers、Agents SDK 与开发者平台的技能合集"
+          en: "Skills for the Cloudflare developer platform"
+          zh: "面向 Cloudflare 开发者平台的技能"
         owner:
           name: "Cloudflare"
+          url: "https://workers.cloudflare.com"
         tags: ["cloudflare", "workers", "agents-sdk", "developer-platform"]
         featured: true
-        plugins: []
+        plugins:
+          - name: "cloudflare"
+            install_command: "/plugin install cloudflare@cloudflare/skills"
+            description:
+              en: "Skills for the Cloudflare developer platform"
+              zh: "面向 Cloudflare 开发者平台的技能"
+            author:
+              name: "Cloudflare"
+            source: "./"
+            tags: ["cloudflare", "developer-platform"]
+            featured: true
       - marketplace_name: "huggingface/skills"
         marketplace_repo: "huggingface/skills"
         repository_url: "https://github.com/huggingface/skills"
         marketplace_add_command: "/plugin marketplace add huggingface/skills"
         description:
-          en: "Skills for AI/ML tasks like dataset creation, model training, and evaluation"
-          zh: "面向数据集创建、模型训练与评测等 AI/ML 任务的技能合集"
+          en: "Agent Skills for AI/ML tasks including dataset creation, model training, evaluation, and research paper publishing on Hugging Face Hub"
+          zh: "面向 Hugging Face Hub 的 AI/ML 任务技能合集，涵盖数据集创建、模型训练、评测与论文发布"
         owner:
           name: "Hugging Face"
         tags: ["huggingface", "machine-learning", "datasets", "training", "evaluation"]
         featured: true
         plugins:
+          - name: "hugging-face-model-trainer"
+            install_command: "/plugin install hugging-face-model-trainer@huggingface/skills"
+            description:
+              en: "Train or fine-tune language models using TRL on Hugging Face Jobs infrastructure. Covers SFT, DPO, GRPO and reward modeling training methods, plus GGUF conversion for local deployment. Includes hardware selection, cost estimation, Trackio monitoring, and Hub persistence."
+              zh: "在 Hugging Face Jobs 上使用 TRL 训练或微调语言模型，涵盖 SFT、DPO、GRPO 与奖励模型训练，并包含 GGUF 本地部署转换、硬件选择、成本估算、Trackio 监控与 Hub 持久化。"
+            author:
+              name: "Hugging Face"
+            source: "./skills/hugging-face-model-trainer"
+            tags: ["huggingface", "training", "trl", "jobs"]
+            featured: true
+          - name: "hugging-face-paper-publisher"
+            install_command: "/plugin install hugging-face-paper-publisher@huggingface/skills"
+            description:
+              en: "Publish and manage research papers on Hugging Face Hub. Supports creating paper pages, linking papers to models/datasets, claiming authorship, and generating professional markdown-based research articles."
+              zh: "在 Hugging Face Hub 发布与管理研究论文，支持创建论文页面、关联模型/数据集、认领作者身份，并生成专业的 Markdown 研究文章。"
+            author:
+              name: "Hugging Face"
+            source: "./skills/hugging-face-paper-publisher"
+            tags: ["huggingface", "papers", "publishing"]
+            featured: true
+          - name: "hugging-face-datasets"
+            install_command: "/plugin install hugging-face-datasets@huggingface/skills"
+            description:
+              en: "Create and manage datasets on Hugging Face Hub. Supports initializing repos, defining configs/system prompts, streaming row updates, and SQL-based dataset querying/transformation."
+              zh: "在 Hugging Face Hub 创建与管理数据集，支持初始化仓库、定义配置/系统提示词、流式更新行数据，以及基于 SQL 的查询与转换。"
+            author:
+              name: "Hugging Face"
+            source: "./skills/hugging-face-datasets"
+            tags: ["huggingface", "datasets", "sql"]
+            featured: true
+          - name: "hugging-face-evaluation"
+            install_command: "/plugin install hugging-face-evaluation@huggingface/skills"
+            description:
+              en: "Add and manage evaluation results in Hugging Face model cards. Supports extracting eval tables from README content, importing scores from Artificial Analysis API, and running custom evaluations with vLLM/lighteval."
+              zh: "在 Hugging Face 模型卡中添加与管理评测结果，支持从 README 提取评测表格、从 Artificial Analysis API 导入分数，以及使用 vLLM/lighteval 进行自定义评测。"
+            author:
+              name: "Hugging Face"
+            source: "./skills/hugging-face-evaluation"
+            tags: ["huggingface", "evaluation", "model-cards"]
+            featured: true
+          - name: "hugging-face-tool-builder"
+            install_command: "/plugin install hugging-face-tool-builder@huggingface/skills"
+            description:
+              en: "Build reusable scripts for Hugging Face API operations. Useful for chaining API calls or automating repeated tasks."
+              zh: "构建可复用的 Hugging Face API 操作脚本，适合串联 API 调用或自动化重复任务。"
+            author:
+              name: "Hugging Face"
+            source: "./skills/hugging-face-tool-builder"
+            tags: ["huggingface", "api", "automation"]
+            featured: true
           - name: "hugging-face-cli"
             install_command: "/plugin install hugging-face-cli@huggingface/skills"
             description:
-              en: "Execute Hugging Face Hub operations using the hf CLI"
-              zh: "使用 hf CLI 执行 Hugging Face Hub 操作"
+              en: "Execute Hugging Face Hub operations using the hf CLI. Download models/datasets, upload files, manage repos, and run cloud compute jobs."
+              zh: "使用 hf CLI 执行 Hugging Face Hub 操作，支持下载模型/数据集、上传文件、管理仓库与运行云端计算任务。"
             author:
               name: "Hugging Face"
-            source: "./"
+            source: "./skills/hugging-face-cli"
             tags: ["huggingface", "cli", "hub"]
+            featured: true
+          - name: "hugging-face-jobs"
+            install_command: "/plugin install hugging-face-jobs@huggingface/skills"
+            description:
+              en: "Run compute jobs on Hugging Face infrastructure. Execute Python scripts, manage scheduled jobs, and monitor job status."
+              zh: "在 Hugging Face 基础设施上运行计算任务，支持执行 Python 脚本、管理定时任务与监控任务状态。"
+            author:
+              name: "Hugging Face"
+            source: "./skills/hugging-face-jobs"
+            tags: ["huggingface", "jobs", "compute"]
+            featured: true
+          - name: "hugging-face-trackio"
+            install_command: "/plugin install hugging-face-trackio@huggingface/skills"
+            description:
+              en: "Track and visualize ML training experiments with Trackio. Log metrics via Python API and retrieve them via CLI. Supports real-time dashboards synced to HF Spaces."
+              zh: "使用 Trackio 跟踪与可视化训练实验，支持 Python API 记录指标与 CLI 获取数据，并可同步到 HF Spaces 的实时仪表盘。"
+            author:
+              name: "Hugging Face"
+            source: "./skills/hugging-face-trackio"
+            tags: ["huggingface", "trackio", "experiments"]
             featured: true
       - marketplace_name: "trailofbits/skills"
         marketplace_repo: "trailofbits/skills"
         repository_url: "https://github.com/trailofbits/skills"
         marketplace_add_command: "/plugin marketplace add trailofbits/skills"
         description:
-          en: "Security analysis, testing, and development workflow skills from Trail of Bits"
-          zh: "来自 Trail of Bits 的安全分析、测试与开发流程技能"
+          en: "Claude Code plugins from Trail of Bits for enhanced AI-assisted security analysis and development"
+          zh: "Trail of Bits 提供的 Claude Code 插件，用于增强 AI 辅助安全分析与开发"
         owner:
           name: "Trail of Bits"
+          email: "opensource@trailofbits.com"
         tags: ["security", "audit", "vulnerability", "smart-contracts", "semgrep"]
         featured: true
-        plugins: []
+        plugins:
+          - name: "ask-questions-if-underspecified"
+            install_command: "/plugin install ask-questions-if-underspecified@trailofbits/skills"
+            description:
+              en: "Clarify requirements before implementing. When doubting, ask questions."
+              zh: "在实现前澄清需求；有疑问就先提问。"
+            version: "1.0.0"
+            author:
+              name: "Kevin Valerio"
+              email: "opensource@trailofbits.com"
+              url: "https://github.com/trailofbits"
+            source: "./plugins/ask-questions-if-underspecified"
+            tags: ["requirements", "clarification", "workflow"]
+            featured: true
+          - name: "audit-context-building"
+            install_command: "/plugin install audit-context-building@trailofbits/skills"
+            description:
+              en: "Build deep architectural context through ultra-granular code analysis before vulnerability hunting"
+              zh: "在漏洞挖掘前，通过超细粒度代码分析建立深度架构上下文"
+            version: "1.0.0"
+            author:
+              name: "Omar Inuwa"
+            source: "./plugins/audit-context-building"
+            tags: ["audit", "context", "analysis"]
+            featured: true
+          - name: "building-secure-contracts"
+            install_command: "/plugin install building-secure-contracts@trailofbits/skills"
+            description:
+              en: "Comprehensive smart contract security toolkit based on Trail of Bits' Building Secure Contracts framework. Includes vulnerability scanners for 6 blockchains and 5 development guideline assistants."
+              zh: "基于 Trail of Bits Building Secure Contracts 框架的智能合约安全工具包，包含 6 条链的漏洞扫描与 5 类开发指南助手。"
+            version: "1.0.0"
+            author:
+              name: "Omar Inuwa"
+            source: "./plugins/building-secure-contracts"
+            tags: ["smart-contracts", "security", "toolkit"]
+            featured: true
+          - name: "burpsuite-project-parser"
+            install_command: "/plugin install burpsuite-project-parser@trailofbits/skills"
+            description:
+              en: "Search and extract data from Burp Suite project files (.burp) for use in Claude"
+              zh: "从 Burp Suite 项目文件（.burp）中检索与提取数据供 Claude 使用"
+            version: "1.0.0"
+            author:
+              name: "Will Vandevanter"
+            source: "./plugins/burpsuite-project-parser"
+            tags: ["burpsuite", "parser", "security"]
+            featured: true
+          - name: "constant-time-analysis"
+            install_command: "/plugin install constant-time-analysis@trailofbits/skills"
+            description:
+              en: "Detect compiler-induced timing side-channels in cryptographic code"
+              zh: "检测加密代码中由编译器引入的时间侧信道"
+            version: "0.1.0"
+            author:
+              name: "Scott Arciszewski"
+              email: "opensource@trailofbits.com"
+            source: "./plugins/constant-time-analysis"
+            tags: ["crypto", "side-channel", "analysis"]
+            featured: true
+          - name: "culture-index"
+            install_command: "/plugin install culture-index@trailofbits/skills"
+            description:
+              en: "Interprets Culture Index survey results for individuals and teams"
+              zh: "解读个人与团队的 Culture Index 调研结果"
+            version: "1.0.0"
+            author:
+              name: "Dan Guido"
+            source: "./plugins/culture-index"
+            tags: ["culture", "survey", "analysis"]
+            featured: true
+          - name: "differential-review"
+            install_command: "/plugin install differential-review@trailofbits/skills"
+            description:
+              en: "Security-focused differential review of code changes with git history analysis and blast radius estimation"
+              zh: "结合 Git 历史分析与影响面评估的安全差异评审"
+            version: "1.0.0"
+            author:
+              name: "Omar Inuwa"
+            source: "./plugins/differential-review"
+            tags: ["code-review", "security", "git"]
+            featured: true
+          - name: "firebase-apk-scanner"
+            install_command: "/plugin install firebase-apk-scanner@trailofbits/skills"
+            description:
+              en: "Scan Android APKs for Firebase security misconfigurations including open databases, storage buckets, authentication issues, and exposed cloud functions. For authorized security research only."
+              zh: "扫描 Android APK 的 Firebase 安全错误配置（开放数据库、存储桶、认证问题与暴露的云函数），仅限授权安全研究使用。"
+            version: "2.1.0"
+            author:
+              name: "Nick Sellier"
+            source: "./plugins/firebase-apk-scanner"
+            tags: ["android", "firebase", "scanner"]
+            featured: true
+          - name: "fix-review"
+            install_command: "/plugin install fix-review@trailofbits/skills"
+            description:
+              en: "Verify fix commits address audit findings without introducing bugs"
+              zh: "验证修复提交是否解决审计问题且不引入新 bug"
+            version: "0.1.0"
+            author:
+              name: "Trail of Bits"
+              email: "opensource@trailofbits.com"
+            source: "./plugins/fix-review"
+            tags: ["audit", "fixes", "review"]
+            featured: true
+          - name: "dwarf-expert"
+            install_command: "/plugin install dwarf-expert@trailofbits/skills"
+            description:
+              en: "Interact with and understand the DWARF debugging format"
+              zh: "交互式理解与使用 DWARF 调试格式"
+            version: "1.0.0"
+            author:
+              name: "Evan Hellman"
+              email: "opensource@trailofbits.com"
+            source: "./plugins/dwarf-expert"
+            tags: ["debugging", "dwarf", "analysis"]
+            featured: true
+          - name: "entry-point-analyzer"
+            install_command: "/plugin install entry-point-analyzer@trailofbits/skills"
+            description:
+              en: "Analyzes smart contract codebases to identify state-changing entry points for security auditing. Detects externally callable functions that modify state, categorizes them by access level, and generates structured audit reports."
+              zh: "分析智能合约代码库以识别更改状态的入口点，检测可外部调用的状态修改函数，按访问级别分类并生成结构化审计报告。"
+            version: "1.0.0"
+            author:
+              name: "Nicolas Donboly"
+              email: "opensource@trailofbits.com"
+              url: "https://github.com/trailofbits"
+            source: "./plugins/entry-point-analyzer"
+            tags: ["smart-contracts", "audit", "analysis"]
+            featured: true
+          - name: "property-based-testing"
+            install_command: "/plugin install property-based-testing@trailofbits/skills"
+            description:
+              en: "Property-based testing guidance for multiple languages and smart contracts"
+              zh: "面向多语言与智能合约的性质驱动测试指南"
+            version: "1.0.0"
+            author:
+              name: "Henrik Brodin"
+              email: "opensource@trailofbits.com"
+            source: "./plugins/property-based-testing"
+            tags: ["testing", "property-based", "smart-contracts"]
+            featured: true
+          - name: "semgrep-rule-creator"
+            install_command: "/plugin install semgrep-rule-creator@trailofbits/skills"
+            description:
+              en: "Create custom Semgrep rules for detecting bug patterns and security vulnerabilities"
+              zh: "创建用于检测 bug 模式与安全漏洞的自定义 Semgrep 规则"
+            version: "1.0.0"
+            author:
+              name: "Maciej Domanski"
+            source: "./plugins/semgrep-rule-creator"
+            tags: ["semgrep", "rules", "security"]
+            featured: true
+          - name: "semgrep-rule-variant-creator"
+            install_command: "/plugin install semgrep-rule-variant-creator@trailofbits/skills"
+            description:
+              en: "Creates language variants of existing Semgrep rules with proper applicability analysis and test-driven validation"
+              zh: "基于适用性分析与测试驱动验证，为既有 Semgrep 规则生成语言变体"
+            version: "1.0.0"
+            author:
+              name: "Maciej Domanski"
+              email: "opensource@trailofbits.com"
+            source: "./plugins/semgrep-rule-variant-creator"
+            tags: ["semgrep", "rules", "analysis"]
+            featured: true
+          - name: "sharp-edges"
+            install_command: "/plugin install sharp-edges@trailofbits/skills"
+            description:
+              en: "Identify error-prone APIs, dangerous configurations, and footgun designs that enable security mistakes"
+              zh: "识别易错 API、危险配置与“脚枪式”设计导致的安全错误"
+            version: "1.0.0"
+            author:
+              name: "Scott Arciszewski"
+              email: "opensource@trailofbits.com"
+              url: "https://github.com/trailofbits"
+            source: "./plugins/sharp-edges"
+            tags: ["security", "api", "configuration"]
+            featured: true
+          - name: "static-analysis"
+            install_command: "/plugin install static-analysis@trailofbits/skills"
+            description:
+              en: "Static analysis toolkit with CodeQL, Semgrep, and SARIF parsing for security vulnerability detection"
+              zh: "包含 CodeQL、Semgrep 与 SARIF 解析的静态分析工具包，用于安全漏洞检测"
+            version: "1.0.1"
+            author:
+              name: "Axel Mierczuk"
+            source: "./plugins/static-analysis"
+            tags: ["static-analysis", "codeql", "sarif"]
+            featured: true
+          - name: "spec-to-code-compliance"
+            install_command: "/plugin install spec-to-code-compliance@trailofbits/skills"
+            description:
+              en: "Specification-to-code compliance checker for blockchain audits with evidence-based alignment analysis"
+              zh: "用于区块链审计的规范-代码一致性检查器，提供基于证据的对齐分析"
+            version: "1.0.0"
+            author:
+              name: "Omar Inuwa"
+            source: "./plugins/spec-to-code-compliance"
+            tags: ["blockchain", "compliance", "audit"]
+            featured: true
+          - name: "testing-handbook-skills"
+            install_command: "/plugin install testing-handbook-skills@trailofbits/skills"
+            description:
+              en: "Skills from the Trail of Bits Application Security Testing Handbook (appsec.guide)"
+              zh: "来自 Trail of Bits《应用安全测试手册》（appsec.guide）的技能"
+            version: "1.0.0"
+            author:
+              name: "Paweł Płatek"
+            source: "./plugins/testing-handbook-skills"
+            tags: ["appsec", "testing", "handbook"]
+            featured: true
+          - name: "variant-analysis"
+            install_command: "/plugin install variant-analysis@trailofbits/skills"
+            description:
+              en: "Find similar vulnerabilities and bugs across codebases using pattern-based analysis"
+              zh: "通过模式分析在代码库间查找相似漏洞与 bug"
+            version: "1.0.0"
+            author:
+              name: "Axel Mierczuk"
+            source: "./plugins/variant-analysis"
+            tags: ["analysis", "vulnerabilities", "bugs"]
+            featured: true
+          - name: "modern-python"
+            install_command: "/plugin install modern-python@trailofbits/skills"
+            description:
+              en: "Modern Python best practices. Use when creating new Python projects, and writing Python scripts, or migrating existing projects from legacy tools."
+              zh: "现代 Python 最佳实践，用于新项目、脚本编写或从旧工具迁移。"
+            version: "1.2.0"
+            author:
+              name: "William Tan"
+              email: "opensource@trailofbits.com"
+              url: "https://github.com/trailofbits"
+            source: "./plugins/modern-python"
+            tags: ["python", "best-practices", "migration"]
+            featured: true
+          - name: "insecure-defaults"
+            install_command: "/plugin install insecure-defaults@trailofbits/skills"
+            description:
+              en: "Detects and verifies insecure default configurations including hardcoded credentials, fallback secrets, weak authentication defaults, and dangerous configuration values that remain active in production"
+              zh: "检测并验证不安全默认配置，包括硬编码凭据、后备密钥、弱认证默认值，以及生产环境仍启用的危险配置。"
+            version: "1.0.0"
+            author:
+              name: "Trail of Bits"
+              email: "opensource@trailofbits.com"
+              url: "https://github.com/trailofbits"
+            source: "./plugins/insecure-defaults"
+            tags: ["security", "defaults", "configuration"]
+            featured: true
       - marketplace_name: "sentry-skills"
         marketplace_repo: "getsentry/skills"
         repository_url: "https://github.com/getsentry/skills"
