@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import type { Plugin, PluginUninstallResult } from "../types";
 
 export function usePlugins() {
   const { i18n } = useTranslation();
@@ -28,10 +29,20 @@ export function useClaudeMarketplaces() {
 export function useUninstallPlugin() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<PluginUninstallResult, Error, string>({
     mutationFn: (pluginId: string) => api.uninstallPlugin(pluginId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["plugins"] });
+    onSuccess: (result, pluginId) => {
+      if (result.success) {
+        queryClient.setQueriesData<Plugin[]>({ queryKey: ["plugins"] }, (prev) => {
+          if (!prev) return prev;
+          return prev.map((plugin) =>
+            plugin.id === pluginId
+              ? { ...plugin, installed: false, installed_at: undefined, install_status: "uninstalled" }
+              : plugin
+          );
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["plugins"], refetchType: "active" });
     },
   });
 }

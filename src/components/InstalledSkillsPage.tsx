@@ -528,6 +528,43 @@ export function InstalledSkillsPage() {
     return Array.from(skillMap.values());
   }, [installedSkills]);
 
+  const installedSkillsByName = useMemo(() => {
+    const map = new Map<string, Skill[]>();
+    if (!installedSkills) return map;
+    installedSkills.forEach((skill) => {
+      const key = skill.name;
+      const list = map.get(key);
+      if (list) {
+        list.push(skill);
+      } else {
+        map.set(key, [skill]);
+      }
+    });
+    return map;
+  }, [installedSkills]);
+
+  const installedSkillPathOwners = useMemo(() => {
+    const map = new Map<string, Map<string, string>>();
+    if (!installedSkills) return map;
+    installedSkills.forEach((skill) => {
+      const key = skill.name;
+      const pathMap = map.get(key) ?? new Map<string, string>();
+      const paths =
+        skill.local_paths && skill.local_paths.length > 0
+          ? skill.local_paths
+          : skill.local_path
+            ? [skill.local_path]
+            : [];
+      paths.forEach((path) => {
+        if (!pathMap.has(path)) {
+          pathMap.set(path, skill.id);
+        }
+      });
+      map.set(key, pathMap);
+    });
+    return map;
+  }, [installedSkills]);
+
   const { data: skillPluginUpgradeCandidates = [] } = useQuery<SkillPluginUpgradeCandidate[]>({
     queryKey: ["skillPluginUpgradeCandidates"],
     queryFn: () => api.getSkillPluginUpgradeCandidates(),
@@ -796,6 +833,11 @@ export function InstalledSkillsPage() {
 
   const renderSkillCard = (skill: Skill, index: number) => {
     const upgradeCandidate = skillPluginUpgradeByName.get(skill.name.toLowerCase());
+    const skillEntries = installedSkillsByName.get(skill.name);
+    const uninstallSkillIds =
+      skillEntries && skillEntries.length > 0 ? skillEntries.map((entry) => entry.id) : [skill.id];
+    const uniqueUninstallSkillIds = Array.from(new Set(uninstallSkillIds));
+    const pathOwners = installedSkillPathOwners.get(skill.name);
     return (
       <SkillCard
         key={`skill-${skill.id}`}
@@ -805,22 +847,30 @@ export function InstalledSkillsPage() {
         onShowPluginUpgrade={() => {
           if (upgradeCandidate) setPendingSkillPluginUpgrade(upgradeCandidate);
         }}
-        onUninstall={() => {
+        onUninstall={async () => {
           setInstalledOps((prev) => ({ ...prev, uninstallingSkillId: skill.id }));
-          uninstallMutation.mutate(skill.id, {
-            onSuccess: () => {
-              setInstalledOps((prev) => ({ ...prev, uninstallingSkillId: null }));
-              appToast.success(t("skills.toast.uninstalled"));
-            },
-            onError: (error: any) => {
-              setInstalledOps((prev) => ({ ...prev, uninstallingSkillId: null }));
-              appToast.error(`${t("skills.toast.uninstallFailed")}: ${error.message || error}`);
-            },
-          });
+          const errors: string[] = [];
+          try {
+            for (const skillId of uniqueUninstallSkillIds) {
+              try {
+                await uninstallMutation.mutateAsync(skillId);
+              } catch (error: any) {
+                errors.push(error?.message || String(error));
+              }
+            }
+          } finally {
+            setInstalledOps((prev) => ({ ...prev, uninstallingSkillId: null }));
+          }
+          if (errors.length === 0) {
+            appToast.success(t("skills.toast.uninstalled"));
+          } else {
+            appToast.error(`${t("skills.toast.uninstallFailed")}: ${errors[0]}`);
+          }
         }}
         onUninstallPath={(path: string) => {
+          const targetSkillId = pathOwners?.get(path) ?? skill.id;
           uninstallPathMutation.mutate(
-            { skillId: skill.id, path },
+            { skillId: targetSkillId, path },
             {
               onSuccess: () => appToast.success(t("skills.toast.uninstalled")),
               onError: (error: any) =>

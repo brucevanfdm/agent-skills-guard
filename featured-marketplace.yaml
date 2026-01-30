@@ -21,8 +21,8 @@ marketplace:
         repository_url: "https://github.com/anthropics/skills"
         marketplace_add_command: "/plugin marketplace add anthropics/skills"
         description:
-          en: "Official Anthropic skills marketplace for Claude Code"
-          zh: "Anthropic 官方 Claude Code 技能市场"
+          en: "Anthropic's official marketplace with essential skills: document processing suite (Excel, Word, PowerPoint, PDF) and example skills for creation workflows, MCP building, design, and testing"
+          zh: "Anthropic 官方市场，提供核心技能：文档处理套件（Excel、Word、PowerPoint、PDF）与示例技能，涵盖创建工作流、MCP 构建、设计与测试场景"
         owner:
           name: "Keith Lazuka"
           email: "klazuka@anthropic.com"
@@ -56,8 +56,8 @@ marketplace:
         repository_url: "https://github.com/obra/superpowers-marketplace"
         marketplace_add_command: "/plugin marketplace add obra/superpowers-marketplace"
         description:
-          en: "Skills, workflows, and productivity tools"
-          zh: "技能、工作流与效率工具"
+          en: "Jesse Vincent's productivity suite: TDD, debugging, collaboration patterns, Chrome automation, writing guidance, episodic memory, CLI automation, development resources, and workflow automation"
+          zh: "Jesse Vincent 的效率工具合集，包含 TDD、调试、协作模式、Chrome 自动化、写作指南、跨会话记忆、交互式 CLI 自动化、开发资源与工作流自动化工具"
         owner:
           name: "Jesse Vincent"
           email: "jesse@fsck.com"
@@ -162,8 +162,8 @@ marketplace:
         repository_url: "https://github.com/JimLiu/baoyu-skills"
         marketplace_add_command: "/plugin marketplace add JimLiu/baoyu-skills"
         description:
-          en: "Skills shared by Baoyu for improving daily work efficiency"
-          zh: "宝玉分享的提升日常工作效率的技能合集"
+          en: "Jim Liu (宝玉)'s productivity toolkit: content generation and publishing, AI-powered generation backends, and utility tools for content processing"
+          zh: "Jim Liu（宝玉）的效率工具包，包含内容生成与发布、AI 生成后端以及内容处理实用工具"
         owner:
           name: "Jim Liu (宝玉)"
           email: "junminliu@gmail.com"
@@ -208,8 +208,8 @@ marketplace:
         repository_url: "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill"
         marketplace_add_command: "/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill"
         description:
-          en: "UI/UX design intelligence skill with extensive style, palette, typography, and chart references"
-          zh: "提供丰富样式、配色、字体与图表参考的 UI/UX 设计智能技能"
+          en: "Professional UI/UX design intelligence by nextlevelbuilder with extensive references for styles, color palettes, typography, and charts across multiple frameworks"
+          zh: "nextlevelbuilder 提供的专业 UI/UX 设计智能，包含丰富的样式、配色方案、字体与图表参考，覆盖多框架技术栈"
         owner:
           name: "nextlevelbuilder"
         tags: ["ui-ux", "design", "frontend"]
@@ -231,8 +231,8 @@ marketplace:
         repository_url: "https://github.com/czlonkowski/n8n-skills"
         marketplace_add_command: "/plugin marketplace add czlonkowski/n8n-skills"
         description:
-          en: "Expert skills for building n8n workflows"
-          zh: "用于构建高质量 n8n 工作流的专家级技能"
+          en: "Romuald Członkowski's expert skills for building n8n workflows with MCP tooling integration"
+          zh: "Romuald Członkowski 提供的 n8n 工作流专家技能，集成 MCP 工具支持"
         owner:
           name: "Romuald Członkowski"
         tags: ["n8n", "workflow-automation", "mcp"]
@@ -254,8 +254,8 @@ marketplace:
         repository_url: "https://github.com/kepano/obsidian-skills"
         marketplace_add_command: "/plugin marketplace add kepano/obsidian-skills"
         description:
-          en: "Claude skills for working with Obsidian"
-          zh: "面向 Obsidian 使用场景的 Claude 技能"
+          en: "Steph Ango's Claude skills for Obsidian note-taking and knowledge management"
+          zh: "Steph Ango 提供的 Obsidian 笔记与知识管理 Claude 技能"
         owner:
           name: "Steph Ango"
         tags: ["obsidian", "markdown", "note-taking"]
@@ -277,8 +277,8 @@ marketplace:
         repository_url: "https://github.com/axtonliu/axton-obsidian-visual-skills"
         marketplace_add_command: "/plugin marketplace add axtonliu/axton-obsidian-visual-skills"
         description:
-          en: "Visual skills pack for Obsidian: generate Canvas, Excalidraw, and Mermaid from text"
-          zh: "Obsidian 可视化技能包：从文本生成 Canvas、Excalidraw 与 Mermaid"
+          en: "Axton Liu's Obsidian visualization pack: generate Canvas, Excalidraw, and Mermaid diagrams from text"
+          zh: "Axton Liu 的 Obsidian 可视化技能包，支持从文本生成 Canvas、Excalidraw 与 Mermaid 图表"
         owner:
           name: "Axton Liu"
           email: "hey@axtonliu.com"
@@ -301,8 +301,8 @@ marketplace:
         repository_url: "https://github.com/coreyhaines31/marketingskills"
         marketplace_add_command: "/plugin marketplace add coreyhaines31/marketingskills"
         description:
-          en: "Marketing skills for Claude Code and AI agents covering CRO, copywriting, SEO, analytics, and growth engineering"
-          zh: "面向 Claude Code 与 AI 代理的营销技能合集，涵盖 CRO、文案写作、SEO、数据分析与增长工程"
+          en: "Corey Haines' marketing skills for Claude Code and AI agents: CRO, copywriting, SEO, analytics, and growth engineering"
+          zh: "Corey Haines 提供的营销技能合集，面向 Claude Code 与 AI 代理，涵盖 CRO、文案写作、SEO、数据分析与增长工程"
         owner:
           name: "Corey Haines"
         tags: ["marketing", "claude-code", "cro", "seo", "copywriting", "analytics", "growth"]
@@ -323,8 +323,8 @@ marketplace:
         repository_url: "https://github.com/supabase/agent-skills"
         marketplace_add_command: "/plugin marketplace add supabase/agent-skills"
         description:
-          en: "Agent Skills to help developers using AI agents with Supabase"
-          zh: "帮助使用 AI 代理的开发者在 Supabase 上更高效工作的技能合集"
+          en: "Official Supabase skills for AI-assisted development: Postgres performance optimization and best practices"
+          zh: "Supabase 官方技能，用于 AI 辅助开发，包含 Postgres 性能优化与最佳实践指南"
         owner:
           name: "Supabase"
         tags: ["supabase", "postgres", "database", "best-practices", "performance"]
@@ -345,8 +345,8 @@ marketplace:
         repository_url: "https://github.com/ZhangHanDong/makepad-skills"
         marketplace_add_command: "/plugin marketplace add ZhangHanDong/makepad-skills"
         description:
-          en: "Agent skills for building cross-platform UI applications with the Makepad framework in Rust"
-          zh: "面向 Rust 的 Makepad 跨平台 UI 应用构建技能合集"
+          en: "ZhangHanDong's Makepad UI framework assistant for Rust: cross-platform app development with auto-routing, widgets, shaders, animations, and production-ready patterns"
+          zh: "ZhangHanDong 的 Makepad UI 框架助手，用于 Rust 跨平台应用开发，包含自动路由、组件模式、着色器、动画与生产级实践模式"
         owner:
           name: "ZhangHanDong"
         tags: ["makepad", "rust", "ui"]
@@ -368,8 +368,8 @@ marketplace:
         repository_url: "https://github.com/K-Dense-AI/claude-scientific-skills"
         marketplace_add_command: "/plugin marketplace add K-Dense-AI/claude-scientific-skills"
         description:
-          en: "Claude scientific skills from K-Dense Inc"
-          zh: "K-Dense 提供的 Claude 科学技能合集"
+          en: "K-Dense Inc.'s scientific research skills for biology, chemistry, medicine, and data analysis"
+          zh: "K-Dense Inc. 提供的科学研究技能，涵盖生物学、化学、医学与数据分析领域"
         owner:
           name: "K-Dense Inc."
           email: "contact@k-dense.ai"
@@ -392,8 +392,8 @@ marketplace:
         repository_url: "https://github.com/OthmanAdi/planning-with-files"
         marketplace_add_command: "/plugin marketplace add OthmanAdi/planning-with-files"
         description:
-          en: "Manus-style persistent markdown files for planning, progress tracking, and knowledge storage"
-          zh: "以 Manus 风格的持久化 Markdown 文件，用于规划、进度追踪与知识沉淀"
+          en: "Ahmad Othman Ammar Adi's Manus-style persistent markdown files for planning, progress tracking, and knowledge storage with hooks integration"
+          zh: "Ahmad Othman Ammar Adi 提供的 Manus 风格持久化 Markdown 文件，用于规划、进度追踪与知识沉淀，支持 hooks 集成"
         owner:
           name: "Ahmad Othman Ammar Adi"
         tags: ["planning", "workflow", "markdown", "context-engineering", "task-management", "templates"]
@@ -415,8 +415,8 @@ marketplace:
         repository_url: "https://github.com/cloudflare/skills"
         marketplace_add_command: "/plugin marketplace add cloudflare/skills"
         description:
-          en: "Skills for the Cloudflare developer platform"
-          zh: "面向 Cloudflare 开发者平台的技能"
+          en: "Official Cloudflare skills for the Workers developer platform and Agents SDK"
+          zh: "Cloudflare 官方技能，面向 Workers 开发者平台与 Agents SDK"
         owner:
           name: "Cloudflare"
           url: "https://workers.cloudflare.com"
@@ -438,8 +438,8 @@ marketplace:
         repository_url: "https://github.com/huggingface/skills"
         marketplace_add_command: "/plugin marketplace add huggingface/skills"
         description:
-          en: "Agent Skills for AI/ML tasks including dataset creation, model training, evaluation, and research paper publishing on Hugging Face Hub"
-          zh: "面向 Hugging Face Hub 的 AI/ML 任务技能合集，涵盖数据集创建、模型训练、评测与论文发布"
+          en: "Official Hugging Face skills for AI/ML workflows: dataset management, model training (TRL/SFT/DPO/GRPO), evaluation, paper publishing, CLI operations, compute jobs, and experiment tracking with Trackio"
+          zh: "Hugging Face 官方技能，用于 AI/ML 工作流：数据集管理、模型训练（TRL/SFT/DPO/GRPO）、评测、论文发布、CLI 操作、计算任务与 Trackio 实验跟踪"
         owner:
           name: "Hugging Face"
         tags: ["huggingface", "machine-learning", "datasets", "training", "evaluation"]
@@ -530,8 +530,8 @@ marketplace:
         repository_url: "https://github.com/trailofbits/skills"
         marketplace_add_command: "/plugin marketplace add trailofbits/skills"
         description:
-          en: "Claude Code plugins from Trail of Bits for enhanced AI-assisted security analysis and development"
-          zh: "Trail of Bits 提供的 Claude Code 插件，用于增强 AI 辅助安全分析与开发"
+          en: "Trail of Bits' comprehensive security toolkit: smart contract auditing, vulnerability scanning, static analysis (CodeQL/Semgrep), property-based testing, security review patterns, crypto analysis, and penetration testing tools"
+          zh: "Trail of Bits 的综合安全工具包，包含智能合约审计、漏洞扫描、静态分析（CodeQL/Semgrep）、性质驱动测试、安全评审模式、加密分析与渗透测试工具"
         owner:
           name: "Trail of Bits"
           email: "opensource@trailofbits.com"
@@ -789,8 +789,8 @@ marketplace:
         repository_url: "https://github.com/getsentry/skills"
         marketplace_add_command: "claude plugin marketplace add getsentry/skills"
         description:
-          en: "Agent skills used by the Sentry team for development"
-          zh: "Sentry 团队用于开发的技能合集"
+          en: "Official Sentry team's skills for development workflows, code review, and engineering practices"
+          zh: "Sentry 官方团队的开发工作流、代码评审与工程实践技能"
         owner:
           name: "Sentry"
         tags: ["sentry", "code-review", "workflow", "development"]
