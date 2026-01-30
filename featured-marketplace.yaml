@@ -5,7 +5,7 @@
 # 本文件包含为 Agent Skills Guard 用户推荐的精选 Marketplace 与插件。
 
 version: "1.0"
-last_updated: "2026-01-29"
+last_updated: "2026-01-30"
 
 marketplace:
   - id: "official"
@@ -338,10 +338,78 @@ marketplace:
             source: "./"
             tags: ["planning", "workflow", "markdown", "context-engineering"]
             featured: true
+      - marketplace_name: "cloudflare/skills"
+        marketplace_repo: "cloudflare/skills"
+        repository_url: "https://github.com/cloudflare/skills"
+        marketplace_add_command: "/plugin marketplace add cloudflare/skills"
+        description:
+          en: "Agent skills for building on Cloudflare, Workers, the Agents SDK, and the Cloudflare Developer Platform"
+          zh: "面向 Cloudflare、Workers、Agents SDK 与开发者平台的技能合集"
+        owner:
+          name: "Cloudflare"
+        tags: ["cloudflare", "workers", "agents-sdk", "developer-platform"]
+        featured: true
+        plugins: []
+      - marketplace_name: "huggingface/skills"
+        marketplace_repo: "huggingface/skills"
+        repository_url: "https://github.com/huggingface/skills"
+        marketplace_add_command: "/plugin marketplace add huggingface/skills"
+        description:
+          en: "Skills for AI/ML tasks like dataset creation, model training, and evaluation"
+          zh: "面向数据集创建、模型训练与评测等 AI/ML 任务的技能合集"
+        owner:
+          name: "Hugging Face"
+        tags: ["huggingface", "machine-learning", "datasets", "training", "evaluation"]
+        featured: true
+        plugins:
+          - name: "hugging-face-cli"
+            install_command: "/plugin install hugging-face-cli@huggingface/skills"
+            description:
+              en: "Execute Hugging Face Hub operations using the hf CLI"
+              zh: "使用 hf CLI 执行 Hugging Face Hub 操作"
+            author:
+              name: "Hugging Face"
+            source: "./"
+            tags: ["huggingface", "cli", "hub"]
+            featured: true
+      - marketplace_name: "trailofbits/skills"
+        marketplace_repo: "trailofbits/skills"
+        repository_url: "https://github.com/trailofbits/skills"
+        marketplace_add_command: "/plugin marketplace add trailofbits/skills"
+        description:
+          en: "Security analysis, testing, and development workflow skills from Trail of Bits"
+          zh: "来自 Trail of Bits 的安全分析、测试与开发流程技能"
+        owner:
+          name: "Trail of Bits"
+        tags: ["security", "audit", "vulnerability", "smart-contracts", "semgrep"]
+        featured: true
+        plugins: []
+      - marketplace_name: "sentry-skills"
+        marketplace_repo: "getsentry/skills"
+        repository_url: "https://github.com/getsentry/skills"
+        marketplace_add_command: "claude plugin marketplace add getsentry/skills"
+        description:
+          en: "Agent skills used by the Sentry team for development"
+          zh: "Sentry 团队用于开发的技能合集"
+        owner:
+          name: "Sentry"
+        tags: ["sentry", "code-review", "workflow", "development"]
+        featured: true
+        plugins:
+          - name: "sentry-skills"
+            install_command: "claude plugin install sentry-skills@sentry-skills"
+            description:
+              en: "Sentry development skills bundle"
+              zh: "Sentry 开发流程技能合集"
+            author:
+              name: "Sentry"
+            source: "./.claude/plugins/sentry-skills"
+            tags: ["sentry", "engineering", "workflow"]
+            featured: true
 
 repositories:
   version: "1.0"
-  last_updated: "2026-01-09"
+  last_updated: "2026-01-30"
   categories:
     - id: "community"
       name:
@@ -385,4 +453,18 @@ repositories:
             en: "Chinese version of Humanizer - a Claude Code skill that removes AI-generated traces from text, making it sound more natural and human-written. Detects and fixes 24 AI writing patterns across content, language, style, and communication categories."
             zh: "来自歸藏的 Humanizer 中文版 - 用于去除文本中 AI 生成的痕迹，使文本更自然、更像人类书写。可检测并修复 24 种 AI 写作模式，涵盖内容、语言、风格和交流四大类别。"
           tags: ["writing", "text-processing", "humanizer"]
+          featured: true
+        - url: "https://github.com/zarazhangrui/frontend-slides"
+          name: "zarazhangrui"
+          description:
+            en: "Claude Code skill for creating animation-rich HTML presentations from scratch or by converting PowerPoint files."
+            zh: "用于从零创建或将 PowerPoint 转换为网页演示文稿的 Claude Code 技能，生成动画丰富的 HTML 幻灯片。"
+          tags: ["slides", "presentation", "design"]
+          featured: true
+        - url: "https://github.com/Shpigford/skills"
+          name: "Shpigford"
+          description:
+            en: "Agent Skills collection for common tasks, compatible with Claude Code and other Agent Skills Standard tools."
+            zh: "面向常见任务的 Agent Skills 合集，兼容 Claude Code 等符合 Agent Skills Standard 的工具。"
+          tags: ["agent-skills", "productivity", "automation"]
           featured: true
