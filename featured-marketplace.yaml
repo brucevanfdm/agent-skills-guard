@@ -539,7 +539,7 @@ marketplace:
         featured: true
         plugins:
           - name: "ask-questions-if-underspecified"
-            install_command: "/plugin install ask-questions-if-underspecified@trailofbit"
+            install_command: "/plugin install ask-questions-if-underspecified@trailofbits"
             description:
               en: "Clarify requirements before implementing. When doubting, ask questions."
               zh: "在实现前澄清需求；有疑问就先提问。"
