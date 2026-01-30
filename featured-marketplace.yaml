@@ -525,7 +525,7 @@ marketplace:
             source: "./skills/hugging-face-trackio"
             tags: ["huggingface", "trackio", "experiments"]
             featured: true
-      - marketplace_name: "trailofbits/skills"
+      - marketplace_name: "trailofbits"
         marketplace_repo: "trailofbits/skills"
         repository_url: "https://github.com/trailofbits/skills"
         marketplace_add_command: "/plugin marketplace add trailofbits/skills"
