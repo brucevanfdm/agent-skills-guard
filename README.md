@@ -376,6 +376,12 @@ pnpm build
 
 ---
 
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=brucevanfdm/agent-skills-guard&type=Date)](https://star-history.com/#brucevanfdm/agent-skills-guard&Date)
+
+---
+
 ## 📜 许可证
 
 MIT License - 自由使用，自由分享
@@ -384,7 +390,7 @@ MIT License - 自由使用，自由分享
 
 <div align="center">
 
-Made with ❤️ by [Bruce](https://github.com/brucevanfdm)
+Made by [Bruce](https://github.com/brucevanfdm)
 
 如果这个项目对你有帮助，请给个 ⭐️ Star 支持一下！
 
