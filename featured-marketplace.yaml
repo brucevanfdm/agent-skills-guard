@@ -806,6 +806,29 @@ marketplace:
             source: "./.claude/plugins/sentry-skills"
             tags: ["sentry", "engineering", "workflow"]
             featured: true
+      - marketplace_name: "rust-skills-marketplace"
+        marketplace_repo: "ZhangHanDong/rust-skills"
+        repository_url: "https://github.com/ZhangHanDong/rust-skills"
+        marketplace_add_command: "/plugin marketplace add ZhangHanDong/rust-skills"
+        description:
+          en: "ZhangHanDong's Rust development assistant with meta-cognition framework: 38 skills covering ownership, concurrency, error handling, unsafe code, LSP code intelligence, and domain-specific patterns for FinTech, ML, Cloud-Native, IoT, Web, CLI, and Embedded systems"
+          zh: "ZhangHanDong 的 Rust 开发助手，采用元认知框架：38 个技能涵盖所有权、并发、错误处理、unsafe 代码、LSP 代码智能以及 FinTech、ML、Cloud-Native、IoT、Web、CLI 与嵌入式系统的领域特定模式"
+        owner:
+          name: "ZhangHanDong"
+        tags: ["rust", "development", "meta-cognition", "ownership", "concurrency"]
+        featured: true
+        plugins:
+          - name: "rust-skills"
+            install_command: "/plugin install rust-skills@rust-skills"
+            description:
+              en: "38 skills covering ownership, concurrency, error handling, unsafe code, LSP code intelligence, and domain-specific patterns for Rust development across FinTech, ML, Cloud-Native, IoT, Web, CLI, and Embedded systems"
+              zh: "38 个技能，涵盖所有权、并发、错误处理、unsafe 代码、LSP 代码智能以及 Rust 开发的领域特定模式，覆盖 FinTech、ML、Cloud-Native、IoT、Web、CLI 与嵌入式系统"
+            version: "2.0.9"
+            author:
+              name: "ZhangHanDong"
+            source: "./"
+            tags: ["rust", "ownership", "concurrency", "error-handling", "unsafe"]
+            featured: true
 
 repositories:
   version: "1.0"

@@ -5,6 +5,18 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.11] - 2026-01-30
+
+### 🎨 最近更新
+
+- 在 skills 全生命周期可视化管理的基础上支持了plugin/marketplace；
+- 增强升级的 skills/plugin 安全扫描规则，覆盖 8 大风险类别，22 项硬触发保护，更少误判；
+- 更符合使用习惯的交互设计等更新细节。
+
+### 🔧 优化改进
+
+- 已知问题修复
+
 ## [0.9.10] - 2026-01-29
 
 ### 🎨 最近更新
