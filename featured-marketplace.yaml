@@ -5,7 +5,7 @@
 # 本文件包含为 Agent Skills Guard 用户推荐的精选 Marketplace 与插件。
 
 version: "1.0"
-last_updated: "2026-01-30"
+last_updated: "2026-02-02"
 
 marketplace:
   - id: "official"
@@ -828,6 +828,31 @@ marketplace:
               name: "ZhangHanDong"
             source: "./"
             tags: ["rust", "ownership", "concurrency", "error-handling", "unsafe"]
+            featured: true
+      - marketplace_name: "claude-mem"
+        marketplace_repo: "thedotmack/claude-mem"
+        repository_url: "https://github.com/thedotmack/claude-mem"
+        marketplace_add_command: "/plugin marketplace add thedotmack/claude-mem"
+        description:
+          en: "Alex Newman's persistent memory compression system for Claude Code: automatically captures tool usage observations, generates semantic summaries with AI, and intelligently injects relevant context into future sessions through progressive disclosure and skill-based search"
+          zh: "Alex Newman 的 Claude Code 持久记忆压缩系统：自动捕获工具使用观察，使用 AI 生成语义摘要，并通过渐进式披露与技能搜索智能地将相关上下文注入未来的会话"
+        owner:
+          name: "Alex Newman"
+          email: "alex@newman.au"
+        tags: ["memory", "context", "search", "productivity", "compression"]
+        featured: true
+        plugins:
+          - name: "claude-mem"
+            install_command: "/plugin install claude-mem"
+            description:
+              en: "Persistent memory system with automatic context capture, AI-powered semantic compression, progressive disclosure retrieval, web viewer UI at localhost:37777, MCP search tools, and privacy control with <private> tags"
+              zh: "持久记忆系统，具备自动上下文捕获、AI 驱动语义压缩、渐进式披露检索、localhost:37777 Web 查看器 UI、MCP 搜索工具以及 <private> 标签隐私控制"
+            version: "9.0.12"
+            author:
+              name: "Alex Newman"
+              email: "alex@newman.au"
+            source: "./plugin"
+            tags: ["memory", "context", "search", "compression", "productivity"]
             featured: true
 
 repositories:
