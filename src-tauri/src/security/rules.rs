@@ -204,7 +204,10 @@ lazy_static! {
         PatternRule::new(
             "CURL_PIPE_SH",
             "Curl管道执行",
-            r"curl\s+[^|]*?\|\s*(ba)?sh",
+            // 说明：为了降低误报（例如在 console.error/README 中仅打印安装指令），
+            // 这里把“硬阻止”的匹配收紧为“疑似实际执行场景”——要么是 shell 脚本里直接以 curl 开头，
+            // 要么同一行出现常见的进程执行 API（execSync/os.system/subprocess 等）再跟随 curl|sh。
+            r"(?i)(?:^\s*curl\s+[^|]*?\|\s*(?:ba)?sh\b|\b(?:execSync|exec|spawnSync|spawn|execFileSync|execFile|os\.system|subprocess\.|Runtime\.getRuntime\(\)\.exec|ProcessBuilder|exec\.Command|Command::new)\b[^\r\n]{0,200}?curl\s+[^|]*?\|\s*(?:ba)?sh\b)",
             Severity::Critical,
             Category::RemoteExec,
             90,
@@ -212,6 +215,19 @@ lazy_static! {
             true,
             Confidence::High,
             "避免直接执行远程脚本，应先下载后检查",
+            Some("CWE-78"),
+        ),
+        PatternRule::new(
+            "CURL_PIPE_SH_MENTION",
+            "Curl管道执行（疑似文本/字符串）",
+            r"(?i)curl\s+[^|]*?\|\s*(?:ba)?sh\b",
+            Severity::Medium,
+            Category::RemoteExec,
+            0,
+            "curl | sh 出现在文本/字符串中（未确认实际执行）",
+            false,
+            Confidence::Low,
+            "如果这段命令会被执行，应改为先下载再校验/审查；若仅为说明文字，可忽略此提示",
             Some("CWE-78"),
         ),
         PatternRule::new(
