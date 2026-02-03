@@ -857,7 +857,7 @@ marketplace:
 
 repositories:
   version: "1.0"
-  last_updated: "2026-01-30"
+  last_updated: "2026-02-03"
   categories:
     - id: "community"
       name:
@@ -915,4 +915,11 @@ repositories:
             en: "Agent Skills collection for common tasks, compatible with Claude Code and other Agent Skills Standard tools."
             zh: "面向常见任务的 Agent Skills 合集，兼容 Claude Code 等符合 Agent Skills Standard 的工具。"
           tags: ["agent-skills", "productivity", "automation"]
+          featured: true
+        - url: "https://github.com/brucevanfdm/docugenius-converter-skill"
+          name: "brucevanfdm"
+          description:
+            en: "Bidirectional document conversion skill for Claude Code. Converts Word/Excel/PPT/PDF to AI-friendly Markdown and exports Markdown to professionally formatted Word documents with auto-dependency installation."
+            zh: "为 Claude Code 添加双向文档转换能力。将 Word/Excel/PPT/PDF 转换为 AI 友好的 Markdown 格式，并将 Markdown 导出为排版精美的 Word 文档，支持自动依赖安装。"
+          tags: ["conversion", "office", "pdf", "markdown"]
           featured: true
