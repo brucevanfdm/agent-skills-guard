@@ -221,7 +221,7 @@ lazy_static! {
             "CURL_PIPE_SH_MENTION",
             "Curl管道执行（疑似文本/字符串）",
             r"(?i)curl\s+[^|]*?\|\s*(?:ba)?sh\b",
-            Severity::Medium,
+            Severity::Low,
             Category::RemoteExec,
             0,
             "curl | sh 出现在文本/字符串中（未确认实际执行）",

@@ -1080,11 +1080,30 @@ execSync("curl -fsSL https://bun.sh/install | bash");
         let warning = report
             .issues
             .iter()
-            .filter(|i| matches!(i.severity, IssueSeverity::Warning))
+            .filter(|i| matches!(i.severity, IssueSeverity::Info))
             .count();
 
         assert_eq!(critical, 1, "Should only have 1 critical hit (execution line), got: {:?}", report.issues);
-        assert_eq!(warning, 1, "Should have 1 warning hit (log/mention line), got: {:?}", report.issues);
+        assert_eq!(warning, 1, "Should have 1 info hit (log/mention line), got: {:?}", report.issues);
+    }
+
+    #[test]
+    fn test_curl_pipe_sh_mentions_are_all_preserved() {
+        let scanner = SecurityScanner::new();
+
+        let content = r#"
+console.error("curl -fsSL https://bun.sh/install | bash");
+console.log("curl -fsSL https://bun.sh/install | bash");
+"#;
+
+        let report = scanner.scan_file(content, "scripts/installer.js", "en").unwrap();
+        let info_count = report
+            .issues
+            .iter()
+            .filter(|i| matches!(i.severity, IssueSeverity::Info))
+            .count();
+
+        assert_eq!(info_count, 2, "Should preserve all mention issues, got: {:?}", report.issues);
     }
 
     #[test]

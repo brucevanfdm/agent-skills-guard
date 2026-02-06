@@ -38,6 +38,31 @@ function sortIssuesBySeverity(issues: SecurityIssue[]): SecurityIssue[] {
   });
 }
 
+interface IssueGroup {
+  key: string;
+  summary: SecurityIssue;
+  items: SecurityIssue[];
+}
+
+function groupIssuesForDisplay(issues: SecurityIssue[]): IssueGroup[] {
+  const grouped = new Map<string, IssueGroup>();
+
+  for (const issue of issues) {
+    const key = `${issue.file_path ?? ""}::${issue.description}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.items.push(issue);
+      continue;
+    }
+    grouped.set(key, { key, summary: issue, items: [issue] });
+  }
+
+  return Array.from(grouped.values()).map((group) => ({
+    ...group,
+    items: [...group.items].sort((a, b) => (a.line_number ?? 0) - (b.line_number ?? 0)),
+  }));
+}
+
 export function SecurityDetailDialog({ result, open, onClose }: SecurityDetailDialogProps) {
   const { t } = useTranslation();
 
@@ -219,6 +244,7 @@ function IssueSection({
 }) {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const groupedIssues = useMemo(() => groupIssuesForDisplay(issues), [issues]);
 
   const colorClasses = {
     red: {
@@ -261,24 +287,62 @@ function IssueSection({
 
       {!collapsed && (
         <div className="p-4 space-y-3">
-          {issues.map((issue, idx) => (
-            <div key={idx} className="p-3 bg-muted/30 rounded-lg border border-border">
-              <div className="text-sm font-medium mb-2">
-                {issue.file_path && <span className="text-primary mr-2">[{issue.file_path}]</span>}
-                {issue.description}
-              </div>
-              {issue.code_snippet && (
-                <div className="mt-2">
-                  <div className="text-xs text-muted-foreground mb-1">
-                    {t("security.detail.lineNumber")}：{issue.line_number}
-                  </div>
-                  <pre className="p-2 bg-muted/50 rounded text-xs font-mono overflow-x-auto">
-                    <code>{issue.code_snippet}</code>
-                  </pre>
+          {groupedIssues.map((group) =>
+            group.items.length === 1 ? (
+              <div key={group.key} className="p-3 bg-muted/30 rounded-lg border border-border">
+                <div className="text-sm font-medium mb-2">
+                  {group.summary.file_path && (
+                    <span className="text-primary mr-2">[{group.summary.file_path}]</span>
+                  )}
+                  {group.summary.description}
                 </div>
-              )}
-            </div>
-          ))}
+                {group.summary.code_snippet && (
+                  <div className="mt-2">
+                    {typeof group.summary.line_number === "number" && (
+                      <div className="text-xs text-muted-foreground mb-1">
+                        {t("security.detail.lineNumber")}：{group.summary.line_number}
+                      </div>
+                    )}
+                    <pre className="p-2 bg-muted/50 rounded text-xs font-mono overflow-x-auto">
+                      <code>{group.summary.code_snippet}</code>
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <details key={group.key} className="p-3 bg-muted/30 rounded-lg border border-border">
+                <summary className="cursor-pointer list-none">
+                  <div className="text-sm font-medium flex items-center gap-2">
+                    <span>
+                      {group.summary.file_path && (
+                        <span className="text-primary mr-2">[{group.summary.file_path}]</span>
+                      )}
+                      {group.summary.description}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      {group.items.length}
+                    </span>
+                  </div>
+                </summary>
+                <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+                  {group.items.map((item, idx) => (
+                    <div key={`${group.key}-${idx}`} className="p-2 bg-muted/50 rounded border border-border/70">
+                      {typeof item.line_number === "number" && (
+                        <div className="text-xs text-muted-foreground mb-1">
+                          {t("security.detail.lineNumber")}：{item.line_number}
+                        </div>
+                      )}
+                      {item.code_snippet && (
+                        <pre className="p-2 bg-muted rounded text-xs font-mono overflow-x-auto">
+                          <code>{item.code_snippet}</code>
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )
+          )}
         </div>
       )}
     </div>

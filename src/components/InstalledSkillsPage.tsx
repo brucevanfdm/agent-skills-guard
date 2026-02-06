@@ -31,7 +31,7 @@ import { CyberSelect, type CyberSelectOption } from "./ui/CyberSelect";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { appToast } from "../lib/toast";
-import { countIssuesBySeverity } from "@/lib/security-utils";
+import { countIssuesBySeverity, groupIssuesBySignature } from "@/lib/security-utils";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -769,9 +769,9 @@ export function InstalledSkillsPage() {
 
   const filteredAllItems = useMemo<InstalledEntry[]>(() => {
     const items: InstalledEntry[] = [
-      ...mergedSkills.map((skill) => ({ kind: "skill", item: skill })),
-      ...installedPlugins.map((plugin) => ({ kind: "plugin", item: plugin })),
-      ...installedMarketplaces.map((marketplace) => ({
+      ...mergedSkills.map((skill): InstalledEntry => ({ kind: "skill", item: skill })),
+      ...installedPlugins.map((plugin): InstalledEntry => ({ kind: "plugin", item: plugin })),
+      ...installedMarketplaces.map((marketplace): InstalledEntry => ({
         kind: "marketplace",
         item: marketplace,
       })),
@@ -1967,6 +1967,8 @@ function UpdateConfirmDialog({
     () => (report ? countIssuesBySeverity(report.issues) : { critical: 0, error: 0, warning: 0 }),
     [report]
   );
+  const groupedIssues = useMemo(() => (report ? groupIssuesBySignature(report.issues) : []), [report]);
+  const previewGroups = useMemo(() => groupedIssues.slice(0, 5), [groupedIssues]);
 
   if (!report) return null;
 
@@ -2080,27 +2082,56 @@ function UpdateConfirmDialog({
                   <div
                     className={`p-3 rounded-lg ${isHighRisk ? "bg-destructive/10" : isMediumRisk ? "bg-warning/10" : "bg-success/10"}`}
                   >
-                    <ul className="space-y-1 text-sm max-h-48 overflow-y-auto">
-                      {report.issues.slice(0, 5).map((issue, idx) => (
-                        <li key={idx} className="text-xs">
-                          {issue.file_path && (
-                            <span className="text-primary mr-1">[{issue.file_path}]</span>
-                          )}
-                          {issue.description}
-                          {issue.line_number && (
-                            <span className="text-muted-foreground ml-2">
-                              (行 {issue.line_number})
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                      {report.issues.length > 5 && (
-                        <li className="text-xs text-muted-foreground">
-                          ...{" "}
-                          {t("skills.installedPage.andMore", { count: report.issues.length - 5 })}
-                        </li>
+                    <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
+                      {previewGroups.map((group) =>
+                        group.items.length === 1 ? (
+                          <div key={group.key} className="text-xs">
+                            {group.summary.file_path && (
+                              <span className="text-primary mr-1">[{group.summary.file_path}]</span>
+                            )}
+                            {group.summary.description}
+                            {typeof group.summary.line_number === "number" && (
+                              <span className="text-muted-foreground ml-2">
+                                (行 {group.summary.line_number})
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <details key={group.key} className="text-xs">
+                            <summary className="cursor-pointer list-none flex items-center justify-between gap-2">
+                              <span className="min-w-0 truncate">
+                                {group.summary.file_path && (
+                                  <span className="text-primary mr-1">[{group.summary.file_path}]</span>
+                                )}
+                                {group.summary.description}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                                {group.items.length}
+                              </span>
+                            </summary>
+                            <ul className="mt-2 pl-3 space-y-1 border-l border-border/60">
+                              {group.items.map((item, itemIdx) => (
+                                <li key={`${group.key}-${itemIdx}`} className="text-muted-foreground">
+                                  <span className="mr-1">#{itemIdx + 1}</span>
+                                  {typeof item.line_number === "number" && (
+                                    <span className="mr-1">(行 {item.line_number})</span>
+                                  )}
+                                  {item.code_snippet && (
+                                    <code className="font-mono text-[11px]">{item.code_snippet}</code>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )
                       )}
-                    </ul>
+                      {groupedIssues.length > previewGroups.length && (
+                        <div className="text-xs text-muted-foreground">
+                          ...{" "}
+                          {t("skills.installedPage.andMore", { count: groupedIssues.length - previewGroups.length })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}

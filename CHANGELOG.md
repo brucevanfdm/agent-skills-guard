@@ -5,6 +5,27 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased] - 2026-02-06
+
+### 🔒 安全扫描
+
+- `CURL_PIPE_SH_MENTION` 规则严重级别由 `Medium` 下调为 `Low`，降低“仅文本提及”场景噪声。
+- 扫描层恢复“保留全部 issue”策略，不再在扫描阶段做 `CURL_PIPE_SH_MENTION` 文件级去重。
+- 新增回归测试，确保同一文件内多处 mention 都会被完整记录。
+
+### 🎨 界面优化
+
+- 安全详情弹窗支持同类 issue 分组折叠展示，默认先看聚合项，展开可看命中明细。
+- Marketplace 安装确认弹窗改为同类 issue 折叠预览（保留风险汇总 + 聚合计数）。
+- Installed 更新确认弹窗改为同类 issue 折叠预览，减少重复告警对刷屏影响。
+- 行号改为“有则显示、无则隐藏”，不再出现 `行号: -`。
+
+### 🐛 问题修复
+
+- 修复 `InstalledSkillsPage` 中 `InstalledEntry` 联合类型推断导致的 TypeScript 报错。
+- 修复 `MarketplacePage` 中 `onViewLog` / `canViewLog` 未使用导致的 TypeScript 报错。
+- 抽取并复用安全 issue 的排序/分组工具函数，避免多处重复逻辑。
+
 ## [0.9.11] - 2026-01-30
 
 ### 🎨 最近更新
