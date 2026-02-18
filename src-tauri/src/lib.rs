@@ -64,21 +64,28 @@ fn create_tray_menu(app: &tauri::AppHandle) -> Result<tauri::menu::Menu<tauri::W
         .build()
 }
 
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+        if let Err(e) = window.show() {
+            log::warn!("显示窗口失败: {}", e);
+        }
+        if let Err(e) = window.unminimize() {
+            log::warn!("取消最小化失败: {}", e);
+        }
+        if let Err(e) = window.set_focus() {
+            log::warn!("设置窗口焦点失败: {}", e);
+        }
+    } else {
+        log::error!("无法获取主窗口");
+    }
+}
+
 fn handle_menu_event(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
     log::debug!("菜单事件: {}", event.id().as_ref());
 
     match event.id().as_ref() {
         MENU_SHOW => {
-            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
-                if let Err(e) = window.show() {
-                    log::warn!("显示窗口失败: {}", e);
-                }
-                if let Err(e) = window.set_focus() {
-                    log::warn!("设置窗口焦点失败: {}", e);
-                }
-            } else {
-                log::error!("无法获取主窗口");
-            }
+            show_main_window(app);
         }
         MENU_HIDE => {
             if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
@@ -116,12 +123,7 @@ fn handle_tray_event(tray: &tauri::tray::TrayIcon<tauri::Wry>, event: tauri::tra
                     }
                 }
                 Ok(false) => {
-                    if let Err(e) = window.show() {
-                        log::warn!("显示窗口失败: {}", e);
-                    }
-                    if let Err(e) = window.set_focus() {
-                        log::warn!("设置窗口焦点失败: {}", e);
-                    }
+                    show_main_window(app);
                 }
                 Err(e) => {
                     log::error!("检查窗口可见性失败: {}", e);
@@ -444,6 +446,13 @@ pub fn run() {
             get_scan_results,
             scan_skill_archive,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                log::info!("收到 macOS Reopen 事件，尝试恢复主窗口");
+                show_main_window(app_handle);
+            }
+        });
 }
