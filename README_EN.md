@@ -82,6 +82,18 @@ Say goodbye to command lines and enjoy the intuitive Apple minimalist interface.
 
 ---
 
+## 🔗 Related Projects
+
+### 🔍 Agent Scanner Skill
+
+If you like the security scanning feature of Agent Skills Guard, you can also try our Claude Code skill version:
+
+**[agent-scanner-skill](https://github.com/brucevanfdm/agent-scanner-skill)** - More powerful security scanning with deep dependency analysis, known vulnerability detection, and intelligent risk assessment
+
+No GUI required, perfect for developers who prefer working in the terminal.
+
+---
+
 ## 🆚 Traditional Way vs Agent Skills Guard
 
 | Feature                           | Traditional Way                       | Agent Skills Guard                                      |
