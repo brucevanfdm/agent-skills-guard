@@ -30,7 +30,7 @@ When enjoying Claude Code's AI-assisted programming, do you face these frustrati
 
 **🎯 Core value in three seconds: Visual management + Security scanning + Featured repositories**
 
-[⭐ Download Now](https://github.com/brucevanfdm/agent-skills-guard/releases) | [📖 Quick Start Guide](#-quick-start)
+[⭐ Download Now](https://github.com/brucevanfdm/agent-skills-guard/releases)
 
 </div>
 

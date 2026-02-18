@@ -30,7 +30,7 @@
 
 **🎯 三秒钟了解核心价值：可视化管理 + 安全扫描 + 精选仓库**
 
-[⭐ 立即下载](https://github.com/brucevanfdm/agent-skills-guard/releases) | [📖 使用教程](#-快速开始)
+[⭐ 立即下载](https://github.com/brucevanfdm/agent-skills-guard/releases)
 
 </div>
 
