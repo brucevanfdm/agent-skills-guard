@@ -47,30 +47,35 @@ fn parse_legacy_issue_string(issue_str: &str) -> Option<SecurityIssue> {
 
     let parts: Vec<&str> = remaining.splitn(2, ": ").collect();
     if parts.len() == 2 {
-        let severity = match parts[0] {
-            "Critical" => IssueSeverity::Critical,
-            "Error" => IssueSeverity::Error,
-            "Warning" => IssueSeverity::Warning,
-            _ => IssueSeverity::Info,
+        let (severity, is_known_severity) = match parts[0] {
+            "Critical" => (IssueSeverity::Critical, true),
+            "Error" => (IssueSeverity::Error, true),
+            "Warning" => (IssueSeverity::Warning, true),
+            "Info" => (IssueSeverity::Info, true),
+            _ => (IssueSeverity::Info, false),
         };
-        Some(SecurityIssue {
+        return Some(SecurityIssue {
             severity,
             category: IssueCategory::Other,
-            description: parts[1].to_string(),
+            description: if is_known_severity {
+                parts[1].to_string()
+            } else {
+                remaining.to_string()
+            },
             line_number: None,
             code_snippet: None,
             file_path,
-        })
-    } else {
-        Some(SecurityIssue {
-            severity: IssueSeverity::Info,
-            category: IssueCategory::Other,
-            description: remaining.to_string(),
-            line_number: None,
-            code_snippet: None,
-            file_path,
-        })
+        });
     }
+
+    Some(SecurityIssue {
+        severity: IssueSeverity::Info,
+        category: IssueCategory::Other,
+        description: remaining.to_string(),
+        line_number: None,
+        code_snippet: None,
+        file_path,
+    })
 }
 
 pub struct Database {
@@ -806,5 +811,34 @@ impl Database {
             .collect::<std::result::Result<Vec<String>, _>>()?;
 
         Ok(repo_ids)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{deserialize_security_issues, parse_legacy_issue_string};
+    use crate::models::security::IssueSeverity;
+
+    #[test]
+    fn parse_legacy_issue_string_preserves_unknown_prefixes() {
+        let issue =
+            parse_legacy_issue_string("[SKILL.md] CURL_PIPE_SH: mentions curl pipe sh").unwrap();
+
+        assert!(matches!(issue.severity, IssueSeverity::Info));
+        assert_eq!(
+            issue.description,
+            "CURL_PIPE_SH: mentions curl pipe sh"
+        );
+        assert_eq!(issue.file_path.as_deref(), Some("SKILL.md"));
+    }
+
+    #[test]
+    fn deserialize_security_issues_accepts_old_string_format_without_losing_rule_names() {
+        let issues =
+            deserialize_security_issues(r#"["RULE_NAME: description text"]"#).unwrap();
+
+        assert_eq!(issues.len(), 1);
+        assert!(matches!(issues[0].severity, IssueSeverity::Info));
+        assert_eq!(issues[0].description, "RULE_NAME: description text");
     }
 }
