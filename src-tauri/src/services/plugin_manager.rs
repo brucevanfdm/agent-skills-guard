@@ -144,6 +144,7 @@ pub struct SkillPluginUpgradeCandidate {
     pub marketplace_name: String,
     pub marketplace_repo: Option<String>,
     pub marketplace_repository_url: Option<String>,
+    pub marketplace_add_command: Option<String>,
     pub latest_version: Option<String>,
     pub reason: String,
 }
@@ -709,6 +710,18 @@ impl PluginManager {
             );
         }
 
+        // 从 DB 获取 marketplace_add_command（来源于 featured-marketplace.yaml）
+        let mut marketplace_add_cmd_by_name: HashMap<String, String> = HashMap::new();
+        if let Ok(db_plugins) = self.db.get_plugins() {
+            for p in db_plugins {
+                if let Some(cmd) = p.marketplace_add_command {
+                    marketplace_add_cmd_by_name
+                        .entry(p.marketplace_name.clone())
+                        .or_insert(cmd);
+                }
+            }
+        }
+
         // 拉取 installed plugins（用于过滤：已安装的不提示）
         let claude_cli = ClaudeCli::new(cli_command.clone());
         let installed_output = claude_cli.run(&[ClaudeCommand {
@@ -793,6 +806,10 @@ impl PluginManager {
                 .cloned()
                 .unwrap_or((None, None));
 
+            let marketplace_add_command = marketplace_add_cmd_by_name
+                .get(&marketplace_name)
+                .cloned();
+
             candidates.push(SkillPluginUpgradeCandidate {
                 skill_id: skill.id,
                 skill_name: skill.name,
@@ -801,6 +818,7 @@ impl PluginManager {
                 marketplace_name,
                 marketplace_repo,
                 marketplace_repository_url,
+                marketplace_add_command,
                 latest_version: best.version.clone(),
                 reason: "name_match".to_string(),
             });

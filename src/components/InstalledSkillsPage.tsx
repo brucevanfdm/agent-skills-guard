@@ -984,12 +984,16 @@ export function InstalledSkillsPage() {
 
   const pluginUpgradeCommands = useMemo(() => {
     if (!pendingSkillPluginUpgrade) return "";
-    const repoArg =
-      pendingSkillPluginUpgrade.marketplace_repo ||
-      pendingSkillPluginUpgrade.marketplace_repository_url ||
-      "";
     const lines: string[] = [];
-    if (repoArg) lines.push(`claude plugin marketplace add ${repoArg}`);
+    if (pendingSkillPluginUpgrade.marketplace_add_command) {
+      lines.push(pendingSkillPluginUpgrade.marketplace_add_command);
+    } else {
+      const repoArg =
+        pendingSkillPluginUpgrade.marketplace_repo ||
+        pendingSkillPluginUpgrade.marketplace_repository_url ||
+        "";
+      if (repoArg) lines.push(`claude plugin marketplace add ${repoArg}`);
+    }
     lines.push(`claude plugin install ${pendingSkillPluginUpgrade.plugin_id}`);
     return lines.join("\n");
   }, [pendingSkillPluginUpgrade]);

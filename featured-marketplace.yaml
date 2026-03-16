@@ -19,7 +19,7 @@ marketplace:
       - marketplace_name: "anthropic-agent-skills"
         marketplace_repo: "anthropics/skills"
         repository_url: "https://github.com/anthropics/skills"
-        marketplace_add_command: "/plugin marketplace add anthropics/skills"
+        marketplace_add_command: "claude plugin marketplace add anthropics/skills"
         description:
           en: "Anthropic's official marketplace with essential skills: document processing suite (Excel, Word, PowerPoint, PDF) and example skills for creation workflows, MCP building, design, and testing"
           zh: "Anthropic 官方市场，提供核心技能：文档处理套件（Excel、Word、PowerPoint、PDF）与示例技能，涵盖创建工作流、MCP 构建、设计与测试场景"
@@ -54,7 +54,7 @@ marketplace:
       - marketplace_name: "superpowers-marketplace"
         marketplace_repo: "obra/superpowers-marketplace"
         repository_url: "https://github.com/obra/superpowers-marketplace"
-        marketplace_add_command: "/plugin marketplace add obra/superpowers-marketplace"
+        marketplace_add_command: "claude plugin marketplace add obra/superpowers-marketplace"
         description:
           en: "Jesse Vincent's productivity suite: TDD, debugging, collaboration patterns, Chrome automation, writing guidance, episodic memory, CLI automation, development resources, and workflow automation"
           zh: "Jesse Vincent 的效率工具合集，包含 TDD、调试、协作模式、Chrome 自动化、写作指南、跨会话记忆、交互式 CLI 自动化、开发资源与工作流自动化工具"
@@ -160,7 +160,7 @@ marketplace:
       - marketplace_name: "baoyu-skills"
         marketplace_repo: "JimLiu/baoyu-skills"
         repository_url: "https://github.com/JimLiu/baoyu-skills"
-        marketplace_add_command: "/plugin marketplace add JimLiu/baoyu-skills"
+        marketplace_add_command: "claude plugin marketplace add JimLiu/baoyu-skills"
         description:
           en: "Jim Liu (宝玉)'s productivity toolkit: content generation and publishing, AI-powered generation backends, and utility tools for content processing"
           zh: "Jim Liu（宝玉）的效率工具包，包含内容生成与发布、AI 生成后端以及内容处理实用工具"
@@ -206,7 +206,7 @@ marketplace:
       - marketplace_name: "ui-ux-pro-max-skill"
         marketplace_repo: "nextlevelbuilder/ui-ux-pro-max-skill"
         repository_url: "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill"
-        marketplace_add_command: "/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill"
+        marketplace_add_command: "claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill"
         description:
           en: "Professional UI/UX design intelligence by nextlevelbuilder with extensive references for styles, color palettes, typography, and charts across multiple frameworks"
           zh: "nextlevelbuilder 提供的专业 UI/UX 设计智能，包含丰富的样式、配色方案、字体与图表参考，覆盖多框架技术栈"
@@ -229,7 +229,7 @@ marketplace:
       - marketplace_name: "n8n-mcp-skills"
         marketplace_repo: "czlonkowski/n8n-skills"
         repository_url: "https://github.com/czlonkowski/n8n-skills"
-        marketplace_add_command: "/plugin marketplace add czlonkowski/n8n-skills"
+        marketplace_add_command: "claude plugin marketplace add czlonkowski/n8n-skills"
         description:
           en: "Romuald Członkowski's expert skills for building n8n workflows with MCP tooling integration"
           zh: "Romuald Członkowski 提供的 n8n 工作流专家技能，集成 MCP 工具支持"
@@ -252,7 +252,7 @@ marketplace:
       - marketplace_name: "obsidian-skills"
         marketplace_repo: "kepano/obsidian-skills"
         repository_url: "https://github.com/kepano/obsidian-skills"
-        marketplace_add_command: "/plugin marketplace add kepano/obsidian-skills"
+        marketplace_add_command: "claude plugin marketplace add kepano/obsidian-skills"
         description:
           en: "Steph Ango's Claude skills for Obsidian note-taking and knowledge management"
           zh: "Steph Ango 提供的 Obsidian 笔记与知识管理 Claude 技能"
@@ -275,7 +275,7 @@ marketplace:
       - marketplace_name: "axton-obsidian-visual-skills"
         marketplace_repo: "axtonliu/axton-obsidian-visual-skills"
         repository_url: "https://github.com/axtonliu/axton-obsidian-visual-skills"
-        marketplace_add_command: "/plugin marketplace add axtonliu/axton-obsidian-visual-skills"
+        marketplace_add_command: "claude plugin marketplace add axtonliu/axton-obsidian-visual-skills"
         description:
           en: "Axton Liu's Obsidian visualization pack: generate Canvas, Excalidraw, and Mermaid diagrams from text"
           zh: "Axton Liu 的 Obsidian 可视化技能包，支持从文本生成 Canvas、Excalidraw 与 Mermaid 图表"
@@ -299,7 +299,7 @@ marketplace:
       - marketplace_name: "marketingskills"
         marketplace_repo: "coreyhaines31/marketingskills"
         repository_url: "https://github.com/coreyhaines31/marketingskills"
-        marketplace_add_command: "/plugin marketplace add coreyhaines31/marketingskills"
+        marketplace_add_command: "claude plugin marketplace add coreyhaines31/marketingskills"
         description:
           en: "Corey Haines' marketing skills for Claude Code and AI agents: CRO, copywriting, SEO, analytics, and growth engineering"
           zh: "Corey Haines 提供的营销技能合集，面向 Claude Code 与 AI 代理，涵盖 CRO、文案写作、SEO、数据分析与增长工程"
@@ -321,7 +321,7 @@ marketplace:
       - marketplace_name: "supabase-agent-skills"
         marketplace_repo: "supabase/agent-skills"
         repository_url: "https://github.com/supabase/agent-skills"
-        marketplace_add_command: "/plugin marketplace add supabase/agent-skills"
+        marketplace_add_command: "claude plugin marketplace add supabase/agent-skills"
         description:
           en: "Official Supabase skills for AI-assisted development: Postgres performance optimization and best practices"
           zh: "Supabase 官方技能，用于 AI 辅助开发，包含 Postgres 性能优化与最佳实践指南"
@@ -343,7 +343,7 @@ marketplace:
       - marketplace_name: "makepad-skills-marketplace"
         marketplace_repo: "ZhangHanDong/makepad-skills"
         repository_url: "https://github.com/ZhangHanDong/makepad-skills"
-        marketplace_add_command: "/plugin marketplace add ZhangHanDong/makepad-skills"
+        marketplace_add_command: "claude plugin marketplace add ZhangHanDong/makepad-skills"
         description:
           en: "ZhangHanDong's Makepad UI framework assistant for Rust: cross-platform app development with auto-routing, widgets, shaders, animations, and production-ready patterns"
           zh: "ZhangHanDong 的 Makepad UI 框架助手，用于 Rust 跨平台应用开发，包含自动路由、组件模式、着色器、动画与生产级实践模式"
@@ -366,7 +366,7 @@ marketplace:
       - marketplace_name: "claude-scientific-skills"
         marketplace_repo: "K-Dense-AI/claude-scientific-skills"
         repository_url: "https://github.com/K-Dense-AI/claude-scientific-skills"
-        marketplace_add_command: "/plugin marketplace add K-Dense-AI/claude-scientific-skills"
+        marketplace_add_command: "claude plugin marketplace add K-Dense-AI/claude-scientific-skills"
         description:
           en: "K-Dense Inc.'s scientific research skills for biology, chemistry, medicine, and data analysis"
           zh: "K-Dense Inc. 提供的科学研究技能，涵盖生物学、化学、医学与数据分析领域"
@@ -390,7 +390,7 @@ marketplace:
       - marketplace_name: "planning-with-files"
         marketplace_repo: "OthmanAdi/planning-with-files"
         repository_url: "https://github.com/OthmanAdi/planning-with-files"
-        marketplace_add_command: "/plugin marketplace add OthmanAdi/planning-with-files"
+        marketplace_add_command: "claude plugin marketplace add OthmanAdi/planning-with-files"
         description:
           en: "Ahmad Othman Ammar Adi's Manus-style persistent markdown files for planning, progress tracking, and knowledge storage with hooks integration"
           zh: "Ahmad Othman Ammar Adi 提供的 Manus 风格持久化 Markdown 文件，用于规划、进度追踪与知识沉淀，支持 hooks 集成"
@@ -413,7 +413,7 @@ marketplace:
       - marketplace_name: "cloudflare/skills"
         marketplace_repo: "cloudflare/skills"
         repository_url: "https://github.com/cloudflare/skills"
-        marketplace_add_command: "/plugin marketplace add cloudflare/skills"
+        marketplace_add_command: "claude plugin marketplace add cloudflare/skills"
         description:
           en: "Official Cloudflare skills for the Workers developer platform and Agents SDK"
           zh: "Cloudflare 官方技能，面向 Workers 开发者平台与 Agents SDK"
@@ -436,7 +436,7 @@ marketplace:
       - marketplace_name: "huggingface/skills"
         marketplace_repo: "huggingface/skills"
         repository_url: "https://github.com/huggingface/skills"
-        marketplace_add_command: "/plugin marketplace add huggingface/skills"
+        marketplace_add_command: "claude plugin marketplace add huggingface/skills"
         description:
           en: "Official Hugging Face skills for AI/ML workflows: dataset management, model training (TRL/SFT/DPO/GRPO), evaluation, paper publishing, CLI operations, compute jobs, and experiment tracking with Trackio"
           zh: "Hugging Face 官方技能，用于 AI/ML 工作流：数据集管理、模型训练（TRL/SFT/DPO/GRPO）、评测、论文发布、CLI 操作、计算任务与 Trackio 实验跟踪"
@@ -528,7 +528,7 @@ marketplace:
       - marketplace_name: "trailofbits"
         marketplace_repo: "trailofbits/skills"
         repository_url: "https://github.com/trailofbits/skills"
-        marketplace_add_command: "/plugin marketplace add trailofbits/skills"
+        marketplace_add_command: "claude plugin marketplace add trailofbits/skills"
         description:
           en: "Trail of Bits' comprehensive security toolkit: smart contract auditing, vulnerability scanning, static analysis (CodeQL/Semgrep), property-based testing, security review patterns, crypto analysis, and penetration testing tools"
           zh: "Trail of Bits 的综合安全工具包，包含智能合约审计、漏洞扫描、静态分析（CodeQL/Semgrep）、性质驱动测试、安全评审模式、加密分析与渗透测试工具"
@@ -809,7 +809,7 @@ marketplace:
       - marketplace_name: "rust-skills-marketplace"
         marketplace_repo: "ZhangHanDong/rust-skills"
         repository_url: "https://github.com/ZhangHanDong/rust-skills"
-        marketplace_add_command: "/plugin marketplace add ZhangHanDong/rust-skills"
+        marketplace_add_command: "claude plugin marketplace add ZhangHanDong/rust-skills"
         description:
           en: "ZhangHanDong's Rust development assistant with meta-cognition framework: 38 skills covering ownership, concurrency, error handling, unsafe code, LSP code intelligence, and domain-specific patterns for FinTech, ML, Cloud-Native, IoT, Web, CLI, and Embedded systems"
           zh: "ZhangHanDong 的 Rust 开发助手，采用元认知框架：38 个技能涵盖所有权、并发、错误处理、unsafe 代码、LSP 代码智能以及 FinTech、ML、Cloud-Native、IoT、Web、CLI 与嵌入式系统的领域特定模式"
@@ -832,7 +832,7 @@ marketplace:
       - marketplace_name: "claude-mem"
         marketplace_repo: "thedotmack/claude-mem"
         repository_url: "https://github.com/thedotmack/claude-mem"
-        marketplace_add_command: "/plugin marketplace add thedotmack/claude-mem"
+        marketplace_add_command: "claude plugin marketplace add thedotmack/claude-mem"
         description:
           en: "Alex Newman's persistent memory compression system for Claude Code: automatically captures tool usage observations, generates semantic summaries with AI, and intelligently injects relevant context into future sessions through progressive disclosure and skill-based search"
           zh: "Alex Newman 的 Claude Code 持久记忆压缩系统：自动捕获工具使用观察，使用 AI 生成语义摘要，并通过渐进式披露与技能搜索智能地将相关上下文注入未来的会话"

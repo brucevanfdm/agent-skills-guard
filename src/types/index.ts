@@ -127,6 +127,7 @@ export interface SkillPluginUpgradeCandidate {
   marketplace_name: string;
   marketplace_repo?: string;
   marketplace_repository_url?: string;
+  marketplace_add_command?: string;
   latest_version?: string;
   reason: string;
 }
