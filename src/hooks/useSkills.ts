@@ -5,6 +5,7 @@ export function useSkills() {
   return useQuery({
     queryKey: ["skills"],
     queryFn: () => api.getSkills(),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -12,6 +13,7 @@ export function useInstalledSkills() {
   return useQuery({
     queryKey: ["skills", "installed"],
     queryFn: () => api.getInstalledSkills(),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

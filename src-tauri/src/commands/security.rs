@@ -1,4 +1,4 @@
-use crate::commands::AppState;
+use crate::commands::{clamp_scan_parallelism, AppState, ScanProgressEvent};
 use crate::i18n::validate_locale;
 use crate::models::security::{SecurityLevel, SecurityReport, SkillScanResult};
 use crate::models::Skill;
@@ -7,26 +7,8 @@ use anyhow::Result;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use rust_i18n::t;
-use serde::Serialize;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, State};
-
-#[derive(Serialize, Clone)]
-struct ScanProgressEvent {
-    scan_id: String,
-    kind: String,
-    item_id: String,
-    file_path: String,
-}
-
-const DEFAULT_SCAN_PARALLELISM: usize = 3;
-const MAX_SCAN_PARALLELISM: usize = 8;
-
-fn clamp_scan_parallelism(scan_parallelism: Option<usize>) -> usize {
-    scan_parallelism
-        .unwrap_or(DEFAULT_SCAN_PARALLELISM)
-        .clamp(1, MAX_SCAN_PARALLELISM)
-}
 
 /// 扫描所有已安装的 skills
 #[tauri::command]
@@ -83,20 +65,7 @@ pub async fn scan_all_installed_skills(
                 let mut updated = skill.clone();
                 updated.security_score = Some(report.score);
                 updated.security_level = Some(report.level.as_str().to_string());
-                updated.security_issues = Some(
-                    report
-                        .issues
-                        .iter()
-                        .map(|i| {
-                            let file_info = i
-                                .file_path
-                                .as_ref()
-                                .map(|f| format!("[{}] ", f))
-                                .unwrap_or_default();
-                            format!("{}{:?}: {}", file_info, i.severity, i.description)
-                        })
-                        .collect(),
-                );
+                updated.security_issues = Some(report.issues.clone());
                 updated.scanned_at = Some(chrono::Utc::now());
 
                 if let Err(e) = db.save_skill(&updated) {
@@ -187,20 +156,7 @@ pub async fn scan_installed_skill(
 
     skill.security_score = Some(report.score);
     skill.security_level = Some(report.level.as_str().to_string());
-    skill.security_issues = Some(
-        report
-            .issues
-            .iter()
-            .map(|i| {
-                let file_info = i
-                    .file_path
-                    .as_ref()
-                    .map(|f| format!("[{}] ", f))
-                    .unwrap_or_default();
-                format!("{}{:?}: {}", file_info, i.severity, i.description)
-            })
-            .collect(),
-    );
+    skill.security_issues = Some(report.issues.clone());
     skill.scanned_at = Some(chrono::Utc::now());
 
     state
@@ -242,90 +198,23 @@ pub async fn count_scan_files(
 /// 获取缓存的扫描结果
 #[tauri::command]
 pub async fn get_scan_results(state: State<'_, AppState>) -> Result<Vec<SkillScanResult>, String> {
-    use crate::models::security::{IssueCategory, IssueSeverity, SecurityIssue};
-
     let skills = state.db.get_skills().map_err(|e| e.to_string())?;
 
     let results: Vec<SkillScanResult> = skills
         .into_iter()
         .filter(|s| s.installed && s.security_score.is_some())
         .map(|s| {
-            // 解析 security_issues 字符串为 SecurityIssue 对象
-            let issues = if let Some(issue_strings) = &s.security_issues {
-                issue_strings
-                    .iter()
-                    .filter_map(|issue_str| {
-                        // 解析格式: "[filename] Severity: description"
-                        // 先提取文件路径
-                        let (file_path, remaining) = if issue_str.starts_with('[') {
-                            if let Some(end_bracket) = issue_str.find(']') {
-                                let file = issue_str[1..end_bracket].to_string();
-                                let rest = issue_str[end_bracket + 1..].trim();
-                                (Some(file), rest)
-                            } else {
-                                (None, issue_str.as_str())
-                            }
-                        } else {
-                            (None, issue_str.as_str())
-                        };
-
-                        // 然后解析 Severity: description
-                        let parts: Vec<&str> = remaining.splitn(2, ": ").collect();
-                        if parts.len() == 2 {
-                            let severity = match parts[0] {
-                                "Critical" => Some(IssueSeverity::Critical),
-                                "Error" => Some(IssueSeverity::Error),
-                                "Warning" => Some(IssueSeverity::Warning),
-                                "Info" => Some(IssueSeverity::Info),
-                                _ => None,
-                            };
-
-                            if let Some(severity) = severity {
-                                Some(SecurityIssue {
-                                    severity,
-                                    category: IssueCategory::Other,
-                                    description: parts[1].to_string(),
-                                    line_number: None,
-                                    code_snippet: None,
-                                    file_path,
-                                })
-                            } else {
-                                // 兼容旧格式（没有 Severity 前缀）：保留原始文本，避免丢失规则名等信息
-                                Some(SecurityIssue {
-                                    severity: IssueSeverity::Info,
-                                    category: IssueCategory::Other,
-                                    description: remaining.to_string(),
-                                    line_number: None,
-                                    code_snippet: None,
-                                    file_path,
-                                })
-                            }
-                        } else {
-                            // 兼容无法解析的格式：保留原始文本
-                            Some(SecurityIssue {
-                                severity: IssueSeverity::Info,
-                                category: IssueCategory::Other,
-                                description: remaining.to_string(),
-                                line_number: None,
-                                code_snippet: None,
-                                file_path,
-                            })
-                        }
-                    })
-                    .collect()
-            } else {
-                vec![]
-            };
+            let issues = s.security_issues.clone().unwrap_or_default();
 
             let report = SecurityReport {
                 skill_id: s.id.clone(),
                 score: s.security_score.unwrap_or(0),
                 level: SecurityLevel::from_score(s.security_score.unwrap_or(0)),
                 issues,
-                recommendations: vec![], // 建议信息暂时为空，未来可以存储到数据库
+                recommendations: vec![],
                 blocked: false,
                 hard_trigger_issues: vec![],
-                scanned_files: vec![], // 缓存结果中没有扫描文件列表
+                scanned_files: vec![],
                 partial_scan: false,
                 skipped_files: vec![],
             };

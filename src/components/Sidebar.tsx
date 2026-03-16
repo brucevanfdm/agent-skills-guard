@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { LayoutDashboard, Package, ShoppingCart, Database, Settings } from "lucide-react";
-
-type TabType = "overview" | "marketplace" | "installed" | "repositories" | "settings";
+import type { TabType } from "../types";
 
 interface SidebarProps {
   currentTab: TabType;

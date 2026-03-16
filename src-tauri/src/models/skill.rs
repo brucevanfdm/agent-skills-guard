@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::models::security::SecurityIssue;
+
 /// Skill 信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Skill {
@@ -18,7 +20,7 @@ pub struct Skill {
     pub local_paths: Option<Vec<String>>, // 新增:支持多个安装路径
     pub checksum: Option<String>,
     pub security_score: Option<i32>,
-    pub security_issues: Option<Vec<String>>,
+    pub security_issues: Option<Vec<SecurityIssue>>,
     pub security_level: Option<String>, // 安全等级：Safe/Low/Medium/High/Critical
     pub scanned_at: Option<DateTime<Utc>>, // 扫描时间戳
     pub installed_commit_sha: Option<String>, // 安装时对应的仓库 commit SHA

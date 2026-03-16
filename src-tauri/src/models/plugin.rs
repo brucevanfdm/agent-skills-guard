@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::models::security::SecurityIssue;
+
 /// Claude Code Plugin 信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Plugin {
@@ -29,7 +31,7 @@ pub struct Plugin {
     pub claude_install_path: Option<String>,
     pub claude_last_updated: Option<DateTime<Utc>>,
     pub security_score: Option<i32>,
-    pub security_issues: Option<Vec<String>>,
+    pub security_issues: Option<Vec<SecurityIssue>>,
     pub security_level: Option<String>,
     pub scanned_at: Option<DateTime<Utc>>,
     pub staging_path: Option<String>,

@@ -38,7 +38,8 @@ fn maybe_suppress_macos_os_activity_logs() {
         return;
     }
 
-    std::env::set_var("OS_ACTIVITY_MODE", "disable");
+    // SAFETY: 在 main 线程启动时调用，此时尚未创建其他线程
+    unsafe { std::env::set_var("OS_ACTIVITY_MODE", "disable") };
 }
 
 /// 获取托盘菜单文本（中英文双语）
@@ -276,7 +277,8 @@ fn ensure_cli_path() {
 
     match std::env::join_paths(paths) {
         Ok(joined) => {
-            std::env::set_var("PATH", joined);
+            // SAFETY: 在 main 线程启动早期调用，tokio 运行时尚未启动
+            unsafe { std::env::set_var("PATH", joined) };
             let list = added
                 .iter()
                 .map(|p| p.to_string_lossy())

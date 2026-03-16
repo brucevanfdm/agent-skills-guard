@@ -419,7 +419,8 @@ function SkillCard({
               <div className="space-y-1 pl-4 border-l-2 border-destructive/30">
                 {skill.security_issues.map((issue, idx) => (
                   <p key={idx} className="text-muted-foreground">
-                    <span className="text-destructive">[{idx + 1}]</span> {issue}
+                    <span className="text-destructive">[{idx + 1}]</span>{" "}
+                    {issue.file_path ? `[${issue.file_path}] ` : ""}{issue.severity}: {issue.description}
                   </p>
                 ))}
               </div>
@@ -468,7 +469,8 @@ function SkillCard({
                 <ul className="text-xs space-y-1">
                   {skill.security_issues.slice(0, 5).map((issue, idx) => (
                     <li key={idx} className="text-muted-foreground">
-                      <span className="text-destructive">[{idx + 1}]</span> {issue}
+                      <span className="text-destructive">[{idx + 1}]</span>{" "}
+                      {issue.file_path ? `[${issue.file_path}] ` : ""}{issue.severity}: {issue.description}
                     </li>
                   ))}
                   {skill.security_issues.length > 5 && (

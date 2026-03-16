@@ -11,6 +11,26 @@ use tauri::Manager;
 use tauri::State;
 use tokio::sync::Mutex;
 
+/// 扫描进度事件（security 和 plugins 共用）
+#[derive(serde::Serialize, Clone)]
+pub struct ScanProgressEvent {
+    pub scan_id: String,
+    pub kind: String,
+    pub item_id: String,
+    pub file_path: String,
+}
+
+/// 默认扫描并行度
+pub const DEFAULT_SCAN_PARALLELISM: usize = 3;
+/// 最大扫描并行度
+pub const MAX_SCAN_PARALLELISM: usize = 8;
+
+pub fn clamp_scan_parallelism(scan_parallelism: Option<usize>) -> usize {
+    scan_parallelism
+        .unwrap_or(DEFAULT_SCAN_PARALLELISM)
+        .clamp(1, MAX_SCAN_PARALLELISM)
+}
+
 pub struct AppState {
     pub db: Arc<Database>,
     pub skill_manager: Arc<Mutex<SkillManager>>,
@@ -286,7 +306,14 @@ mod tests {
         existing.local_paths = Some(vec!["/tmp/skill-a".to_string(), "/tmp/skill-b".to_string()]);
         existing.security_score = Some(88);
         existing.security_level = Some("Low".to_string());
-        existing.security_issues = Some(vec!["Warning: existing".to_string()]);
+        existing.security_issues = Some(vec![crate::models::security::SecurityIssue {
+            severity: crate::models::security::IssueSeverity::Warning,
+            category: crate::models::security::IssueCategory::Other,
+            description: "Warning: existing".to_string(),
+            line_number: None,
+            code_snippet: None,
+            file_path: None,
+        }]);
         existing.installed_commit_sha = Some("abc1234".to_string());
         existing.version = Some("1.0.0".to_string());
         existing.author = Some("Bruce".to_string());
@@ -665,13 +692,65 @@ pub struct ClearAllCachesResult {
 
 /// 打开技能目录
 #[tauri::command]
-pub async fn open_skill_directory(local_path: String) -> Result<(), String> {
+pub async fn open_skill_directory(state: State<'_, AppState>, local_path: String) -> Result<(), String> {
     use std::process::Command;
+
+    let path = std::path::Path::new(&local_path);
+
+    // 验证路径是否存在且为目录
+    if !path.exists() || !path.is_dir() {
+        return Err(format!("Path does not exist or is not a directory: {}", local_path));
+    }
+
+    // 规范化路径，防止路径遍历
+    let canonical = path.canonicalize()
+        .map_err(|e| format!("Failed to resolve path: {}", e))?;
+
+    // 验证路径在允许的范围内（技能安装目录或缓存目录）
+    let allowed = {
+        let mut allowed_paths: Vec<std::path::PathBuf> = Vec::new();
+
+        // 允许的目录：用户 .claude 目录
+        if let Some(home) = dirs::home_dir() {
+            allowed_paths.push(home.join(".claude"));
+        }
+
+        // 允许的目录：应用缓存目录
+        if let Some(cache_dir) = dirs::cache_dir() {
+            allowed_paths.push(cache_dir.join("agent-skills-guard"));
+        }
+
+        // 允许的目录：数据库中记录的已安装技能路径
+        if let Ok(skills) = state.db.get_skills() {
+            for skill in skills {
+                if let Some(paths) = &skill.local_paths {
+                    for p in paths {
+                        if let Ok(cp) = std::path::Path::new(p).canonicalize() {
+                            allowed_paths.push(cp);
+                        }
+                    }
+                }
+                if let Some(p) = &skill.local_path {
+                    if let Ok(cp) = std::path::Path::new(p).canonicalize() {
+                        allowed_paths.push(cp);
+                    }
+                }
+            }
+        }
+
+        allowed_paths.iter().any(|allowed| canonical.starts_with(allowed))
+    };
+
+    if !allowed {
+        return Err("Path is not within an allowed directory".to_string());
+    }
+
+    let canonical_str = canonical.to_string_lossy().to_string();
 
     #[cfg(target_os = "windows")]
     {
         Command::new("explorer")
-            .arg(&local_path)
+            .arg(&canonical_str)
             .spawn()
             .map_err(|e| format!("Failed to open directory: {}", e))?;
     }
@@ -679,7 +758,7 @@ pub async fn open_skill_directory(local_path: String) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         Command::new("open")
-            .arg(&local_path)
+            .arg(&canonical_str)
             .spawn()
             .map_err(|e| format!("Failed to open directory: {}", e))?;
     }
@@ -687,7 +766,7 @@ pub async fn open_skill_directory(local_path: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
         Command::new("xdg-open")
-            .arg(&local_path)
+            .arg(&canonical_str)
             .spawn()
             .map_err(|e| format!("Failed to open directory: {}", e))?;
     }

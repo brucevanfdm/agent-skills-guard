@@ -1247,20 +1247,7 @@ impl PluginManager {
             let mut updated = plugin_entry.clone();
             updated.security_score = Some(report.score);
             updated.security_level = Some(report.level.as_str().to_string());
-            updated.security_issues = Some(
-                report
-                    .issues
-                    .iter()
-                    .map(|i| {
-                        let file_info = i
-                            .file_path
-                            .as_ref()
-                            .map(|f| format!("[{}] ", f))
-                            .unwrap_or_default();
-                        format!("{}{:?}: {}", file_info, i.severity, i.description)
-                    })
-                    .collect(),
-            );
+            updated.security_issues = Some(report.issues.clone());
             updated.scanned_at = Some(now);
             updated.staging_path = Some(repo_root.to_string_lossy().to_string());
             if blocked && !updated.installed {

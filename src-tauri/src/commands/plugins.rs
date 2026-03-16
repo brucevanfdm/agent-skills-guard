@@ -1,5 +1,5 @@
 use crate::commands::featured_marketplaces;
-use crate::commands::AppState;
+use crate::commands::{AppState, ScanProgressEvent};
 use crate::i18n::validate_locale;
 use crate::models::{Plugin, SecurityReport};
 use crate::security::{ScanOptions, SecurityScanner};
@@ -10,17 +10,8 @@ use crate::services::plugin_manager::{
 use chrono::Utc;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
-use serde::Serialize;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, State};
-
-#[derive(Serialize, Clone)]
-struct ScanProgressEvent {
-    scan_id: String,
-    kind: String,
-    item_id: String,
-    file_path: String,
-}
 
 /// 获取所有 plugins
 #[tauri::command]
@@ -36,32 +27,19 @@ pub async fn get_plugins(
 
     // 通过 Claude CLI 同步本地安装状态（包含非本程序安装的 plugins/marketplaces）
     // 同步失败不阻塞 UI：回退到 DB 缓存
-    if let Ok(manager) = state.plugin_manager.try_lock() {
-        if let Some(config) = &featured_config {
-            if let Err(e) = manager
-                .sync_featured_marketplaces(config, &locale, None, true)
-                .await
-            {
-                log::warn!("同步精选插件清单失败: {}", e);
-            }
-        }
-        if let Err(e) = manager.sync_claude_installed_state(None).await {
-            log::warn!("同步 Claude plugins 状态失败: {}", e);
-        }
-    } else {
-        let manager = state.plugin_manager.lock().await;
-        if let Some(config) = &featured_config {
-            if let Err(e) = manager
-                .sync_featured_marketplaces(config, &locale, None, true)
-                .await
-            {
-                log::warn!("同步精选插件清单失败: {}", e);
-            }
-        }
-        if let Err(e) = manager.sync_claude_installed_state(None).await {
-            log::warn!("同步 Claude plugins 状态失败: {}", e);
+    let manager = state.plugin_manager.lock().await;
+    if let Some(config) = &featured_config {
+        if let Err(e) = manager
+            .sync_featured_marketplaces(config, &locale, None, true)
+            .await
+        {
+            log::warn!("同步精选插件清单失败: {}", e);
         }
     }
+    if let Err(e) = manager.sync_claude_installed_state(None).await {
+        log::warn!("同步 Claude plugins 状态失败: {}", e);
+    }
+    drop(manager);
 
     state.db.get_plugins().map_err(|e| e.to_string())
 }
@@ -267,11 +245,7 @@ pub async fn scan_all_installed_plugins(
     let plugins = state.db.get_plugins().map_err(|e| e.to_string())?;
     let installed_plugins: Vec<Plugin> = plugins.into_iter().filter(|p| p.installed).collect();
 
-    const DEFAULT_SCAN_PARALLELISM: usize = 3;
-    const MAX_SCAN_PARALLELISM: usize = 8;
-    let parallelism = scan_parallelism
-        .unwrap_or(DEFAULT_SCAN_PARALLELISM)
-        .clamp(1, MAX_SCAN_PARALLELISM);
+    let parallelism = crate::commands::clamp_scan_parallelism(scan_parallelism);
 
     let db = state.db.clone();
     let locale_owned = locale.to_string();
@@ -313,20 +287,7 @@ pub async fn scan_all_installed_plugins(
                 let mut updated = plugin.clone();
                 updated.security_score = Some(report.score);
                 updated.security_level = Some(report.level.as_str().to_string());
-                updated.security_issues = Some(
-                    report
-                        .issues
-                        .iter()
-                        .map(|i| {
-                            let file_info = i
-                                .file_path
-                                .as_ref()
-                                .map(|f| format!("[{}] ", f))
-                                .unwrap_or_default();
-                            format!("{}{:?}: {}", file_info, i.severity, i.description)
-                        })
-                        .collect(),
-                );
+                updated.security_issues = Some(report.issues.clone());
                 updated.scanned_at = Some(Utc::now());
 
                 if let Err(e) = db.save_plugin(&updated) {
@@ -423,18 +384,7 @@ pub async fn scan_installed_plugin(
     plugin.security_score = Some(report.score);
     plugin.security_level = Some(report.level.as_str().to_string());
     plugin.security_issues = Some(
-        report
-            .issues
-            .iter()
-            .map(|i| {
-                let file_info = i
-                    .file_path
-                    .as_ref()
-                    .map(|f| format!("[{}] ", f))
-                    .unwrap_or_default();
-                format!("{}{:?}: {}", file_info, i.severity, i.description)
-            })
-            .collect(),
+        report.issues.clone(),
     );
     plugin.scanned_at = Some(Utc::now());
 

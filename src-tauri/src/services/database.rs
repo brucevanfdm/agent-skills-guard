@@ -1,14 +1,91 @@
+use crate::models::security::SecurityIssue;
 use crate::models::{Plugin, Repository, Skill};
 use anyhow::{Context, Result};
 use rusqlite::{params, params_from_iter, Connection, OptionalExtension};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+/// 反序列化 security_issues JSON，兼容旧格式（Vec<String>）和新格式（Vec<SecurityIssue>）
+fn deserialize_security_issues(json_str: &str) -> Option<Vec<SecurityIssue>> {
+    // 先尝试新格式：Vec<SecurityIssue>
+    if let Ok(issues) = serde_json::from_str::<Vec<SecurityIssue>>(json_str) {
+        return Some(issues);
+    }
+
+    // 回退到旧格式：Vec<String>，解析每个字符串
+    if let Ok(strings) = serde_json::from_str::<Vec<String>>(json_str) {
+        let issues: Vec<SecurityIssue> = strings
+            .iter()
+            .filter_map(|s| parse_legacy_issue_string(s))
+            .collect();
+        return Some(issues);
+    }
+
+    None
+}
+
+/// 解析旧格式的安全问题字符串："[filename] Severity: description"
+fn parse_legacy_issue_string(issue_str: &str) -> Option<SecurityIssue> {
+    use crate::models::security::{IssueCategory, IssueSeverity};
+
+    let raw = issue_str.trim();
+    if raw.is_empty() {
+        return None;
+    }
+
+    let (file_path, remaining) = if raw.starts_with('[') {
+        if let Some(end) = raw.find(']') {
+            let file = raw[1..end].to_string();
+            let rest = raw[end + 1..].trim();
+            (Some(file), rest)
+        } else {
+            (None, raw)
+        }
+    } else {
+        (None, raw)
+    };
+
+    let parts: Vec<&str> = remaining.splitn(2, ": ").collect();
+    if parts.len() == 2 {
+        let severity = match parts[0] {
+            "Critical" => IssueSeverity::Critical,
+            "Error" => IssueSeverity::Error,
+            "Warning" => IssueSeverity::Warning,
+            _ => IssueSeverity::Info,
+        };
+        Some(SecurityIssue {
+            severity,
+            category: IssueCategory::Other,
+            description: parts[1].to_string(),
+            line_number: None,
+            code_snippet: None,
+            file_path,
+        })
+    } else {
+        Some(SecurityIssue {
+            severity: IssueSeverity::Info,
+            category: IssueCategory::Other,
+            description: remaining.to_string(),
+            line_number: None,
+            code_snippet: None,
+            file_path,
+        })
+    }
+}
+
 pub struct Database {
     conn: Mutex<Connection>,
 }
 
 impl Database {
+    /// 获取数据库连接锁，自动恢复 Mutex 中毒状态
+    fn lock_conn(&self) -> std::sync::MutexGuard<'_, Connection> {
+        self.conn.lock().unwrap_or_else(|poisoned| {
+            log::warn!("Database mutex was poisoned, recovering");
+            poisoned.into_inner()
+        })
+    }
+
     /// 创建或打开数据库
     pub fn new(db_path: PathBuf) -> Result<Self> {
         // 确保父目录存在
@@ -28,7 +105,7 @@ impl Database {
 
     /// 重置数据库中的所有业务数据（保留表结构与迁移）
     pub fn reset_all_data(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.execute_batch(
             r#"
@@ -54,7 +131,7 @@ impl Database {
 
     /// 初始化数据库架构
     fn initialize_schema(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS repositories (
@@ -152,12 +229,14 @@ impl Database {
 
     /// 保存 plugin
     pub fn save_plugin(&self, plugin: &Plugin) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let security_issues_json = plugin
             .security_issues
             .as_ref()
-            .map(|issues| serde_json::to_string(issues).unwrap());
+            .map(|issues| serde_json::to_string(issues))
+            .transpose()
+            .context("Failed to serialize plugin security issues")?;
 
         conn.execute(
             "INSERT OR REPLACE INTO plugins
@@ -202,7 +281,7 @@ impl Database {
 
     /// 数据库迁移：添加 repository_owner 列
     fn migrate_add_repository_owner(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         // 尝试添加列（如果列已存在会失败，这是正常的）
         let _ = conn.execute("ALTER TABLE skills ADD COLUMN repository_owner TEXT", []);
@@ -235,7 +314,7 @@ impl Database {
 
     /// 添加仓库
     pub fn add_repository(&self, repo: &Repository) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.execute(
             "INSERT OR REPLACE INTO repositories
@@ -261,7 +340,7 @@ impl Database {
 
     /// 获取所有仓库
     pub fn get_repositories(&self) -> Result<Vec<Repository>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, url, name, description, enabled, scan_subdirs, added_at, last_scanned, cache_path, cached_at, cached_commit_sha
              FROM repositories
@@ -298,17 +377,21 @@ impl Database {
 
     /// 保存 skill
     pub fn save_skill(&self, skill: &Skill) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let security_issues_json = skill
             .security_issues
             .as_ref()
-            .map(|issues| serde_json::to_string(issues).unwrap());
+            .map(|issues| serde_json::to_string(issues))
+            .transpose()
+            .context("Failed to serialize skill security issues")?;
 
         let local_paths_json = skill
             .local_paths
             .as_ref()
-            .map(|paths| serde_json::to_string(paths).unwrap());
+            .map(|paths| serde_json::to_string(paths))
+            .transpose()
+            .context("Failed to serialize skill local paths")?;
 
         conn.execute(
             "INSERT OR REPLACE INTO skills
@@ -342,7 +425,7 @@ impl Database {
 
     /// 获取所有 skills
     pub fn get_skills(&self) -> Result<Vec<Skill>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, name, description, repository_url, repository_owner, file_path, version, author,
                     installed, installed_at, local_path, local_paths, checksum, security_score, security_issues, security_level, scanned_at, installed_commit_sha
@@ -352,7 +435,7 @@ impl Database {
         let skills = stmt
             .query_map([], |row| {
                 let security_issues: Option<String> = row.get(14)?;
-                let security_issues = security_issues.and_then(|s| serde_json::from_str(&s).ok());
+                let security_issues = security_issues.and_then(|s| deserialize_security_issues(&s));
 
                 let local_paths: Option<String> = row.get(11)?;
                 let local_paths = local_paths.and_then(|s| serde_json::from_str(&s).ok());
@@ -389,7 +472,7 @@ impl Database {
 
     /// 获取所有 plugins
     pub fn get_plugins(&self) -> Result<Vec<Plugin>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, claude_id, name, description, version, installed_version, author, repository_url, repository_owner,
                     marketplace_name, source, discovery_source, marketplace_add_command, plugin_install_command,
@@ -401,7 +484,7 @@ impl Database {
         let plugins = stmt
             .query_map([], |row| {
                 let security_issues: Option<String> = row.get(21)?;
-                let security_issues = security_issues.and_then(|s| serde_json::from_str(&s).ok());
+                let security_issues = security_issues.and_then(|s| deserialize_security_issues(&s));
 
                 Ok(Plugin {
                     id: row.get(0)?,
@@ -446,7 +529,7 @@ impl Database {
 
     /// 删除仓库
     pub fn delete_repository(&self, repo_id: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.execute("DELETE FROM repositories WHERE id = ?1", params![repo_id])?;
         Ok(())
     }
@@ -456,7 +539,7 @@ impl Database {
         &self,
         repository_url: &str,
     ) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let deleted_count = conn.execute(
             "DELETE FROM skills WHERE repository_url = ?1 AND installed = 0",
             params![repository_url],
@@ -469,7 +552,7 @@ impl Database {
         &self,
         repository_url: &str,
     ) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let deleted_count = conn.execute(
             "DELETE FROM plugins WHERE repository_url = ?1 AND installed = 0",
             params![repository_url],
@@ -479,7 +562,7 @@ impl Database {
 
     /// 删除 skill
     pub fn delete_skill(&self, skill_id: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.execute("DELETE FROM skills WHERE id = ?1", params![skill_id])?;
         conn.execute(
             "DELETE FROM installations WHERE skill_id = ?1",
@@ -494,7 +577,7 @@ impl Database {
             return Ok(0);
         }
 
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let placeholders = (0..skill_ids.len())
             .map(|index| format!("?{}", index + 1))
             .collect::<Vec<_>>()
@@ -511,14 +594,14 @@ impl Database {
 
     /// 删除 plugin 记录
     pub fn delete_plugin(&self, plugin_id: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.execute("DELETE FROM plugins WHERE id = ?1", params![plugin_id])?;
         Ok(())
     }
 
     /// 数据库迁移：添加缓存相关字段
     fn migrate_add_cache_fields(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         // 添加 cache_path 列
         let _ = conn.execute("ALTER TABLE repositories ADD COLUMN cache_path TEXT", []);
@@ -537,7 +620,7 @@ impl Database {
 
     /// 数据库迁移：添加安全扫描增强字段
     fn migrate_add_security_enhancement_fields(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         // 添加 security_level 列
         let _ = conn.execute("ALTER TABLE skills ADD COLUMN security_level TEXT", []);
@@ -550,7 +633,7 @@ impl Database {
 
     /// 数据库迁移：添加 local_paths 列,支持多个安装路径
     fn migrate_add_local_paths(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         // 添加 local_paths 列（JSON 数组格式）
         let _ = conn.execute("ALTER TABLE skills ADD COLUMN local_paths TEXT", []);
@@ -576,7 +659,7 @@ impl Database {
         cached_at: chrono::DateTime<chrono::Utc>,
         cached_commit_sha: Option<&str>,
     ) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.execute(
             "UPDATE repositories
@@ -596,7 +679,7 @@ impl Database {
 
     /// 清除仓库缓存信息（但不删除文件）
     pub fn clear_repository_cache_metadata(&self, repo_id: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.execute(
             "UPDATE repositories
@@ -610,7 +693,7 @@ impl Database {
 
     /// 数据库迁移：添加 installed_commit_sha 列
     fn migrate_add_installed_commit_sha(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         // 添加 installed_commit_sha 列
         let _ = conn.execute(
@@ -623,7 +706,7 @@ impl Database {
 
     /// 数据库迁移：为 plugins 增加 Claude CLI 同步字段
     fn migrate_add_plugin_claude_fields(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let _ = conn.execute("ALTER TABLE plugins ADD COLUMN claude_id TEXT", []);
         let _ = conn.execute("ALTER TABLE plugins ADD COLUMN installed_version TEXT", []);
@@ -659,7 +742,7 @@ impl Database {
 
     /// 数据库迁移：为 plugins 增加 marketplace/plugin 安装指令字段
     fn migrate_add_plugin_install_commands(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let _ = conn.execute(
             "ALTER TABLE plugins ADD COLUMN marketplace_add_command TEXT",
@@ -675,7 +758,7 @@ impl Database {
 
     /// 获取单个仓库信息
     pub fn get_repository(&self, repo_id: &str) -> Result<Option<Repository>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let mut stmt = conn.prepare(
             "SELECT id, url, name, description, enabled, scan_subdirs,
@@ -714,7 +797,7 @@ impl Database {
 
     /// 获取所有未扫描的仓库ID列表
     pub fn get_unscanned_repositories(&self) -> Result<Vec<String>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt =
             conn.prepare("SELECT id FROM repositories WHERE last_scanned IS NULL AND enabled = 1")?;
 

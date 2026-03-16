@@ -5,6 +5,7 @@ export function useRepositories() {
   return useQuery({
     queryKey: ["repositories"],
     queryFn: () => api.getRepositories(),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

@@ -24,10 +24,9 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "./components/ui/alert-dialog";
+import type { TabType } from "./types";
 
 const reactQueryClient = new QueryClient();
-
-type TabType = "overview" | "marketplace" | "installed" | "repositories" | "settings";
 type MarketplacePreset = { marketplaceName?: string } | null;
 
 const ONBOARDING_IMPORT_FEATURED_KEY = "asguard.onboarding.importFeatured.v1";
@@ -286,7 +285,7 @@ function AppContent() {
         <main className="flex-1 overflow-hidden">
           {currentTab === "overview" && (
             <div className="h-full overflow-y-auto">
-              <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
+              <div className="p-8 animate-fade-in">
                 <div className="max-w-6xl mx-auto">
                   <OverviewPage />
                 </div>
@@ -310,7 +309,7 @@ function AppContent() {
           )}
           {currentTab === "repositories" && (
             <div className="h-full overflow-y-auto">
-              <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
+              <div className="p-8 animate-fade-in">
                 <div className="max-w-6xl mx-auto">
                   <RepositoriesPage
                     onNavigateToMarket={(options) => {
@@ -328,7 +327,7 @@ function AppContent() {
           )}
           {currentTab === "settings" && (
             <div className="h-full overflow-y-auto">
-              <div className="p-8" style={{ animation: "fadeIn 0.4s ease-out" }}>
+              <div className="p-8 animate-fade-in">
                 <div className="max-w-6xl mx-auto">
                   <SettingsPage />
                 </div>

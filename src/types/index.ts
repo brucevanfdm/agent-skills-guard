@@ -1,3 +1,7 @@
+import type { SecurityIssue } from "./security";
+
+export type TabType = "overview" | "marketplace" | "installed" | "repositories" | "settings";
+
 export interface Repository {
   id: string;
   url: string;
@@ -34,7 +38,7 @@ export interface Skill {
   local_paths?: string[]; // 新增:支持多个安装路径
   checksum?: string;
   security_score?: number;
-  security_issues?: string[];
+  security_issues?: SecurityIssue[];
   installed_commit_sha?: string; // 安装时的 commit SHA，用于版本追踪
 }
 
@@ -60,7 +64,7 @@ export interface Plugin {
   claude_install_path?: string;
   claude_last_updated?: string;
   security_score?: number;
-  security_issues?: string[];
+  security_issues?: SecurityIssue[];
   security_level?: string;
   scanned_at?: string;
   staging_path?: string;

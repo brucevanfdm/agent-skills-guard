@@ -12,7 +12,7 @@ import { IssuesSummaryCard } from "./overview/IssuesSummaryCard";
 import { IssuesList } from "./overview/IssuesList";
 import { appToast } from "@/lib/toast";
 import { GroupCard, GroupCardItem } from "./ui/GroupCard";
-import type { SecurityIssue, SecurityReport } from "@/types/security";
+import type { SecurityReport } from "@/types/security";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useClaudeMarketplaces, usePlugins } from "@/hooks/usePlugins";
 import { getScanConcurrency } from "@/lib/storage";
@@ -676,60 +676,16 @@ export function OverviewPage() {
 }
 
 function buildReportFromPlugin(plugin: Plugin): SecurityReport {
-  const issues: SecurityIssue[] = (plugin.security_issues || [])
-    .map(parseStoredIssueString)
-    .filter((v): v is SecurityIssue => v !== null);
-
   return {
     skill_id: plugin.id,
     score: plugin.security_score ?? 0,
     level: plugin.security_level ?? "Unknown",
-    issues,
+    issues: plugin.security_issues ?? [],
     recommendations: [],
     blocked: false,
     hard_trigger_issues: [],
     scanned_files: [],
     partial_scan: false,
     skipped_files: [],
-  };
-}
-
-function parseStoredIssueString(issue: string): SecurityIssue | null {
-  const raw = issue.trim();
-  if (!raw) return null;
-
-  // Format (Rust): "[path] Severity: description" or "Severity: description"
-  let file_path: string | undefined;
-  let remaining = raw;
-  if (remaining.startsWith("[")) {
-    const end = remaining.indexOf("]");
-    if (end > 1) {
-      file_path = remaining.slice(1, end).trim() || undefined;
-      remaining = remaining.slice(end + 1).trim();
-    }
-  }
-
-  const parts = remaining.split(":");
-  if (parts.length < 2) {
-    return {
-      severity: "Info",
-      category: "Other",
-      description: remaining,
-      file_path,
-    };
-  }
-
-  const severity = parts[0].trim();
-  const description = parts.slice(1).join(":").trim();
-  const normalized =
-    severity === "Critical" || severity === "Error" || severity === "Warning" || severity === "Info"
-      ? severity
-      : "Info";
-
-  return {
-    severity: normalized,
-    category: "Other",
-    description: description || remaining,
-    file_path,
   };
 }
