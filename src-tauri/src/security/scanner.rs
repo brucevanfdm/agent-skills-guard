@@ -59,8 +59,7 @@ lazy_static! {
         Regex::new(r#"(?:"\s*\+\s*"|'\s*\+\s*'|"\s*\+\s*'|'\s*\+\s*")"#)
             .expect("Invalid string concat regex");
     static ref STRING_PLUS_CONTINUATION: Regex =
-        Regex::new(r#"(?:["']\s*\+\s*$)"#)
-            .expect("Invalid string plus continuation regex");
+        Regex::new(r#"(?:["']\s*\+\s*$)"#).expect("Invalid string plus continuation regex");
 }
 
 #[derive(Debug, Clone, Copy)]

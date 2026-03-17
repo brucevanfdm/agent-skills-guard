@@ -62,7 +62,7 @@ export function OverviewPage() {
     queryFn: api.getRepositories,
   });
 
-  const { data: plugins = [], isLoading: isPluginsLoading } = usePlugins();
+  const { data: plugins = [], isLoading: isPluginsLoading } = usePlugins({ mode: "cached" });
 
   const { data: marketplaces = [], isLoading: isMarketplacesLoading } = useClaudeMarketplaces();
 
@@ -219,7 +219,9 @@ export function OverviewPage() {
           backgroundMarketplaces,
         ]);
         const scannedSkillIds = new Set(results.map((result) => result.skill_id));
-        extraLocalScannedCount = localSkills.filter((skill) => !scannedSkillIds.has(skill.id)).length;
+        extraLocalScannedCount = localSkills.filter(
+          (skill) => !scannedSkillIds.has(skill.id)
+        ).length;
         await queryClient.refetchQueries({ queryKey: ["skills", "installed"] });
         await queryClient.refetchQueries({ queryKey: ["skills"] });
         await queryClient.refetchQueries({ queryKey: ["plugins"] });
@@ -378,7 +380,9 @@ export function OverviewPage() {
       localSkillsCount = installedSkillsCount;
 
       const scannedSkillIds = new Set(results.map((result) => result.skill_id));
-      const extraLocalScannedCount = localSkills.filter((skill) => !scannedSkillIds.has(skill.id)).length;
+      const extraLocalScannedCount = localSkills.filter(
+        (skill) => !scannedSkillIds.has(skill.id)
+      ).length;
 
       return {
         results,
@@ -495,7 +499,9 @@ export function OverviewPage() {
   }, [plugins, uniqueScanResults]);
 
   const issueCount = useMemo(() => {
-    const skillIssues = uniqueScanResults.filter((r) => r.level !== "Safe" && r.level !== "Low").length;
+    const skillIssues = uniqueScanResults.filter(
+      (r) => r.level !== "Safe" && r.level !== "Low"
+    ).length;
     const pluginIssues = plugins.filter((p) => {
       if (!p.installed) return false;
       const level = p.security_level;

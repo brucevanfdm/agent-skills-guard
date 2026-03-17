@@ -3,11 +3,25 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import type { Plugin, PluginUninstallResult } from "../types";
 
-export function usePlugins() {
+type UsePluginsOptions = {
+  mode?: "runtime" | "cached";
+};
+
+export function pluginsQueryKey(lang: string) {
+  return ["plugins", lang] as const;
+}
+
+export function pluginsCachedQueryKey(lang: string) {
+  return ["plugins", lang, "cached"] as const;
+}
+
+export function usePlugins(options: UsePluginsOptions = {}) {
   const { i18n } = useTranslation();
+  const mode = options.mode ?? "runtime";
   return useQuery({
-    queryKey: ["plugins", i18n.language],
-    queryFn: () => api.getPlugins(i18n.language),
+    queryKey:
+      mode === "runtime" ? pluginsQueryKey(i18n.language) : pluginsCachedQueryKey(i18n.language),
+    queryFn: () => (mode === "runtime" ? api.getPlugins(i18n.language) : api.getPluginsCached()),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -37,7 +51,12 @@ export function useUninstallPlugin() {
           if (!prev) return prev;
           return prev.map((plugin) =>
             plugin.id === pluginId
-              ? { ...plugin, installed: false, installed_at: undefined, install_status: "uninstalled" }
+              ? {
+                  ...plugin,
+                  installed: false,
+                  installed_at: undefined,
+                  install_status: "uninstalled",
+                }
               : plugin
           );
         });

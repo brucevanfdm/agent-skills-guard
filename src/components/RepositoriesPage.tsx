@@ -38,10 +38,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
 } from "./ui/alert-dialog";
-import {
-  SkillSecurityDialog,
-  SkillSecurityDialogConfirmButton,
-} from "./ui/SkillSecurityDialog";
+import { SkillSecurityDialog, SkillSecurityDialogConfirmButton } from "./ui/SkillSecurityDialog";
+import { pluginsCachedQueryKey } from "../hooks/usePlugins";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -92,9 +90,9 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
   const deleteMutation = useDeleteRepository();
   const scanMutation = useScanRepository();
 
-  const [activeTab, setActiveTab] = useState<
-    "featuredMarketplaces" | "featured" | "my"
-  >("featuredMarketplaces");
+  const [activeTab, setActiveTab] = useState<"featuredMarketplaces" | "featured" | "my">(
+    "featuredMarketplaces"
+  );
 
   const [isAddingFeatured, setIsAddingFeatured] = useState(false);
   const [addingFeaturedUrl, setAddingFeaturedUrl] = useState<string | null>(null);
@@ -161,11 +159,9 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
         try {
           const plugins = await api.syncFeaturedMarketplacePlugins(i18n.language);
           queryClient.setQueryData(["plugins", i18n.language], plugins);
+          queryClient.setQueryData(pluginsCachedQueryKey(i18n.language), plugins);
         } catch (error) {
-          console.debug(
-            "Failed to refresh plugins after featured marketplaces update:",
-            error
-          );
+          console.debug("Failed to refresh plugins after featured marketplaces update:", error);
         }
       }
     },
@@ -921,9 +917,7 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
                       <button
                         onClick={() => prepareSkillInstall(skill)}
                         disabled={
-                          skill.installed ||
-                          preparingSkillId !== null ||
-                          installingSkillId !== null
+                          skill.installed || preparingSkillId !== null || installingSkillId !== null
                         }
                         className="apple-button-primary h-8 px-3 text-xs flex items-center gap-1.5 disabled:opacity-50 flex-shrink-0"
                       >
@@ -943,7 +937,6 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
                       </button>
                     </div>
                   ))}
-
                 </div>
               </div>
             </AlertDialogDescription>
@@ -990,7 +983,7 @@ export function RepositoriesPage({ onNavigateToMarket }: RepositoriesPageProps) 
               installPath: selectedPath,
               allowPartialScan: Boolean(
                 pendingSkillInstall.report?.partial_scan ||
-                  pendingSkillInstall.report?.skipped_files?.length
+                pendingSkillInstall.report?.skipped_files?.length
               ),
             });
             addRecentInstallPath(selectedPath);
@@ -1100,8 +1093,8 @@ function SkillInstallConfirmDialog({
               report?.partial_scan
                 ? t("skills.marketplace.install.installCautiously")
                 : report && (report.score < 50 || report.blocked)
-                ? t("skills.marketplace.install.installAnyway")
-                : t("skills.marketplace.install.confirmInstall")
+                  ? t("skills.marketplace.install.installAnyway")
+                  : t("skills.marketplace.install.confirmInstall")
             }
             tone={confirmTone}
           />

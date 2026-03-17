@@ -31,7 +31,11 @@ interface UpdateContextValue {
 
 const UpdateContext = createContext<UpdateContextValue | undefined>(undefined);
 
+import { isThrottleDue, markThrottleCompleted } from "../lib/rateLimit";
+
 const DISMISSED_KEY_PREFIX = "agent-skills-guard:update:dismissedVersion";
+const AUTO_CHECKED_AT_KEY = "agent-skills-guard:update:autoCheckedAt";
+const AUTO_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
 export function UpdateProvider({ children }: { children: React.ReactNode }) {
   const [hasUpdate, setHasUpdate] = useState(false);
@@ -178,10 +182,13 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (didScheduleAutoCheckRef.current) return;
     didScheduleAutoCheckRef.current = true;
+    if (!isThrottleDue(AUTO_CHECKED_AT_KEY, AUTO_CHECK_INTERVAL_MS)) return;
 
     const timer = setTimeout(() => {
-      checkUpdate().catch(console.error);
-    }, 1000);
+      checkUpdate().then(() => {
+        markThrottleCompleted(AUTO_CHECKED_AT_KEY);
+      }).catch(console.error);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [checkUpdate]);

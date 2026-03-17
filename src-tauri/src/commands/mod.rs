@@ -290,6 +290,11 @@ pub async fn scan_repository(
         );
     }
 
+    state
+        .db
+        .set_repository_last_scanned(&repo_id, Utc::now())
+        .map_err(|e| e.to_string())?;
+
     Ok(merged_skills)
 }
 
@@ -1150,7 +1155,11 @@ pub async fn confirm_skill_update(
 ) -> Result<(), String> {
     let manager = state.skill_manager.lock().await;
     manager
-        .confirm_skill_update(&skill_id, force_overwrite, allow_partial_scan.unwrap_or(false))
+        .confirm_skill_update(
+            &skill_id,
+            force_overwrite,
+            allow_partial_scan.unwrap_or(false),
+        )
         .map_err(|e| e.to_string())
 }
 

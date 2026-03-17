@@ -5,7 +5,7 @@
 # 本文件包含为 Agent Skills Guard 用户推荐的精选 Marketplace 与插件。
 
 version: "1.0"
-last_updated: "2026-02-02"
+last_updated: "2026-03-17"
 
 marketplace:
   - id: "official"
@@ -854,10 +854,35 @@ marketplace:
             source: "./plugin"
             tags: ["memory", "context", "search", "compression", "productivity"]
             featured: true
+      - marketplace_name: "impeccable"
+        marketplace_repo: "pbakaus/impeccable"
+        repository_url: "https://github.com/pbakaus/impeccable"
+        marketplace_add_command: "claude plugin marketplace add pbakaus/impeccable"
+        description:
+          en: "Paul Bakaus' design fluency toolkit for AI harnesses: an enhanced frontend-design skill, 17 steering commands, and curated anti-patterns for more intentional frontend design"
+          zh: "Paul Bakaus 提供的 AI 设计增强工具包：包含强化版 frontend-design 技能、17 个引导命令，以及帮助前端设计更克制更到位的反模式清单"
+        owner:
+          name: "Paul Bakaus"
+          email: "paul@paulbakaus.com"
+        tags: ["design", "frontend", "ui", "ux", "commands"]
+        featured: true
+        plugins:
+          - name: "impeccable"
+            install_command: "/plugin install impeccable@impeccable"
+            description:
+              en: "Design vocabulary and frontend design skillset with 17 commands such as /polish, /distill, /audit, /bolder, and /quieter, plus curated anti-patterns"
+              zh: "面向前端设计的词汇与技能包，包含 /polish、/distill、/audit、/bolder、/quieter 等 17 个命令，并附带精选反模式清单"
+            version: "1.3.0"
+            author:
+              name: "Paul Bakaus"
+              email: "paul@paulbakaus.com"
+            source: "./"
+            tags: ["design", "frontend", "ui", "ux", "commands"]
+            featured: true
 
 repositories:
   version: "1.0"
-  last_updated: "2026-02-03"
+  last_updated: "2026-03-17"
   categories:
     - id: "community"
       name:
@@ -923,4 +948,17 @@ repositories:
             zh: "面向常见任务的 Agent Skills 合集，兼容 Claude Code 等符合 Agent Skills Standard 的工具。"
           tags: ["agent-skills", "productivity", "automation"]
           featured: true
-
+        - url: "https://github.com/carmahhawwari/ui-design-brain"
+          name: "carmahhawwari"
+          description:
+            en: "UI component knowledge skill for AI agents with best practices, layout patterns, design-system conventions, aliases, and anti-patterns for 60+ interface components, grounded in component.gallery."
+            zh: "面向 AI 代理的 UI 组件知识技能，基于 component.gallery，覆盖 60+ 界面组件的最佳实践、布局模式、设计系统约定、别名与反模式。"
+          tags: ["design", "ui", "components", "cursor"]
+          featured: true
+        - url: "https://github.com/Leonxlnx/taste-skill"
+          name: "Leonxlnx"
+          description:
+            en: "Frontend design skill pack for AI tools with three focused skills: premium UI generation from scratch, redesign guidance for existing interfaces, and stricter output discipline to avoid incomplete code."
+            zh: "面向 AI 工具的前端设计技能包，包含三个重点技能：从零生成高质量界面、对现有界面做重设计指导，以及强化输出约束以避免半成品代码。"
+          tags: ["frontend", "design", "ui-ux", "output-quality"]
+          featured: true

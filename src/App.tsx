@@ -25,14 +25,20 @@ import {
   AlertDialogCancel,
 } from "./components/ui/alert-dialog";
 import type { TabType } from "./types";
+import { pluginsCachedQueryKey } from "./hooks/usePlugins";
 
 const reactQueryClient = new QueryClient();
 type MarketplacePreset = { marketplaceName?: string } | null;
 
 const ONBOARDING_IMPORT_FEATURED_KEY = "asguard.onboarding.importFeatured.v1";
+import { isThrottleDue, markThrottleCompleted } from "./lib/rateLimit";
+
+const FEATURED_REPOSITORIES_REFRESHED_AT_KEY = "asguard.featuredRepositories.refreshedAt.v1";
+const FEATURED_MARKETPLACES_REFRESHED_AT_KEY = "asguard.featuredMarketplaces.refreshedAt.v1";
+const FEATURED_RESOURCES_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 function AppContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<TabType>("overview");
   const [marketplacePreset, setMarketplacePreset] = useState<MarketplacePreset>(null);
@@ -41,6 +47,8 @@ function AppContent() {
   const [isImportingFeatured, setIsImportingFeatured] = useState(false);
   const didRunStartupTasksRef = useRef(false);
   const didRunOnboardingCheckRef = useRef(false);
+  const langRef = useRef(i18n.language);
+  langRef.current = i18n.language;
 
   const clearMarketplacePreset = useCallback(() => {
     setMarketplacePreset(null);
@@ -70,27 +78,64 @@ function AppContent() {
 
     let cancelled = false;
 
-    const run = async () => {
-      // 1) 自动更新精选仓库
-      try {
-        const data = await api.refreshFeaturedRepositories();
-        if (!cancelled) queryClient.setQueryData(["featured-repositories"], data);
-      } catch (error) {
-        console.debug("Failed to auto-update featured repositories:", error);
+    const refreshFeaturedResources = async () => {
+      const tasks: Promise<void>[] = [];
+
+      if (
+        isThrottleDue(FEATURED_REPOSITORIES_REFRESHED_AT_KEY, FEATURED_RESOURCES_REFRESH_INTERVAL_MS)
+      ) {
+        tasks.push(
+          api
+            .refreshFeaturedRepositories()
+            .then((data) => {
+              if (cancelled) return;
+              queryClient.setQueryData(["featured-repositories"], data);
+              markThrottleCompleted(FEATURED_REPOSITORIES_REFRESHED_AT_KEY);
+            })
+            .catch((error) => {
+              console.debug("Failed to auto-update featured repositories:", error);
+            })
+        );
       }
 
-      // 2) 自动更新精选插件市场（不强制触发 plugins 立刻重拉，避免高成本同步重复跑）
-      try {
-        const data = await api.refreshFeaturedMarketplaces();
-        if (!cancelled) queryClient.setQueryData(["featured-marketplaces"], data);
-      } catch (error) {
-        console.debug("Failed to auto-update featured marketplaces:", error);
+      if (
+        isThrottleDue(FEATURED_MARKETPLACES_REFRESHED_AT_KEY, FEATURED_RESOURCES_REFRESH_INTERVAL_MS)
+      ) {
+        tasks.push(
+          api
+            .refreshFeaturedMarketplaces()
+            .then(async (data) => {
+              if (cancelled) return;
+              queryClient.setQueryData(["featured-marketplaces"], data);
+              markThrottleCompleted(FEATURED_MARKETPLACES_REFRESHED_AT_KEY);
+
+              try {
+                const lang = langRef.current;
+                const plugins = await api.syncFeaturedMarketplacePlugins(lang);
+                if (!cancelled) {
+                  queryClient.setQueryData(pluginsCachedQueryKey(lang), plugins);
+                }
+              } catch (error) {
+                console.debug(
+                  "Failed to sync featured marketplace plugins after auto-refresh:",
+                  error
+                );
+              }
+            })
+            .catch((error) => {
+              console.debug("Failed to auto-update featured marketplaces:", error);
+            })
+        );
       }
+
+      await Promise.allSettled(tasks);
     };
 
-    run();
+    const refreshTimer = setTimeout(() => {
+      void refreshFeaturedResources();
+    }, 1500);
 
-    // 3) 首次启动时自动扫描未扫描的仓库（延迟 1 秒避免阻塞启动渲染）
+    // 首次启动时自动扫描未扫描的仓库，稍微延后到启动高峰之后
     const autoScanRepositories = async () => {
       try {
         const scannedRepos = await api.autoScanUnscannedRepositories();
@@ -103,10 +148,11 @@ function AppContent() {
         console.debug("自动扫描仓库失败:", error);
       }
     };
-    const timer = setTimeout(autoScanRepositories, 1000);
+    const autoScanTimer = setTimeout(autoScanRepositories, 2500);
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      clearTimeout(refreshTimer);
+      clearTimeout(autoScanTimer);
     };
   }, [queryClient]);
 
@@ -131,7 +177,30 @@ function AppContent() {
       try {
         const repos = await api.getRepositories();
         if (cancelled) return;
-        if (repos.length === 0) setImportDialogOpen(true);
+        if (repos.length > 0) return;
+
+        try {
+          const localSkills = await api.scanLocalSkills();
+          if (cancelled) return;
+          if (localSkills.length > 0) {
+            queryClient.invalidateQueries({ queryKey: ["skills"] });
+            queryClient.invalidateQueries({ queryKey: ["skills", "installed"] });
+            queryClient.invalidateQueries({ queryKey: ["scanResults"] });
+            return;
+          }
+        } catch (error) {
+          console.debug("Failed to auto-detect local skills for onboarding:", error);
+        }
+
+        try {
+          const plugins = await api.getPluginsCached();
+          if (cancelled) return;
+          if (plugins.some((plugin) => plugin.installed)) return;
+        } catch (error) {
+          console.debug("Failed to inspect cached plugins for onboarding:", error);
+        }
+
+        setImportDialogOpen(true);
       } catch (error) {
         console.debug("Failed to check repositories for onboarding:", error);
       }
@@ -140,7 +209,7 @@ function AppContent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [queryClient]);
 
   const dismissImportDialog = () => {
     if (isImportingFeatured) return;

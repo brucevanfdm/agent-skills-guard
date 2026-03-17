@@ -747,15 +747,32 @@ impl Database {
 
         conn.execute(
             "UPDATE repositories
-             SET cache_path = ?1, cached_at = ?2, last_scanned = ?3, cached_commit_sha = ?4
-             WHERE id = ?5",
+             SET cache_path = ?1, cached_at = ?2, cached_commit_sha = ?3
+             WHERE id = ?4",
             params![
                 cache_path,
-                cached_at.to_rfc3339(),
                 cached_at.to_rfc3339(),
                 cached_commit_sha,
                 repo_id,
             ],
+        )?;
+
+        Ok(())
+    }
+
+    /// 标记仓库成功完成了一次扫描
+    pub fn set_repository_last_scanned(
+        &self,
+        repo_id: &str,
+        last_scanned: chrono::DateTime<chrono::Utc>,
+    ) -> Result<()> {
+        let conn = self.lock_conn();
+
+        conn.execute(
+            "UPDATE repositories
+             SET last_scanned = ?1
+             WHERE id = ?2",
+            params![last_scanned.to_rfc3339(), repo_id],
         )?;
 
         Ok(())
