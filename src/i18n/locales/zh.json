@@ -91,6 +91,9 @@
     "status": "系统状态：",
     "operational": "运行中"
   },
+  "common": {
+    "delete": "删除"
+  },
   "scan": {
     "initializing": "初始化技能扫描器...",
     "complete": "扫描完成：{{count}} 个技能已检测",
@@ -362,6 +365,15 @@
   "repositories": {
     "title": "仓库",
     "busy": {
+      "refreshFeaturedMarketplaces": "正在刷新精选市场...",
+      "refreshFeatured": "正在刷新精选仓库...",
+      "refreshRepository": "正在刷新仓库缓存：{{name}}",
+      "scanRepository": "正在扫描仓库：{{name}}",
+      "deleteRepository": "正在删除仓库：{{name}}",
+      "addFeatured": "正在添加精选市场...",
+      "addRepository": "正在添加仓库...",
+      "prepareSkill": "正在准备安装技能：{{name}}",
+      "installSkill": "正在安装技能：{{name}}",
       "refreshingFeaturedMarketplaces": "正在刷新精选市场...",
       "refreshingFeaturedRepositories": "正在刷新精选仓库...",
       "refreshingRepositoryCache": "正在刷新仓库缓存...",

@@ -91,6 +91,9 @@
     "status": "SYSTEM_STATUS:",
     "operational": "OPERATIONAL"
   },
+  "common": {
+    "delete": "DELETE"
+  },
   "scan": {
     "initializing": "INITIALIZING_SKILL_SCANNER...",
     "complete": "SCAN_COMPLETE: {{count}} SKILLS_DETECTED",
@@ -362,6 +365,15 @@
   "repositories": {
     "title": "REPOSITORIES",
     "busy": {
+      "refreshFeaturedMarketplaces": "Refreshing featured marketplaces...",
+      "refreshFeatured": "Refreshing featured repositories...",
+      "refreshRepository": "Refreshing repository cache: {{name}}",
+      "scanRepository": "Scanning repository: {{name}}",
+      "deleteRepository": "Deleting repository: {{name}}",
+      "addFeatured": "Adding featured marketplace...",
+      "addRepository": "Adding repository...",
+      "prepareSkill": "Preparing skill install: {{name}}",
+      "installSkill": "Installing skill: {{name}}",
       "refreshingFeaturedMarketplaces": "Refreshing featured marketplaces...",
       "refreshingFeaturedRepositories": "Refreshing featured repositories...",
       "refreshingRepositoryCache": "Refreshing repository cache...",
