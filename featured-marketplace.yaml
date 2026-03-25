@@ -962,3 +962,31 @@ repositories:
             zh: "面向 AI 工具的前端设计技能包，包含三个重点技能：从零生成高质量界面、对现有界面做重设计指导，以及强化输出约束以避免半成品代码。"
           tags: ["frontend", "design", "ui-ux", "output-quality"]
           featured: true
+        - url: "https://github.com/lijigang/ljg-skills"
+          name: "lijigang"
+          description:
+            en: "A collection of 10 creative skills for Claude Code, including visual card generation (ljg-card), concept learning, academic paper reading, vocabulary analysis, writing engine, and structured roundtable discussion framework."
+            zh: "为 Claude Code 提供 10 个创意技能合集，包含图卡生成（ljg-card）、概念学习、学术论文解读、词汇深度分析、写作引擎及结构化圆桌讨论框架等。"
+          tags: ["card", "learning", "writing", "visualization", "analysis"]
+          featured: true
+        - url: "https://github.com/shaom/infocard-skills"
+          name: "shaom"
+          description:
+            en: "A Claude Code skill that generates editorial-style information cards from natural-language input, converting source material into screenshot-ready HTML cards with optional PNG output."
+            zh: "从自然语言输入生成编辑风格信息卡片的 Claude Code 技能，将原始内容转换为可截图的 HTML 卡片，支持导出为 PNG。"
+          tags: ["card", "infocard", "html", "design", "screenshot"]
+          featured: true
+        - url: "https://github.com/brucevanfdm/drawio-skill"
+          name: "brucevanfdm"
+          description:
+            en: "Cross-platform draw.io diagram generator for Claude Code, supporting flowcharts, architecture diagrams, UML (sequence/class), ER diagrams, mind maps, and network topology. Works on macOS, Windows, and Linux."
+            zh: "跨平台 draw.io 图形生成技能，支持流程图、架构图、UML（时序/类图）、ER 图、思维导图及网络拓扑图，兼容 macOS、Windows 和 Linux。"
+          tags: ["diagram", "drawio", "uml", "flowchart", "visualization"]
+          featured: true
+        - url: "https://github.com/rookie-ricardo/erduo-skills"
+          name: "rookie-ricardo"
+          description:
+            en: "A productivity skill pack for Claude Code with 5 skills: daily news report generation, RSS digest with scoring filter, voice transcript polishing, multilingual translation workflow (ZH↔EN/ZH↔JA), and Gemini watermark removal."
+            zh: "面向 Claude Code 的效率技能包，包含 5 个技能：每日资讯报告生成、RSS 精选摘要（带评分过滤）、语音转录润色、多语言翻译工作流（中英/中日互译）及 Gemini 水印去除。"
+          tags: ["news", "rss", "translation", "transcript", "productivity"]
+          featured: true
