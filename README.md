@@ -18,6 +18,12 @@
 
 </div>
 
+### 🚀 更多开源项目
+
+[📄 bruce-doc-converter](https://github.com/brucevanfdm/bruce-doc-converter) - Office/PDF 与 Markdown 双向转换，自动渲染 Mermaid 图表，让 AI 轻松读懂你的文档
+
+[📊 bruce-drawio](https://github.com/brucevanfdm/bruce-drawio) - 用自然语言生成各类 draw.io 图表，支持流程图、架构图、ER 图等，一键导出 PNG/SVG/PDF
+
 </div>
 
 ---
