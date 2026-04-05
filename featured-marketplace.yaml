@@ -990,3 +990,24 @@ repositories:
             zh: "面向 Claude Code 的效率技能包，包含 5 个技能：每日资讯报告生成、RSS 精选摘要（带评分过滤）、语音转录润色、多语言翻译工作流（中英/中日互译）及 Gemini 水印去除。"
           tags: ["news", "rss", "translation", "transcript", "productivity"]
           featured: true
+        - url: "https://github.com/dontbesilent2025/dbskill"
+          name: "dontbesilent2025"
+          description:
+            en: "Business diagnosis toolkit derived from 12,000+ tweets. Includes skills for business model diagnosis, benchmark analysis, content creation, short-video hooks, Xiaohongshu title formulas, execution analysis, and concept deconstruction."
+            zh: "从 12,000+ 条推文提炼的商业诊断工具箱。包含商业模式诊断、对标分析、内容创作、短视频开头优化、小红书标题公式、执行力诊断和概念拆解等技能。"
+          tags: ["business", "diagnosis", "content-creation", "marketing"]
+          featured: true
+        - url: "https://github.com/slowmist/slowmist-agent-security"
+          name: "slowmist"
+          description:
+            en: "Comprehensive security review framework for AI agents in adversarial environments. Covers skill/MCP installation safety, GitHub repo audits, URL/document analysis, on-chain address AML checks, and social engineering detection."
+            zh: "面向对抗环境中 AI 代理的综合安全审查框架。涵盖技能/MCP 安装安全检测、GitHub 仓库审计、URL/文档分析、链上地址 AML 风险评估和社会工程攻击检测。"
+          tags: ["security", "audit", "blockchain", "aml"]
+          featured: true
+        - url: "https://github.com/MiniMax-AI/skills"
+          name: "MiniMax-AI"
+          description:
+            en: "Official MiniMax development skills for AI coding agents. Covers frontend, fullstack, Android, iOS, React Native, Flutter, and shader development. Includes MiniMax API integration for multimodal content generation (image, video, audio, TTS)."
+            zh: "MiniMax 官方开发技能集，面向 AI 编程代理。涵盖前端、全栈、Android、iOS、React Native、Flutter 和着色器开发。集成 MiniMax API 用于多模态内容生成（图像、视频、音频、语音合成）。"
+          tags: ["minimax", "frontend", "mobile", "multimodal", "api"]
+          featured: true
